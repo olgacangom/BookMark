@@ -7,7 +7,7 @@ import * as bcrypt from 'bcrypt';
 describe('AuthService', () => {
   let service: AuthService;
 
-  const mockUser = { id: 'uuid', email: 'test@test.com', password: 'non-secret-mock-value' };
+  const mockUser = { id: 'uuid', email: 'test@test.com', password: 'non-secret-mock-value' }; // NOSONAR
   const mockUsersService = { findOneByEmail: jest.fn().mockResolvedValue(mockUser) };
   const mockJwtService = { sign: jest.fn().mockReturnValue('mockToken') };
 
