@@ -26,4 +26,11 @@ describe('AuthController', () => {
   it('should be defined', () => {
     expect(controller).toBeDefined();
   });
+
+  it('should throw UnauthorizedException if login fails', async () => {
+    mockAuthService.validateUser.mockResolvedValue(null);
+    const loginDto = { email: 'wrong@test.com', password: 'wrongPassword' }; // NOSONAR
+    
+    await expect(controller.login(loginDto)).rejects.toThrow('Credenciales inválidas');
+  });
 });

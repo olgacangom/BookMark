@@ -16,9 +16,9 @@ describe('JwtStrategy', () => {
     expect(strategy).toBeDefined();
   });
 
-  it('should validate and return user payload', async () => {
+  it('should validate and return user payload', () => {
     const payload = { sub: 'uuid', email: 'test@test.com' };
-    const result = await strategy.validate(payload);
+    const result = strategy.validate(payload);
     expect(result).toEqual({ userId: 'uuid', email: 'test@test.com' });
   });
 });

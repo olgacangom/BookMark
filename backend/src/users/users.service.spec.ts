@@ -30,4 +30,16 @@ describe('UsersService', () => {
     expect(result).toBeDefined();
     expect(mockUserRepository.save).toHaveBeenCalled();
   });
+
+  it('should return all users', async () => {
+    const result = await service.findAll();
+    expect(result).toEqual([mockUser]);
+    expect(mockUserRepository.find).toHaveBeenCalled();
+  });
+
+  it('should find one user by email', async () => {
+    mockUserRepository.findOneBy.mockResolvedValue(mockUser);
+    const result = await service.findOneByEmail('test@test.com');
+    expect(result).toEqual(mockUser);
+  });
 });
