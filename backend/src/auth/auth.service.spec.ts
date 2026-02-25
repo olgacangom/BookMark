@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
+import * as bcrypt from 'bcrypt'; 
 
 // Mockeamos bcrypt antes de los tests
 jest.mock('bcrypt', () => ({
@@ -39,9 +40,7 @@ describe('AuthService', () => {
 
   it('should return null if validation fails', async () => {
     // Usamos el mock definido arriba para que devuelva false
-    const bcrypt = require('bcrypt');
-    jest.spyOn(bcrypt, 'compare').mockResolvedValue(false);
-    
+    jest.spyOn(bcrypt, 'compare').mockResolvedValue(false as never);
     const result = await service.validateUser('test@test.com', 'wrong'); // NOSONAR
     expect(result).toBeNull();
   });
