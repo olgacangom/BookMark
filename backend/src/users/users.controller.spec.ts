@@ -5,10 +5,11 @@ import { UsersService } from './users.service';
 describe('UsersController', () => {
   let controller: UsersController;
 
-  // Creamos un mock del servicio para no necesitar el UserRepository
   const mockUsersService = {
+    create: jest.fn().mockResolvedValue({ id: '1', email: 'test@test.com' }),
     findAll: jest.fn().mockResolvedValue([]),
     findOne: jest.fn().mockResolvedValue({ id: '1', email: 'test@test.com' }),
+    remove: jest.fn().mockResolvedValue({ deleted: true }),
   };
 
   beforeEach(async () => {
@@ -24,5 +25,17 @@ describe('UsersController', () => {
 
   it('should be defined', () => {
     expect(controller).toBeDefined();
+  });
+  it('should create a user', async () => {
+    const dto = { email: 'test@test.com', password: 'password123', fullName: 'Test' }; // NOSONAR
+    expect(await controller.create(dto)).toEqual({ id: '1', email: 'test@test.com' });
+  });
+
+  it('should find all users', async () => {
+    expect(await controller.findAll()).toEqual([]);
+  });
+
+  it('should delete a user', async () => {
+    expect(await controller.remove('1')).toEqual({ deleted: true });
   });
 });

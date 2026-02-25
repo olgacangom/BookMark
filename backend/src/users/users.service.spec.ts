@@ -42,4 +42,17 @@ describe('UsersService', () => {
     const result = await service.findOneByEmail('test@test.com');
     expect(result).toEqual(mockUser);
   });
+
+  it('should update a user', async () => {
+    mockUserRepository.save.mockResolvedValue({ ...mockUser, fullName: 'Updated Name' });
+    const result = await service.update('uuid', { fullName: 'Updated Name' });
+    expect(result.fullName).toEqual('Updated Name');
+  });
+
+  it('should remove a user', async () => {
+    mockUserRepository.findOneBy.mockResolvedValue(mockUser);
+    mockUserRepository.save.mockResolvedValue({ ...mockUser, isActive: false });
+    const result = await service.remove('uuid');
+    expect(result).toBeDefined();
+  });
 });

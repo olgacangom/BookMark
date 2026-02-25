@@ -33,4 +33,11 @@ describe('AuthController', () => {
     
     await expect(controller.login(loginDto)).rejects.toThrow('Credenciales inválidas');
   });
+  
+  it('should register a new user', async () => {
+    const dto = { email: 'new@test.com', password: 'password123', fullName: 'New User' }; // NOSONAR
+    const result = await controller.register(dto);
+    expect(result).toBeDefined();
+    expect(mockUsersService.create).toHaveBeenCalled();
+  });
 });
