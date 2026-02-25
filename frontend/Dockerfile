@@ -3,7 +3,10 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
-COPY . .
+COPY src/ ./src
+COPY public/ ./public
+COPY *.config.js ./
+COPY index.html ./
 RUN npm run build
 
 # Etapa de producción con Nginx

@@ -3,7 +3,9 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
-COPY . .
+COPY src/ ./src
+COPY tsconfig*.json ./
+COPY nest-cli.json ./
 RUN npm run build
 
 # Etapa de producción
