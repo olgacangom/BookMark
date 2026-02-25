@@ -1,8 +1,8 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { UsersService } from '../users/users.service';
-import { User } from 'src/users/entities/user.entity';
+import { User } from '../users/entities/user.entity';
 
 @Injectable()
 export class AuthService {
@@ -11,18 +11,17 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
-  // 1. Validar al usuario (Email + Bcrypt)
-  async validateUser(email: string, pass: string): Promise<any> {
+  async validateUser(email: string, pass: string): Promise<Partial<User> | null> {
     const user = await this.usersService.findOneByEmail(email);
     
     if (user && await bcrypt.compare(pass, user.password)) {
-      const { password: _, ...result } = user; // Usar _ para indicar que no se usará la variable 'password'
+      const result: Partial<User> = { ...user };
+      delete result.password; 
       return result;
     }
     return null;
   }
 
-  // 2. Generar el pasaporte (JWT)
   login(user: Partial<User>) {
     const payload = { email: user.email, sub: user.id };
     return {
