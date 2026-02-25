@@ -1,4 +1,4 @@
-name: Email Notification - Project Movements
+name: 📧 Email Notification - Project Movements
 
 on:
   # Se activa cuando mueves una tarjeta en el tablero de proyectos
@@ -16,7 +16,6 @@ jobs:
         id: info
         run: |
           # Obtenemos el estado (columna) actual
-          # Para project_item, buscamos el valor del campo 'Status'
           STATUS="${{ github.event.project_item.status || github.event.issue.state }}"
           ACTION="${{ github.event.action }}"
           
@@ -36,6 +35,8 @@ jobs:
           fi
 
       - name: Send mail
+        # El if evita que se envíen correos vacíos si por alguna razón se dispara un push
+        if: github.event_name != 'push'
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: smtp.gmail.com
