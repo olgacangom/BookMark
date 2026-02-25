@@ -11,7 +11,7 @@ import { JwtStrategy } from './jwt.strategy';
     UsersModule, // Para poder buscar usuarios por email
     PassportModule,
     JwtModule.register({
-      secret: 'CLAVE_SUPER_SECRETA', // Esto irá al .env después
+      secret: process.env.JWT_SECRET || 'clave-de-emergencia',
       signOptions: { expiresIn: '1h' }, // El token caduca en 1 hora
     }),
   ],
