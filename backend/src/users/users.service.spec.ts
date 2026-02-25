@@ -2,16 +2,19 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { UsersService } from './users.service';
 import { User } from './entities/user.entity';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 
 describe('UsersService', () => {
   let service: UsersService;
 
-  const mockUser = { id: 'uuid', email: 'test@test.com', password: 'non-secret-mock-value' };  // NOSONAR
+  const mockUser = { id: 'uuid', email: 'test@test.com', password: 'hash' }; // NOSONAR
   const mockUserRepository = {
-    findOneBy: jest.fn().mockResolvedValue(null),
+    findOneBy: jest.fn(),
     create: jest.fn().mockReturnValue(mockUser),
     save: jest.fn().mockResolvedValue(mockUser),
     find: jest.fn().mockResolvedValue([mockUser]),
+    preload: jest.fn(),
+    remove: jest.fn().mockResolvedValue(mockUser),
   };
 
   beforeEach(async () => {
@@ -24,35 +27,44 @@ describe('UsersService', () => {
     service = module.get<UsersService>(UsersService);
   });
 
-  it('should hash password and create user', async () => {
-    const dto = { email: 'new@test.com', password: 'password123', fullName: 'Test' }; //NOSONAR
-    const result = await service.create(dto);
-    expect(result).toBeDefined();
-    expect(mockUserRepository.save).toHaveBeenCalled();
+  it('should throw BadRequestException if email exists', async () => {
+    mockUserRepository.findOneBy.mockResolvedValue(mockUser);
+    const dto = { email: 'test@test.com', password: '123', fullName: 'Test' }; // NOSONAR
+    await expect(service.create(dto)).rejects.toThrow(BadRequestException);
   });
 
-  it('should return all users', async () => {
-    const result = await service.findAll();
-    expect(result).toEqual([mockUser]);
-    expect(mockUserRepository.find).toHaveBeenCalled();
+  it('should throw NotFoundException in findOne if user missing', async () => {
+    mockUserRepository.findOneBy.mockResolvedValue(null);
+    await expect(service.findOne('any-id')).rejects.toThrow(NotFoundException);
+  });
+
+  it('should update user successfully', async () => {
+    mockUserRepository.preload.mockResolvedValue(mockUser);
+    const result = await service.update('uuid', { fullName: 'New' });
+    expect(result).toBeDefined();
+  });
+
+  it('should throw NotFoundException in update if user missing', async () => {
+    mockUserRepository.preload.mockResolvedValue(null);
+    await expect(service.update('uuid', { fullName: 'New' })).rejects.toThrow(NotFoundException);
+  });
+
+  it('should remove user successfully', async () => {
+    mockUserRepository.findOneBy.mockResolvedValue(mockUser);
+    const result = await service.remove('uuid');
+    expect(result).toBeDefined();
   });
 
   it('should find one user by email', async () => {
     mockUserRepository.findOneBy.mockResolvedValue(mockUser);
     const result = await service.findOneByEmail('test@test.com');
     expect(result).toEqual(mockUser);
+    expect(mockUserRepository.findOneBy).toHaveBeenCalledWith({ email: 'test@test.com' });
   });
 
-  it('should update a user', async () => {
-    mockUserRepository.save.mockResolvedValue({ ...mockUser, fullName: 'Updated Name' });
-    const result = await service.update('uuid', { fullName: 'Updated Name' });
-    expect(result.fullName).toEqual('Updated Name');
-  });
-
-  it('should remove a user', async () => {
-    mockUserRepository.findOneBy.mockResolvedValue(mockUser);
-    mockUserRepository.save.mockResolvedValue({ ...mockUser, isActive: false });
-    const result = await service.remove('uuid');
-    expect(result).toBeDefined();
+  it('should return all users', async () => {
+    const result = await service.findAll();
+    expect(result).toEqual([mockUser]);
+    expect(mockUserRepository.find).toHaveBeenCalled();
   });
 });

@@ -36,4 +36,13 @@ describe('AuthService', () => {
     const result = service.login(mockUser);
     expect(result.access_token).toBe('mockToken');
   });
+
+  it('should return null if validation fails', async () => {
+    // Usamos el mock definido arriba para que devuelva false
+    const bcrypt = require('bcrypt');
+    jest.spyOn(bcrypt, 'compare').mockResolvedValue(false);
+    
+    const result = await service.validateUser('test@test.com', 'wrong'); // NOSONAR
+    expect(result).toBeNull();
+  });
 });

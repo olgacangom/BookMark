@@ -27,17 +27,25 @@ describe('AuthController', () => {
     expect(controller).toBeDefined();
   });
 
-  it('should throw UnauthorizedException if login fails', async () => {
-    mockAuthService.validateUser.mockResolvedValue(null);
-    const loginDto = { email: 'wrong@test.com', password: 'wrongPassword' }; // NOSONAR
-    
-    await expect(controller.login(loginDto)).rejects.toThrow('Credenciales inválidas');
-  });
-  
   it('should register a new user', async () => {
-    const dto = { email: 'new@test.com', password: 'password123', fullName: 'New User' }; // NOSONAR
+    const dto = { email: 'new@test.com', password: 'password123', fullName: 'New' }; // NOSONAR
     const result = await controller.register(dto);
     expect(result).toBeDefined();
     expect(mockUsersService.create).toHaveBeenCalled();
+  });
+
+  it('should throw UnauthorizedException on failed login', async () => {
+    mockAuthService.validateUser.mockResolvedValue(null);
+    const dto = { email: 'wrong@test.com', password: 'wrong' }; // NOSONAR
+    await expect(controller.login(dto)).rejects.toThrow('Credenciales inválidas');
+  });
+
+  it('should login successfully', async () => {
+    mockAuthService.validateUser.mockResolvedValue({ id: '1', email: 'test@test.com' });
+    const loginDto = { email: 'test@test.com', password: 'password123' }; // NOSONAR
+    
+    const result = await controller.login(loginDto);
+    expect(result).toEqual({ access_token: 'token' });
+    expect(mockAuthService.login).toHaveBeenCalled();
   });
 });
