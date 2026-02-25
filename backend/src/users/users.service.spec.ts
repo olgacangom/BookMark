@@ -6,7 +6,7 @@ import { User } from './entities/user.entity';
 describe('UsersService', () => {
   let service: UsersService;
 
-  const mockUser = { id: 'uuid', email: 'test@test.com', password: 'hashedPassword' };
+  const mockUser = { id: 'uuid', email: 'test@test.com', password: 'non-secret-mock-value' };  
   const mockUserRepository = {
     findOneBy: jest.fn().mockResolvedValue(null),
     create: jest.fn().mockReturnValue(mockUser),
