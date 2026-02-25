@@ -11,8 +11,17 @@ RUN npm run build
 # Etapa de producción
 FROM node:20-alpine
 WORKDIR /app
-COPY --from=builder /app/package*.json ./
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/dist ./dist
+
+# 1. Damos permisos de la carpeta de trabajo al usuario 'node'
+RUN chown node:node /app
+
+# 2. Cambiamos al usuario 'node' para que no use root
+USER node
+
+# 3. Copiamos los archivos asegurando que el dueño sea el usuario 'node'
+COPY --from=builder --chown=node:node /app/package*.json ./
+COPY --from=builder --chown=node:node /app/node_modules ./node_modules
+COPY --from=builder --chown=node:node /app/dist ./dist
+
 EXPOSE 3000
 CMD ["npm", "run", "start:prod"]
