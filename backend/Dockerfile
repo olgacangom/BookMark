@@ -18,10 +18,11 @@ RUN chown node:node /app
 # 2. Cambiamos al usuario 'node' para que no use root
 USER node
 
-# 3. Copiamos los archivos asegurando que el dueño sea el usuario 'node'; --chmod=555 (Lectura y Ejecución, pero NO Escritura)
-COPY --from=builder --chown=node:node --chmod=555 /app/package*.json ./
-COPY --from=builder --chown=node:node --chmod=555 /app/node_modules ./node_modules
-COPY --from=builder --chown=node:node --chmod=555 /app/dist ./dist
+# 3. Copiamos como DUEÑO root y permisos 755 (seguridad de archivos)
+# Esto evita que el usuario 'node' pueda modificar su propio código.
+COPY --from=builder --chown=root:root --chmod=755 /app/package*.json ./
+COPY --from=builder --chown=root:root --chmod=755 /app/node_modules ./node_modules
+COPY --from=builder --chown=root:root --chmod=755 /app/dist ./dist
 
 EXPOSE 3000
 CMD ["npm", "run", "start:prod"]
