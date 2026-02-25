@@ -2,7 +2,11 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
-import * as bcrypt from 'bcrypt';
+
+// Mockeamos bcrypt antes de los tests
+jest.mock('bcrypt', () => ({
+  compare: jest.fn().mockResolvedValue(true),
+}));
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -23,8 +27,7 @@ describe('AuthService', () => {
   });
 
   it('should validate user correctly', async () => {
-    jest.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
-    const result = await service.validateUser('test@test.com', 'password123');  // NOSONAR
+    const result = await service.validateUser('test@test.com', 'password123'); // NOSONAR
     expect(result).not.toBeNull();
     expect(result!.email).toBe(mockUser.email);
   });
