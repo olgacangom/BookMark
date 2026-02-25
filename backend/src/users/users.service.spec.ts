@@ -25,7 +25,7 @@ describe('UsersService', () => {
   });
 
   it('should hash password and create user', async () => {
-    const dto = { email: 'new@test.com', password: 'password123', fullName: 'Test' };
+    const dto = { email: 'new@test.com', password: 'password123', fullName: 'Test' }; //NOSONAR
     const result = await service.create(dto);
     expect(result).toBeDefined();
     expect(mockUserRepository.save).toHaveBeenCalled();

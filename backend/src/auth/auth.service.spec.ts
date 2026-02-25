@@ -24,7 +24,7 @@ describe('AuthService', () => {
 
   it('should validate user correctly', async () => {
     jest.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
-    const result = await service.validateUser('test@test.com', 'password123');
+    const result = await service.validateUser('test@test.com', 'password123');  // NOSONAR
     expect(result).not.toBeNull();
     expect(result!.email).toBe(mockUser.email);
   });
