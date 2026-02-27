@@ -30,11 +30,11 @@ describe('UsersController', () => {
   });
 
   it('should update user profile including bio and privacy', async () => {
-    const updateDto = { 
-      bio: 'Nueva bio profesional', 
-      isPublic: false 
+    const updateDto = {
+      bio: 'Nueva bio profesional',
+      isPublic: false,
     };
-    
+
     const result = await controller.update('uuid-1', updateDto);
     expect(result).toBeDefined();
     expect(mockUsersService.update).toHaveBeenCalledWith('uuid-1', updateDto);

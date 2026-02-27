@@ -11,12 +11,15 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
-  async validateUser(email: string, pass: string): Promise<Partial<User> | null> {
+  async validateUser(
+    email: string,
+    pass: string,
+  ): Promise<Partial<User> | null> {
     const user = await this.usersService.findOneByEmail(email);
-    
-    if (user && await bcrypt.compare(pass, user.password)) {
+
+    if (user && (await bcrypt.compare(pass, user.password))) {
       const result: Partial<User> = { ...user };
-      delete result.password; 
+      delete result.password;
       return result;
     }
     return null;

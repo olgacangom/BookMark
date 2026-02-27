@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
-import * as bcrypt from 'bcrypt'; 
+import * as bcrypt from 'bcrypt';
 
 // Mockeamos bcrypt antes de los tests
 jest.mock('bcrypt', () => ({
@@ -12,8 +12,14 @@ jest.mock('bcrypt', () => ({
 describe('AuthService', () => {
   let service: AuthService;
 
-  const mockUser = { id: 'uuid', email: 'test@test.com', password: 'non-secret-mock-value' }; // NOSONAR
-  const mockUsersService = { findOneByEmail: jest.fn().mockResolvedValue(mockUser) };
+  const mockUser = {
+    id: 'uuid',
+    email: 'test@test.com',
+    password: 'non-secret-mock-value',
+  }; // NOSONAR
+  const mockUsersService = {
+    findOneByEmail: jest.fn().mockResolvedValue(mockUser),
+  };
   const mockJwtService = { sign: jest.fn().mockReturnValue('mockToken') };
 
   beforeEach(async () => {

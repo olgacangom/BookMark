@@ -1,12 +1,20 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  OneToMany,
+} from 'typeorm';
 import { Exclude } from 'class-transformer';
+import { Book } from '../../books/entities/book.entity';
 
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn('uuid') // Seguridad: los UUID evitan que se adivine el número de usuarios
   id: string;
 
-  @Column({ unique: true }) 
+  @Column({ unique: true })
   email: string;
 
   @Column()
@@ -20,13 +28,16 @@ export class User {
   bio: string;
 
   @Column({ nullable: true })
-  avatarUrl: string; 
+  avatarUrl: string;
 
   @Column({ default: true }) // Por defecto el perfil es público
   isPublic: boolean;
 
   @Column({ default: true })
   isActive: boolean;
+
+  @OneToMany(() => Book, (book) => book.user)
+  books: Book[];
 
   @CreateDateColumn()
   createdAt: Date;
