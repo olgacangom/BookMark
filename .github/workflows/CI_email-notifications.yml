@@ -2,7 +2,7 @@ name: 📧 Email Notification - Project Movements
 
 on:
   # Se activa cuando mueves una tarjeta en el tablero de proyectos
-  project_item:
+  project_v2_item:
     types: [edited, created]
   # Mantenemos los de Issues por si las abres/cierras fuera del tablero
   issues:
