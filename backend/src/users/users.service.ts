@@ -72,7 +72,7 @@ export class UsersService {
     throw new ForbiddenException('Este perfil es privado');
   }
 
-  const { password, email, ...publicData } = user; // ocultamos email si es perfil público
+  const { password: _password, email: _email, ...publicData } = user; // ocultamos email si es perfil público
   return publicData;
   }
 
@@ -85,7 +85,7 @@ export class UsersService {
   }
 
   // Devolvemos los datos seguros (sin contraseña)
-  const { password, ...result } = user;
+  const { password: _password, ...result } = user;
   return result;
 }
 }
