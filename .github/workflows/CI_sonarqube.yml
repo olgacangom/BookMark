@@ -19,12 +19,21 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install Dependencies
+      # --- BACKEND ---
+      - name: Install Backend Dependencies
         run: cd backend && npm ci
 
-      - name: Run Tests with Coverage
+      - name: Run Backend Tests
         run: cd backend && npm run test:cov
 
+      # --- FRONTEND ---
+      - name: Install Frontend Dependencies
+        run: cd frontend && npm ci
+
+      - name: Run Frontend Tests
+        run: cd frontend && npm run test:coverage
+
+      # --- ANÁLISIS GLOBAL ---
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@master
         env:
@@ -36,6 +45,7 @@ jobs:
             -Dsonar.organization=olgacangom
             -Dsonar.sources=backend/src,frontend/src
             -Dsonar.tests=backend/src,frontend/src
-            -Dsonar.test.inclusions=**/*.spec.ts
-            -Dsonar.exclusions=backend/src/**/*.spec.ts,backend/test/**,backend/src/main.ts
-            -Dsonar.javascript.lcov.reportPaths=backend/coverage/lcov.info
+            -Dsonar.test.inclusions=**/*.spec.ts,**/*.test.tsx,**/*.test.ts
+            -Dsonar.exclusions=**/*.spec.ts,**/*.test.tsx,**/*.test.ts,backend/test/**,backend/src/main.ts,frontend/src/main.tsx,frontend/src/vite-env.d.ts
+            -Dsonar.javascript.lcov.reportPaths=backend/coverage/lcov.info,frontend/coverage/lcov.info
+            -Dsonar.cpd.exclusions=**/*.test.tsx,**/*.test.ts

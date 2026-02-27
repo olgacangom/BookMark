@@ -12,9 +12,9 @@ export const RegisterView = () => {
   const onSubmit = async (data: RegisterFormData) => {
     try {
       await authService.register(data);
-      alert("¡Registro exitoso! Ya puedes iniciar sesión.");
+      console.log("¡Registro exitoso! Ya puedes iniciar sesión.");
     } catch (error: any) {
-      alert(error.response?.data?.message || "Error al registrarse");
+      console.log(error.response?.data?.message || "Error al registrarse");
     }
   };
 
