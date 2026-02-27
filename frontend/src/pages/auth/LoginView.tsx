@@ -1,8 +1,8 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { Link } from 'react-router-dom';
 import { LoginFormData, loginSchema } from '../../schemas/auth.schema';
 import { authService } from '../../services/auth.service';
-import { Link } from 'react-router-dom';
 
 export const LoginView = () => {
   const { register, handleSubmit, formState: { errors } } = useForm<LoginFormData>({
@@ -12,7 +12,7 @@ export const LoginView = () => {
   const onSubmit = async (data: LoginFormData) => {
     try {
       const result = await authService.login(data);
-      localStorage.setItem('token', result.access_token); // Guardamos el token para futuras peticiones
+      localStorage.setItem('token', result.access_token);
       alert("Login exitoso");
     } catch (error: any) {
       alert("Credenciales inválidas");
@@ -25,14 +25,23 @@ export const LoginView = () => {
         <h2 className="text-2xl font-bold mb-6 text-center">Iniciar Sesión</h2>
 
         <div className="mb-4">
-          <label className="block text-sm font-medium mb-1">Email</label>
-          <input {...register('email')} className="w-full p-2 border border-gray-300 rounded" />
+          <label htmlFor="email" className="block text-sm font-medium mb-1">Email</label>
+          <input 
+            id="email" // 👈 Añadido
+            {...register('email')} 
+            className="w-full p-2 border border-gray-300 rounded" 
+          />
           {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>}
         </div>
 
         <div className="mb-6">
-          <label className="block text-sm font-medium mb-1">Contraseña</label>
-          <input type="password" {...register('password')} className="w-full p-2 border border-gray-300 rounded" />
+          <label htmlFor="password" className="block text-sm font-medium mb-1">Contraseña</label>
+          <input 
+            id="password" // 👈 Añadido
+            type="password" 
+            {...register('password')} 
+            className="w-full p-2 border border-gray-300 rounded" 
+          />
           {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>}
         </div>
 
