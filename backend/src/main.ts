@@ -5,6 +5,8 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  app.enableCors();
+
   // Activa la validación global
   app.useGlobalPipes(new ValidationPipe({
     whitelist: true, // Borra datos que no estén en el DTO (seguridad extra)
