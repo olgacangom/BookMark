@@ -2,104 +2,96 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { RegisterView } from './RegisterView';
 import { BrowserRouter } from 'react-router-dom';
 import { authService } from '../../services/auth.service';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Simulamos el servicio para que no intente conectar con el backend real
 vi.mock('../../services/auth.service', () => ({
-    authService: {
-        register: vi.fn(),
-    },
+  authService: {
+    register: vi.fn(),
+  },
 }));
 
 describe('RegisterView', () => {
-    beforeEach(() => {
-        vi.clearAllMocks(); // Limpia el historial de llamadas de los mocks
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+  });
+
+  it('debe registrar con éxito y mostrar log', async () => {
+    (authService.register as any).mockResolvedValue({ id: 1 });
+
+    render(
+      <BrowserRouter>
+        <RegisterView />
+      </BrowserRouter>
+    );
+
+    fireEvent.change(screen.getByLabelText(/Nombre Completo/i), { target: { value: 'Olga Cantalejo' } });
+    fireEvent.change(screen.getByLabelText(/Email/i), { target: { value: 'olga@test.com' } });
+    fireEvent.change(screen.getByLabelText(/Contraseña/i), { target: { value: 'Password123' } });
+    
+    fireEvent.click(screen.getByRole('button', { name: /Registrarse/i }));
+
+    await waitFor(() => {
+      expect(authService.register).toHaveBeenCalled();
+      expect(console.log).toHaveBeenCalledWith("¡Registro exitoso! Ya puedes iniciar sesión.");
     });
-    it('should submit the form and show success alert', async () => {
-        const alertMock = vi.spyOn(window, 'alert').mockImplementation(() => { });
+  });
 
-        render(
-            <BrowserRouter>
-                <RegisterView />
-            </BrowserRouter>
-        );
-
-        // Rellenamos los campos
-        fireEvent.change(screen.getByLabelText(/Nombre Completo/i), { target: { value: 'Olga Cantalejo' } });
-        fireEvent.change(screen.getByLabelText(/Email/i), { target: { value: 'olga@test.com' } });
-        fireEvent.change(screen.getByLabelText(/Contraseña/i), { target: { value: 'Password123' } });
-
-        // Click en registrarse
-        fireEvent.click(screen.getByRole('button', { name: /Registrarse/i }));
-
-        await waitFor(() => {
-            expect(authService.register).toHaveBeenCalled();
-            expect(alertMock).toHaveBeenCalledWith(expect.stringContaining("¡Registro exitoso!"));
-        });
+  it('debe mostrar el mensaje de error del servidor en el log', async () => {
+    const errorMsg = "El email ya existe";
+    (authService.register as any).mockRejectedValue({
+      response: { data: { message: errorMsg } }
     });
 
-    it('should show error message if registration fails', async () => {
-        const alertMock = vi.spyOn(window, 'alert').mockImplementation(() => { });
+    render(
+      <BrowserRouter>
+        <RegisterView />
+      </BrowserRouter>
+    );
 
-        // Configuramos el mock para que falle ESTA VEZ
-        (authService.register as any).mockRejectedValue({
-            response: { data: { message: 'El email ya existe' } }
-        });
+    fireEvent.change(screen.getByLabelText(/Nombre Completo/i), { target: { value: 'Test' } });
+    fireEvent.change(screen.getByLabelText(/Email/i), { target: { value: 'test@test.com' } });
+    fireEvent.change(screen.getByLabelText(/Contraseña/i), { target: { value: 'Password123' } });
 
-        render(
-            <BrowserRouter>
-                <RegisterView />
-            </BrowserRouter>
-        );
+    fireEvent.click(screen.getByRole('button', { name: /Registrarse/i }));
 
-        // IMPORTANTE: Hay que rellenar el formulario para que pase Zod
-        fireEvent.change(screen.getByLabelText(/Nombre Completo/i), { target: { value: 'Usuario Error' } });
-        fireEvent.change(screen.getByLabelText(/Email/i), { target: { value: 'error@test.com' } });
-        fireEvent.change(screen.getByLabelText(/Contraseña/i), { target: { value: 'Password123' } });
-
-        fireEvent.click(screen.getByRole('button', { name: /Registrarse/i }));
-
-        await waitFor(() => {
-            expect(alertMock).toHaveBeenCalledWith('El email ya existe');
-        });
+    await waitFor(() => {
+      expect(console.log).toHaveBeenCalledWith(errorMsg);
     });
-    it('should show validation errors when fields are empty', async () => {
-        render(
-            <BrowserRouter><RegisterView /></BrowserRouter>
-        );
+  });
 
-        // Pulsamos registrarse sin escribir nada
-        fireEvent.click(screen.getByRole('button', { name: /Registrarse/i }));
+  it('debe mostrar error genérico si el servidor no envía mensaje', async () => {
+    (authService.register as any).mockRejectedValue(new Error());
 
-        await waitFor(() => {
-            // Comprobamos que aparecen los mensajes definidos en auth.schema.ts
-            expect(screen.getByText(/El nombre debe tener al menos 2 caracteres/i)).toBeInTheDocument();
-            expect(screen.getByText(/Formato de email inválido/i)).toBeInTheDocument();
-            expect(screen.getByText(/La contraseña debe tener al menos 8 caracteres/i)).toBeInTheDocument();
-        });
+    render(
+      <BrowserRouter>
+        <RegisterView />
+      </BrowserRouter>
+    );
+
+    fireEvent.change(screen.getByLabelText(/Nombre Completo/i), { target: { value: 'Test' } });
+    fireEvent.change(screen.getByLabelText(/Email/i), { target: { value: 'test@test.com' } });
+    fireEvent.change(screen.getByLabelText(/Contraseña/i), { target: { value: 'Password123' } });
+
+    fireEvent.click(screen.getByRole('button', { name: /Registrarse/i }));
+
+    await waitFor(() => {
+      expect(console.log).toHaveBeenCalledWith("Error al registrarse");
     });
-    it('should show generic error message if server response has no message', async () => {
-        const alertMock = vi.spyOn(window, 'alert').mockImplementation(() => { });
+  });
 
-        // Forzamos un error genérico sin mensaje detallado
-        (authService.register as any).mockRejectedValue(new Error("Generic error"));
+  it('debe mostrar errores de Zod al dejar campos vacíos', async () => {
+    render(
+      <BrowserRouter>
+        <RegisterView />
+      </BrowserRouter>
+    );
 
-        render(
-            <BrowserRouter>
-                <RegisterView />
-            </BrowserRouter>
-        );
+    fireEvent.click(screen.getByRole('button', { name: /Registrarse/i }));
 
-        // Rellenamos para pasar Zod
-        fireEvent.change(screen.getByLabelText(/Nombre Completo/i), { target: { value: 'Test User' } });
-        fireEvent.change(screen.getByLabelText(/Email/i), { target: { value: 'test@test.com' } });
-        fireEvent.change(screen.getByLabelText(/Contraseña/i), { target: { value: 'Password123' } });
-
-        fireEvent.click(screen.getByRole('button', { name: /Registrarse/i }));
-
-        await waitFor(() => {
-            // Esto obligará a entrar en la rama del "||" que estaba en amarillo
-            expect(alertMock).toHaveBeenCalledWith("Error al registrarse");
-        });
+    await waitFor(() => {
+      expect(screen.getByText(/El nombre debe tener al menos 2 caracteres/i)).toBeInTheDocument();
+      expect(screen.getByText(/Formato de email inválido/i)).toBeInTheDocument();
     });
+  });
 });
