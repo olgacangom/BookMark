@@ -65,19 +65,20 @@ export class UsersService {
     return this.userRepository.remove(user);
   }
 
-  async getPublicProfile(id: string) {
+async getPublicProfile(id: string) {
     const user = await this.findOne(id);
 
     if (!user.isPublic) {
       throw new ForbiddenException('Este perfil es privado');
     }
-
-    // Convertimos a 'any' para que TS nos deje usar 'delete' en propiedades obligatorias
-    const result = { ...user } as any;
-    delete result.password;
-    delete result.email;
-
-    return result;
+    // Seleccionamos solo los campos públicos
+    return {
+      id: user.id,
+      fullName: user.fullName,
+      bio: user.bio,
+      avatarUrl: user.avatarUrl,
+      isPublic: user.isPublic,
+    };
   }
 
   async findOneProfile(id: string, requesterId?: string): Promise<Partial<User>> {
@@ -87,9 +88,11 @@ export class UsersService {
       throw new ForbiddenException('Este perfil es privado');
     }
 
-    const result = { ...user } as any;
-    delete result.password;
-
+    // Para el perfil completo (pero sin password), devolvemos todo excepto el password
+    // Usamos esta forma para que el linter no detecte 'password' como variable no usada
+    const { password, ...result } = user;
+    void password; // Esto le dice al linter que 'password' ha sido "usada" (ignorada conscientemente)
+    
     return result;
   }
 }
