@@ -3,8 +3,12 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Link } from 'react-router-dom';
 import { LoginFormData, loginSchema } from '../../schemas/auth.schema';
 import { authService } from '../../services/auth.service';
+import { useAuth } from '../../context/AuthContext'; 
+import { useNavigate } from 'react-router-dom';
 
 export const LoginView = () => {
+  const { login } = useAuth(); 
+  const navigate = useNavigate();
   const { register, handleSubmit, formState: { errors } } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema)
   });
@@ -12,8 +16,9 @@ export const LoginView = () => {
   const onSubmit = async (data: LoginFormData) => {
     try {
       const result = await authService.login(data);
-      localStorage.setItem('token', result.access_token);
+      login(result.access_token);
       console.log("Login exitoso");
+      navigate('/dashboard');
     } catch {
       console.log("Credenciales inválidas");
     }

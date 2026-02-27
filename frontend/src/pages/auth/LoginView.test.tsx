@@ -3,6 +3,8 @@ import { LoginView } from './LoginView';
 import { BrowserRouter } from 'react-router-dom';
 import { authService } from '../../services/auth.service';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { AuthProvider } from '../../context/AuthContext';
+import React from 'react';
 
 // Mock del servicio
 vi.mock('../../services/auth.service', () => ({
@@ -14,18 +16,25 @@ vi.mock('../../services/auth.service', () => ({
 describe('LoginView', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.spyOn(console, 'log').mockImplementation(() => { });
   });
+
+  // 🛠️ Función ayudante para evitar repetición
+  const renderWithProviders = (ui: React.ReactElement) => {
+    return render(
+      <AuthProvider>
+        <BrowserRouter>
+          {ui}
+        </BrowserRouter>
+      </AuthProvider>
+    );
+  };
 
   it('debe loguearse con éxito, guardar token y poner log de éxito', async () => {
     const setItemSpy = vi.spyOn(Storage.prototype, 'setItem');
     (authService.login as any).mockResolvedValue({ access_token: 'token-123' });
 
-    render(
-      <BrowserRouter>
-        <LoginView />
-      </BrowserRouter>
-    );
+    renderWithProviders(<LoginView />);
 
     fireEvent.change(screen.getByLabelText(/Email/i), { target: { value: 'test@test.com' } });
     fireEvent.change(screen.getByLabelText(/Contraseña/i), { target: { value: 'password123' } });
@@ -44,11 +53,7 @@ describe('LoginView', () => {
   it('debe mostrar log de error si las credenciales fallan', async () => {
     (authService.login as any).mockRejectedValue(new Error());
 
-    render(
-      <BrowserRouter>
-        <LoginView />
-      </BrowserRouter>
-    );
+    renderWithProviders(<LoginView />);
 
     fireEvent.change(screen.getByLabelText(/Email/i), { target: { value: 'error@test.com' } });
     fireEvent.change(screen.getByLabelText(/Contraseña/i), { target: { value: 'wrong' } });
@@ -60,11 +65,7 @@ describe('LoginView', () => {
   });
 
   it('debe mostrar errores de Zod si los campos están vacíos', async () => {
-    render(
-      <BrowserRouter>
-        <LoginView />
-      </BrowserRouter>
-    );
+    renderWithProviders(<LoginView />);
 
     fireEvent.click(screen.getByRole('button', { name: /Entrar/i }));
 

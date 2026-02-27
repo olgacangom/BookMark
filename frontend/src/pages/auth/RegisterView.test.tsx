@@ -3,6 +3,7 @@ import { RegisterView } from './RegisterView';
 import { BrowserRouter } from 'react-router-dom';
 import { authService } from '../../services/auth.service';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { AuthProvider } from '../../context/AuthContext';
 
 vi.mock('../../services/auth.service', () => ({
   authService: {
@@ -13,22 +14,24 @@ vi.mock('../../services/auth.service', () => ({
 describe('RegisterView', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.spyOn(console, 'log').mockImplementation(() => { });
   });
 
   it('debe registrar con éxito y mostrar log', async () => {
     (authService.register as any).mockResolvedValue({ id: 1 });
 
     render(
-      <BrowserRouter>
-        <RegisterView />
-      </BrowserRouter>
+      <AuthProvider>
+        <BrowserRouter>
+          <RegisterView />
+        </BrowserRouter>
+      </AuthProvider>
     );
 
     fireEvent.change(screen.getByLabelText(/Nombre Completo/i), { target: { value: 'Olga Cantalejo' } });
     fireEvent.change(screen.getByLabelText(/Email/i), { target: { value: 'olga@test.com' } });
     fireEvent.change(screen.getByLabelText(/Contraseña/i), { target: { value: 'Password123' } });
-    
+
     fireEvent.click(screen.getByRole('button', { name: /Registrarse/i }));
 
     await waitFor(() => {

@@ -6,7 +6,7 @@ import tseslint from 'typescript-eslint'
 
 export default tseslint.config(
   // 1. Ignorar carpetas de compilación
-  { ignores: ['dist'] },
+  { ignores: ['dist', 'coverage'] },
 
   {
     extends: [
