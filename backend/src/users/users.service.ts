@@ -1,4 +1,9 @@
-import { Injectable, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
@@ -11,7 +16,7 @@ export class UsersService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
-  ) { }
+  ) {}
 
   // S1-01: Crear usuario con Hash de Bcrypt
   async create(createUserDto: CreateUserDto) {
@@ -45,7 +50,8 @@ export class UsersService {
     return this.userRepository.find();
   }
 
-  async findOne(id: string) { // Cambiado a string por el UUID
+  async findOne(id: string) {
+    // Cambiado a string por el UUID
     const user = await this.userRepository.findOneBy({ id });
     if (!user) throw new NotFoundException('Usuario no encontrado');
     return user;
@@ -65,7 +71,7 @@ export class UsersService {
     return this.userRepository.remove(user);
   }
 
-async getPublicProfile(id: string) {
+  async getPublicProfile(id: string) {
     const user = await this.findOne(id);
 
     if (!user.isPublic) {
@@ -81,7 +87,10 @@ async getPublicProfile(id: string) {
     };
   }
 
-  async findOneProfile(id: string, requesterId?: string): Promise<Partial<User>> {
+  async findOneProfile(
+    id: string,
+    requesterId?: string,
+  ): Promise<Partial<User>> {
     const user = await this.findOne(id);
 
     if (!user.isPublic && user.id !== requesterId) {
@@ -92,7 +101,7 @@ async getPublicProfile(id: string) {
     // Usamos esta forma para que el linter no detecte 'password' como variable no usada
     const { password, ...result } = user;
     void password; // Esto le dice al linter que 'password' ha sido "usada" (ignorada conscientemente)
-    
+
     return result;
   }
 }

@@ -6,9 +6,9 @@ import { UsersService } from '../users/users.service';
 describe('AuthController', () => {
   let controller: AuthController;
 
-  const mockAuthService = { 
+  const mockAuthService = {
     validateUser: jest.fn().mockResolvedValue({ id: '1' }),
-    login: jest.fn().mockResolvedValue({ access_token: 'token' }) 
+    login: jest.fn().mockResolvedValue({ access_token: 'token' }),
   };
   const mockUsersService = { create: jest.fn().mockResolvedValue({ id: '1' }) };
 
@@ -28,7 +28,11 @@ describe('AuthController', () => {
   });
 
   it('should register a new user', async () => {
-    const dto = { email: 'new@test.com', password: 'password123', fullName: 'New' }; // NOSONAR
+    const dto = {
+      email: 'new@test.com',
+      password: 'password123',
+      fullName: 'New',
+    }; // NOSONAR
     const result = await controller.register(dto);
     expect(result).toBeDefined();
     expect(mockUsersService.create).toHaveBeenCalled();
@@ -37,13 +41,18 @@ describe('AuthController', () => {
   it('should throw UnauthorizedException on failed login', async () => {
     mockAuthService.validateUser.mockResolvedValue(null);
     const dto = { email: 'wrong@test.com', password: 'wrong' }; // NOSONAR
-    await expect(controller.login(dto)).rejects.toThrow('Credenciales inválidas');
+    await expect(controller.login(dto)).rejects.toThrow(
+      'Credenciales inválidas',
+    );
   });
 
   it('should login successfully', async () => {
-    mockAuthService.validateUser.mockResolvedValue({ id: '1', email: 'test@test.com' });
+    mockAuthService.validateUser.mockResolvedValue({
+      id: '1',
+      email: 'test@test.com',
+    });
     const loginDto = { email: 'test@test.com', password: 'password123' }; // NOSONAR
-    
+
     const result = await controller.login(loginDto);
     expect(result).toEqual({ access_token: 'token' });
     expect(mockAuthService.login).toHaveBeenCalled();

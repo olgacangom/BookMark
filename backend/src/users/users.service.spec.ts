@@ -2,17 +2,21 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { UsersService } from './users.service';
 import { User } from './entities/user.entity';
-import { BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  BadRequestException,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 
 describe('UsersService', () => {
   let service: UsersService;
 
-  const mockUser = { 
-    id: 'uuid', 
-    email: 'test@test.com', 
+  const mockUser = {
+    id: 'uuid',
+    email: 'test@test.com',
     password: 'hash',
     isPublic: true,
-    bio: 'My bio'
+    bio: 'My bio',
   }; // NOSONAR
 
   const mockUserRepository = {
@@ -53,7 +57,9 @@ describe('UsersService', () => {
 
   it('should throw NotFoundException in update if user missing', async () => {
     mockUserRepository.preload.mockResolvedValue(null);
-    await expect(service.update('uuid', { fullName: 'New' })).rejects.toThrow(NotFoundException);
+    await expect(service.update('uuid', { fullName: 'New' })).rejects.toThrow(
+      NotFoundException,
+    );
   });
 
   it('should remove user successfully', async () => {
@@ -66,7 +72,9 @@ describe('UsersService', () => {
     mockUserRepository.findOneBy.mockResolvedValue(mockUser);
     const result = await service.findOneByEmail('test@test.com');
     expect(result).toEqual(mockUser);
-    expect(mockUserRepository.findOneBy).toHaveBeenCalledWith({ email: 'test@test.com' });
+    expect(mockUserRepository.findOneBy).toHaveBeenCalledWith({
+      email: 'test@test.com',
+    });
   });
 
   it('should return all users', async () => {
@@ -76,32 +84,50 @@ describe('UsersService', () => {
   });
 
   it('should return profile if user is public (findOneProfile)', async () => {
-    mockUserRepository.findOneBy.mockResolvedValue({ ...mockUser, isPublic: true });
+    mockUserRepository.findOneBy.mockResolvedValue({
+      ...mockUser,
+      isPublic: true,
+    });
     const result = await service.findOneProfile('uuid', 'visitor-uuid');
     expect(result).toBeDefined();
   });
 
   it('should return profile if user is private but owner (findOneProfile)', async () => {
-    mockUserRepository.findOneBy.mockResolvedValue({ ...mockUser, isPublic: false });
+    mockUserRepository.findOneBy.mockResolvedValue({
+      ...mockUser,
+      isPublic: false,
+    });
     const result = await service.findOneProfile('uuid', 'uuid');
     expect(result).toBeDefined();
   });
 
   it('should throw ForbiddenException if user is private and not owner (findOneProfile)', async () => {
-    mockUserRepository.findOneBy.mockResolvedValue({ ...mockUser, isPublic: false });
-    await expect(service.findOneProfile('uuid', 'other-uuid')).rejects.toThrow(ForbiddenException);
+    mockUserRepository.findOneBy.mockResolvedValue({
+      ...mockUser,
+      isPublic: false,
+    });
+    await expect(service.findOneProfile('uuid', 'other-uuid')).rejects.toThrow(
+      ForbiddenException,
+    );
   });
 
   it('should throw ForbiddenException in getPublicProfile if user is private', async () => {
-    mockUserRepository.findOneBy.mockResolvedValue({ ...mockUser, isPublic: false });
-    await expect(service.getPublicProfile('uuid')).rejects.toThrow(ForbiddenException);
+    mockUserRepository.findOneBy.mockResolvedValue({
+      ...mockUser,
+      isPublic: false,
+    });
+    await expect(service.getPublicProfile('uuid')).rejects.toThrow(
+      ForbiddenException,
+    );
   });
 
   it('should return data in getPublicProfile if user is public', async () => {
-    mockUserRepository.findOneBy.mockResolvedValue({ ...mockUser, isPublic: true });
+    mockUserRepository.findOneBy.mockResolvedValue({
+      ...mockUser,
+      isPublic: true,
+    });
     const result = await service.getPublicProfile('uuid');
     expect(result).toBeDefined();
     expect(result).not.toHaveProperty('password'); // Verificamos que se oculte la password
   });
-  
 });
