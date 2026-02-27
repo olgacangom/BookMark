@@ -11,7 +11,7 @@ export class UsersService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
-  ) {}
+  ) { }
 
   // S1-01: Crear usuario con Hash de Bcrypt
   async create(createUserDto: CreateUserDto) {
@@ -66,26 +66,30 @@ export class UsersService {
   }
 
   async getPublicProfile(id: string) {
-  const user = await this.findOne(id); // Usa el findOne que ya tienes
-  
-  if (!user.isPublic) {
-    throw new ForbiddenException('Este perfil es privado');
-  }
+    const user = await this.findOne(id);
 
-  const { password: _password, email: _email, ...publicData } = user; // ocultamos email si es perfil público
-  return publicData;
+    if (!user.isPublic) {
+      throw new ForbiddenException('Este perfil es privado');
+    }
+
+    // Convertimos a 'any' para que TS nos deje usar 'delete' en propiedades obligatorias
+    const result = { ...user } as any;
+    delete result.password;
+    delete result.email;
+
+    return result;
   }
 
   async findOneProfile(id: string, requesterId?: string): Promise<Partial<User>> {
-  const user = await this.findOne(id); // Usa el findOne que ya tiene el throw NotFoundException
+    const user = await this.findOne(id);
 
-  // Si el perfil es privado Y el que pide los datos NO es el dueño...
-  if (!user.isPublic && user.id !== requesterId) {
-    throw new ForbiddenException('Este perfil es privado');
+    if (!user.isPublic && user.id !== requesterId) {
+      throw new ForbiddenException('Este perfil es privado');
+    }
+
+    const result = { ...user } as any;
+    delete result.password;
+
+    return result;
   }
-
-  // Devolvemos los datos seguros (sin contraseña)
-  const { password: _password, ...result } = user;
-  return result;
-}
 }
