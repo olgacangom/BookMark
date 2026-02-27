@@ -2,12 +2,19 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { UsersService } from './users.service';
 import { User } from './entities/user.entity';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
 
 describe('UsersService', () => {
   let service: UsersService;
 
-  const mockUser = { id: 'uuid', email: 'test@test.com', password: 'hash' }; // NOSONAR
+  const mockUser = { 
+    id: 'uuid', 
+    email: 'test@test.com', 
+    password: 'hash',
+    isPublic: true,
+    bio: 'My bio'
+  }; // NOSONAR
+
   const mockUserRepository = {
     findOneBy: jest.fn(),
     create: jest.fn().mockReturnValue(mockUser),
@@ -67,4 +74,34 @@ describe('UsersService', () => {
     expect(result).toEqual([mockUser]);
     expect(mockUserRepository.find).toHaveBeenCalled();
   });
+
+  it('should return profile if user is public (findOneProfile)', async () => {
+    mockUserRepository.findOneBy.mockResolvedValue({ ...mockUser, isPublic: true });
+    const result = await service.findOneProfile('uuid', 'visitor-uuid');
+    expect(result).toBeDefined();
+  });
+
+  it('should return profile if user is private but owner (findOneProfile)', async () => {
+    mockUserRepository.findOneBy.mockResolvedValue({ ...mockUser, isPublic: false });
+    const result = await service.findOneProfile('uuid', 'uuid');
+    expect(result).toBeDefined();
+  });
+
+  it('should throw ForbiddenException if user is private and not owner (findOneProfile)', async () => {
+    mockUserRepository.findOneBy.mockResolvedValue({ ...mockUser, isPublic: false });
+    await expect(service.findOneProfile('uuid', 'other-uuid')).rejects.toThrow(ForbiddenException);
+  });
+
+  it('should throw ForbiddenException in getPublicProfile if user is private', async () => {
+    mockUserRepository.findOneBy.mockResolvedValue({ ...mockUser, isPublic: false });
+    await expect(service.getPublicProfile('uuid')).rejects.toThrow(ForbiddenException);
+  });
+
+  it('should return data in getPublicProfile if user is public', async () => {
+    mockUserRepository.findOneBy.mockResolvedValue({ ...mockUser, isPublic: true });
+    const result = await service.getPublicProfile('uuid');
+    expect(result).toBeDefined();
+    expect(result).not.toHaveProperty('password'); // Verificamos que se oculte la password
+  });
+  
 });

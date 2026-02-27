@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
@@ -11,7 +11,7 @@ export class UsersService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
-  ) {}
+  ) { }
 
   // S1-01: Crear usuario con Hash de Bcrypt
   async create(createUserDto: CreateUserDto) {
@@ -63,5 +63,36 @@ export class UsersService {
   async remove(id: string) {
     const user = await this.findOne(id);
     return this.userRepository.remove(user);
+  }
+
+async getPublicProfile(id: string) {
+    const user = await this.findOne(id);
+
+    if (!user.isPublic) {
+      throw new ForbiddenException('Este perfil es privado');
+    }
+    // Seleccionamos solo los campos públicos
+    return {
+      id: user.id,
+      fullName: user.fullName,
+      bio: user.bio,
+      avatarUrl: user.avatarUrl,
+      isPublic: user.isPublic,
+    };
+  }
+
+  async findOneProfile(id: string, requesterId?: string): Promise<Partial<User>> {
+    const user = await this.findOne(id);
+
+    if (!user.isPublic && user.id !== requesterId) {
+      throw new ForbiddenException('Este perfil es privado');
+    }
+
+    // Para el perfil completo (pero sin password), devolvemos todo excepto el password
+    // Usamos esta forma para que el linter no detecte 'password' como variable no usada
+    const { password, ...result } = user;
+    void password; // Esto le dice al linter que 'password' ha sido "usada" (ignorada conscientemente)
+    
+    return result;
   }
 }

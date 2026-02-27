@@ -16,6 +16,15 @@ export class User {
   @Column({ nullable: true })
   fullName: string;
 
+  @Column({ nullable: true })
+  bio: string;
+
+  @Column({ nullable: true })
+  avatarUrl: string; 
+
+  @Column({ default: true }) // Por defecto el perfil es público
+  isPublic: boolean;
+
   @Column({ default: true })
   isActive: boolean;
 
