@@ -5,19 +5,20 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import tseslint from 'typescript-eslint'
 
 export default tseslint.config(
+  // 1. Ignorar carpetas de compilación
   { ignores: ['dist'] },
+
   {
-    
     extends: [
       js.configs.recommended,
-      ...tseslint.configs.recommended, 
+      ...tseslint.configs.recommended,
     ],
-    files: ['**/*.{ts,tsx,js,jsx}'], 
+    files: ['**/*.{ts,tsx}'], 
     languageOptions: {
       ecmaVersion: 2020,
       globals: globals.browser,
       parserOptions: {
-        project: ['./tsconfig.app.json', './tsconfig.node.json'], 
+        project: ['./tsconfig.app.json'],
         tsconfigRootDir: import.meta.dirname,
       },
     },
@@ -31,9 +32,14 @@ export default tseslint.config(
         'warn',
         { allowConstantExport: true },
       ],
-      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-explicit-any': 'off', 
       'no-unused-vars': 'off', 
-      '@typescript-eslint/no-unused-vars': ['warn']
+      '@typescript-eslint/no-unused-vars': ['warn', { "argsIgnorePattern": "^_" }] 
     },
+  },
+
+  {
+    files: ['*.config.js', 'eslint.config.js'],
+    extends: [tseslint.configs.disableTypeChecked],
   },
 )

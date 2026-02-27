@@ -14,7 +14,7 @@ export const LoginView = () => {
       const result = await authService.login(data);
       localStorage.setItem('token', result.access_token);
       console.log("Login exitoso");
-    } catch (error: any) {
+    } catch {
       console.log("Credenciales inválidas");
     }
   };

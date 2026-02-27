@@ -14,7 +14,6 @@ vi.mock('../../services/auth.service', () => ({
 describe('LoginView', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Espiamos console.log porque es lo que usa tu componente
     vi.spyOn(console, 'log').mockImplementation(() => {});
   });
 
