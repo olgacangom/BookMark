@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
@@ -64,4 +64,28 @@ export class UsersService {
     const user = await this.findOne(id);
     return this.userRepository.remove(user);
   }
+
+  async getPublicProfile(id: string) {
+  const user = await this.findOne(id); // Usa el findOne que ya tienes
+  
+  if (!user.isPublic) {
+    throw new ForbiddenException('Este perfil es privado');
+  }
+
+  const { password, email, ...publicData } = user; // ocultamos email si es perfil público
+  return publicData;
+  }
+
+  async findOneProfile(id: string, requesterId?: string): Promise<Partial<User>> {
+  const user = await this.findOne(id); // Usa el findOne que ya tiene el throw NotFoundException
+
+  // Si el perfil es privado Y el que pide los datos NO es el dueño...
+  if (!user.isPublic && user.id !== requesterId) {
+    throw new ForbiddenException('Este perfil es privado');
+  }
+
+  // Devolvemos los datos seguros (sin contraseña)
+  const { password, ...result } = user;
+  return result;
+}
 }
