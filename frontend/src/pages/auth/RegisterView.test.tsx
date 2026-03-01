@@ -1,11 +1,12 @@
+import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { RegisterView } from './RegisterView';
-import { BrowserRouter } from 'react-router-dom';
-import { authService } from '../../auth/auth.service';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { BrowserRouter } from 'react-router-dom';
+import { RegisterView } from './RegisterView';
+import { authService } from '../../auth/auth.service';
 import { AuthProvider } from '../../context/AuthContext';
 
-vi.mock('../../services/auth.service', () => ({
+vi.mock('../../auth/auth.service', () => ({
   authService: {
     register: vi.fn(),
   },
@@ -17,16 +18,20 @@ describe('RegisterView', () => {
     vi.spyOn(console, 'log').mockImplementation(() => { });
   });
 
-  it('debe registrar con éxito y mostrar log', async () => {
-    (authService.register as any).mockResolvedValue({ id: 1 });
-
-    render(
+  const renderWithProviders = (ui: React.ReactElement) => {
+    return render(
       <AuthProvider>
         <BrowserRouter>
-          <RegisterView />
+          {ui}
         </BrowserRouter>
       </AuthProvider>
     );
+  };
+
+  it('debe registrar con éxito y mostrar log', async () => {
+    vi.mocked(authService.register).mockResolvedValue({ id: 1 });
+
+    renderWithProviders(<RegisterView />);
 
     fireEvent.change(screen.getByLabelText(/Nombre Completo/i), { target: { value: 'Olga Cantalejo' } });
     fireEvent.change(screen.getByLabelText(/Email/i), { target: { value: 'olga@test.com' } });
@@ -42,15 +47,11 @@ describe('RegisterView', () => {
 
   it('debe mostrar el mensaje de error del servidor en el log', async () => {
     const errorMsg = "El email ya existe";
-    (authService.register as any).mockRejectedValue({
+    vi.mocked(authService.register).mockRejectedValue({
       response: { data: { message: errorMsg } }
     });
 
-    render(
-      <BrowserRouter>
-        <RegisterView />
-      </BrowserRouter>
-    );
+    renderWithProviders(<RegisterView />);
 
     fireEvent.change(screen.getByLabelText(/Nombre Completo/i), { target: { value: 'Test' } });
     fireEvent.change(screen.getByLabelText(/Email/i), { target: { value: 'test@test.com' } });
@@ -64,13 +65,9 @@ describe('RegisterView', () => {
   });
 
   it('debe mostrar error genérico si el servidor no envía mensaje', async () => {
-    (authService.register as any).mockRejectedValue(new Error());
+    vi.mocked(authService.register).mockRejectedValue(new Error("Server Error"));
 
-    render(
-      <BrowserRouter>
-        <RegisterView />
-      </BrowserRouter>
-    );
+    renderWithProviders(<RegisterView />);
 
     fireEvent.change(screen.getByLabelText(/Nombre Completo/i), { target: { value: 'Test' } });
     fireEvent.change(screen.getByLabelText(/Email/i), { target: { value: 'test@test.com' } });
@@ -84,11 +81,7 @@ describe('RegisterView', () => {
   });
 
   it('debe mostrar errores de Zod al dejar campos vacíos', async () => {
-    render(
-      <BrowserRouter>
-        <RegisterView />
-      </BrowserRouter>
-    );
+    renderWithProviders(<RegisterView />);
 
     fireEvent.click(screen.getByRole('button', { name: /Registrarse/i }));
 
