@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { bookService, Book, BookStatus } from '../books/book.service';
-import { BookCard } from '../components/BookCard';
+import { bookService, Book, BookStatus } from '../../books/book.service';
+import { BookCard } from '../../components/BookCard';
 
 export const DashboardView = () => {
   const [books, setBooks] = useState<Book[]>([]);

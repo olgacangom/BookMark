@@ -3,7 +3,7 @@ import { AuthProvider } from './context/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { LoginView } from './pages/auth/LoginView';
 import { RegisterView } from './pages/auth/RegisterView';
-import { DashboardView } from './pages/DashboardView'; 
+import { DashboardView } from './pages/dashboard/DashboardView'; 
 
 function App() {
   return (
