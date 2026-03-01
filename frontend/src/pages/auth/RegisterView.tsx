@@ -2,7 +2,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link } from 'react-router-dom';
 import { RegisterFormData, registerSchema } from '../../schemas/auth.schema';
-import { authService } from '../../services/auth.service';
+import { authService } from '../../auth/auth.service';
 
 export const RegisterView = () => {
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<RegisterFormData>({

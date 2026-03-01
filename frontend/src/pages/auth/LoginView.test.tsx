@@ -1,15 +1,15 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { LoginView } from './LoginView';
-import { BrowserRouter } from 'react-router-dom';
-import { authService } from '../../services/auth.service';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { AuthProvider } from '../../context/AuthContext';
 import React from 'react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { BrowserRouter } from 'react-router-dom';
+import { LoginView } from './LoginView';
+import { authService } from '../../auth/auth.service';
+import { AuthProvider } from '../../context/AuthContext';
 
-// Mock del servicio
-vi.mock('../../services/auth.service', () => ({
+vi.mock('../../auth/auth.service', () => ({
   authService: {
     login: vi.fn(),
+    register: vi.fn(),
   },
 }));
 
@@ -19,7 +19,6 @@ describe('LoginView', () => {
     vi.spyOn(console, 'log').mockImplementation(() => { });
   });
 
-  // 🛠️ Función ayudante para evitar repetición
   const renderWithProviders = (ui: React.ReactElement) => {
     return render(
       <AuthProvider>
@@ -32,7 +31,8 @@ describe('LoginView', () => {
 
   it('debe loguearse con éxito, guardar token y poner log de éxito', async () => {
     const setItemSpy = vi.spyOn(Storage.prototype, 'setItem');
-    (authService.login as any).mockResolvedValue({ access_token: 'token-123' });
+    
+    vi.mocked(authService.login).mockResolvedValue({ access_token: 'token-123' });
 
     renderWithProviders(<LoginView />);
 
@@ -51,7 +51,7 @@ describe('LoginView', () => {
   });
 
   it('debe mostrar log de error si las credenciales fallan', async () => {
-    (authService.login as any).mockRejectedValue(new Error());
+    vi.mocked(authService.login).mockRejectedValue(new Error("Unauthorized"));
 
     renderWithProviders(<LoginView />);
 
