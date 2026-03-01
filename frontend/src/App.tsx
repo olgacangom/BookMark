@@ -3,6 +3,7 @@ import { AuthProvider } from './context/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { LoginView } from './pages/auth/LoginView';
 import { RegisterView } from './pages/auth/RegisterView';
+import { DashboardView } from './pages/DashboardView'; 
 
 function App() {
   return (
@@ -13,10 +14,10 @@ function App() {
           <Route path="/login" element={<LoginView />} />
           <Route path="/register" element={<RegisterView />} />
 
-          {/* Rutas Protegidas (Solo entras si estás logueado) */}
+          {/* Rutas Protegidas */}
           <Route element={<ProtectedRoute />}>
-            <Route path="/dashboard" element={<div>¡Bienvenido al Dashboard Privado!</div>} />
-            {/* Aquí irán tus futuras páginas de marcadores/bookmarks */}
+            {/* 📚 Cambiamos el placeholder por el Dashboard real */}
+            <Route path="/dashboard" element={<DashboardView />} />
           </Route>
 
           {/* Redirección por defecto */}

@@ -1,7 +1,7 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { RegisterView } from './RegisterView';
 import { BrowserRouter } from 'react-router-dom';
-import { authService } from '../../services/auth.service';
+import { authService } from '../../auth/auth.service';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { AuthProvider } from '../../context/AuthContext';
 
