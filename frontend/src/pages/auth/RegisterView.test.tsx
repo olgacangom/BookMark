@@ -6,9 +6,20 @@ import { RegisterView } from './RegisterView';
 import { authService } from '../../auth/auth.service';
 import { AuthProvider } from '../../context/AuthContext';
 
+// mock useNavigate so we can assert navigation
+const mockNavigate = vi.fn();
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual<any>('react-router-dom');
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
+  };
+});
+
 vi.mock('../../auth/auth.service', () => ({
   authService: {
     register: vi.fn(),
+    login: vi.fn(),
   },
 }));
 
@@ -28,8 +39,12 @@ describe('RegisterView', () => {
     );
   };
 
-  it('debe registrar con éxito y mostrar log', async () => {
+  it('debe registrar con éxito, iniciar sesión automáticamente y navegar', async () => {
     vi.mocked(authService.register).mockResolvedValue({ id: 1 });
+    vi.mocked(authService.login).mockResolvedValue({
+      access_token: 'token-xyz',
+      user: { email: 'olga@test.com', id: 'u1' },
+    });
 
     renderWithProviders(<RegisterView />);
 
@@ -37,15 +52,21 @@ describe('RegisterView', () => {
     fireEvent.change(screen.getByLabelText(/Email/i), { target: { value: 'olga@test.com' } });
     fireEvent.change(screen.getByLabelText(/Contraseña/i), { target: { value: 'Password123' } });
 
+    expect(screen.getByRole('link', { name: /Inicia sesión/i })).toHaveAttribute('href', '/login');
+
     fireEvent.click(screen.getByRole('button', { name: /Registrarse/i }));
 
     await waitFor(() => {
       expect(authService.register).toHaveBeenCalled();
-      expect(console.log).toHaveBeenCalledWith("¡Registro exitoso! Ya puedes iniciar sesión.");
+      expect(authService.login).toHaveBeenCalledWith({
+        email: 'olga@test.com',
+        password: 'Password123',
+      });
+      expect(mockNavigate).toHaveBeenCalledWith('/dashboard');
     });
   });
 
-  it('debe mostrar el mensaje de error del servidor en el log', async () => {
+  it('muestra mensaje de error devuelto por servidor', async () => {
     const errorMsg = "El email ya existe";
     vi.mocked(authService.register).mockRejectedValue({
       response: { data: { message: errorMsg } }
@@ -60,11 +81,11 @@ describe('RegisterView', () => {
     fireEvent.click(screen.getByRole('button', { name: /Registrarse/i }));
 
     await waitFor(() => {
-      expect(console.log).toHaveBeenCalledWith(errorMsg);
+      expect(screen.getByText(errorMsg)).toBeInTheDocument();
     });
   });
 
-  it('debe mostrar error genérico si el servidor no envía mensaje', async () => {
+  it('muestra mensaje genérico si el servidor no devuelve mensaje', async () => {
     vi.mocked(authService.register).mockRejectedValue(new Error("Server Error"));
 
     renderWithProviders(<RegisterView />);
@@ -76,18 +97,22 @@ describe('RegisterView', () => {
     fireEvent.click(screen.getByRole('button', { name: /Registrarse/i }));
 
     await waitFor(() => {
-      expect(console.log).toHaveBeenCalledWith("Error al registrarse");
+      expect(screen.getByText(/Error al crear la cuenta/i)).toBeInTheDocument();
     });
   });
 
-  it('debe mostrar errores de Zod al dejar campos vacíos', async () => {
+  it('limpia el error cuando el usuario edita los campos', async () => {
     renderWithProviders(<RegisterView />);
 
+    // dispara un error de formato
+    fireEvent.change(screen.getByLabelText(/Email/i), { target: { value: 'malo' } });
     fireEvent.click(screen.getByRole('button', { name: /Registrarse/i }));
-
     await waitFor(() => {
-      expect(screen.getByText(/El nombre debe tener al menos 2 caracteres/i)).toBeInTheDocument();
       expect(screen.getByText(/Formato de email inválido/i)).toBeInTheDocument();
     });
+
+    // al corregir el email se borra el mensaje
+    fireEvent.change(screen.getByLabelText(/Email/i), { target: { value: 'bueno@test.com' } });
+    expect(screen.queryByText(/Formato de email inválido/i)).toBeNull();
   });
 });

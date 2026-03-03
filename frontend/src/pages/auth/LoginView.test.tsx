@@ -38,6 +38,10 @@ describe('LoginView', () => {
 
     fireEvent.change(screen.getByLabelText(/Email/i), { target: { value: 'test@test.com' } });
     fireEvent.change(screen.getByLabelText(/Contraseña/i), { target: { value: 'password123' } });
+
+    // El enlace a registro debe apuntar a /register
+    expect(screen.getByRole('link', { name: /Regístrate aquí/i })).toHaveAttribute('href', '/register');
+
     fireEvent.click(screen.getByRole('button', { name: /Entrar/i }));
 
     await waitFor(() => {

@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { DashboardView } from './DashboardView';
-import { Book, bookService } from '../../books/book.service';
+import { Book, bookService } from '../../books/services/book.service';
 import { AuthProvider } from '../../context/AuthContext';
 import { BrowserRouter } from 'react-router-dom';
 

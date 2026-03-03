@@ -15,60 +15,53 @@ import { User } from './entities/user.entity';
 export class UsersService {
   constructor(
     @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
+    private readonly usersRepository: Repository<User>,
   ) {}
 
-  // S1-01: Crear usuario con Hash de Bcrypt
   async create(createUserDto: CreateUserDto) {
-    const { password, email, ...userData } = createUserDto;
-
-    // Verificar duplicados
-    const userExists = await this.userRepository.findOneBy({ email });
-    if (userExists) {
-      throw new BadRequestException('El correo electrónico ya está registrado');
-    }
-
-    // Hashear contraseña
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
-    const newUser = this.userRepository.create({
-      ...userData,
-      email,
+    // 🔐 Hasheamos aquí antes de guardar
+    const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
+    
+    const newUser = this.usersRepository.create({
+      ...createUserDto,
       password: hashedPassword,
     });
-
-    return await this.userRepository.save(newUser);
+    
+    const savedUser = await this.usersRepository.save(newUser);
+    
+    // Quitamos la password del objeto devuelto por seguridad
+    const { password, ...result } = savedUser;
+    return result;
   }
 
   // Método extra útil para el login de JWT más adelante
   async findOneByEmail(email: string) {
-    return await this.userRepository.findOneBy({ email });
+    return await this.usersRepository.findOneBy({ email });
   }
 
   findAll() {
-    return this.userRepository.find();
+    return this.usersRepository.find();
   }
 
   async findOne(id: string) {
     // Cambiado a string por el UUID
-    const user = await this.userRepository.findOneBy({ id });
+    const user = await this.usersRepository.findOneBy({ id });
     if (!user) throw new NotFoundException('Usuario no encontrado');
     return user;
   }
 
   async update(id: string, updateUserDto: UpdateUserDto) {
-    const user = await this.userRepository.preload({
+    const user = await this.usersRepository.preload({
       id: id,
       ...updateUserDto,
     });
     if (!user) throw new NotFoundException('Usuario no encontrado');
-    return this.userRepository.save(user);
+    return this.usersRepository.save(user);
   }
 
   async remove(id: string) {
     const user = await this.findOne(id);
-    return this.userRepository.remove(user);
+    return this.usersRepository.remove(user);
   }
 
   async getPublicProfile(id: string) {

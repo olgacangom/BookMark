@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
-import { BookCard } from './BookCard';
-import { Book } from '../books/book.service';
+import { BookCard } from '../components/BookCard';
+import { Book } from '../services/book.service';
 
 describe('BookCard', () => {
   const mockBook: Book = {
