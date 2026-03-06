@@ -21,6 +21,11 @@ jobs:
       - name: Install Dependencies
         run: cd backend && npm ci
 
+      - name: Run Test Coverage
+        run: |
+          cd backend
+          npm run test:cov
+
       - name: Run Lint
         run: cd backend && npm run lint
 
