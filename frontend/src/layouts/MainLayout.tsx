@@ -1,6 +1,6 @@
 import { Outlet, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LogOut, BookOpen } from 'lucide-react'; // Importamos iconos profesionales
+import { LogOut, BookOpen } from 'lucide-react'; 
 
 export const MainLayout = () => {
   const { logout } = useAuth();

@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -18,6 +19,11 @@ export class UsersService {
   ) {}
 
   async create(createUserDto: CreateUserDto) {
+    const existingUser = await this.findOneByEmail(createUserDto.email);
+    if (existingUser) {
+      throw new BadRequestException('El email ya está registrado');
+    }
+
     const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
 
     const newUser = this.usersRepository.create({

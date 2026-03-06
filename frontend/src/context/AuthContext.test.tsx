@@ -41,16 +41,19 @@ describe('AuthContext & ProtectedRoute Coverage', () => {
   });
 
   it('debe lanzar un error si useAuth se usa fuera del Provider', () => {
-    // 🎯 Esto cubre la rama "if (!context)"
-    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
+
     expect(() => renderHook(() => useAuth())).toThrow('useAuth debe usarse dentro de un AuthProvider');
-    
+
     consoleSpy.mockRestore();
   });
 
   it('debe permitir acceso a rutas protegidas si hay token', () => {
-    vi.spyOn(Storage.prototype, 'getItem').mockReturnValue('token-valido');
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation((key) => {
+      if (key === 'token') return 'token-valido';
+      if (key === 'user') return JSON.stringify({ id: '1', fullName: 'Olga' });
+      return null;
+    });
 
     render(
       <AuthProvider>
@@ -65,5 +68,59 @@ describe('AuthContext & ProtectedRoute Coverage', () => {
     );
 
     expect(screen.getByText(/Zona Segura/i)).toBeInTheDocument();
+  });
+
+  it('debe actualizar los datos del usuario correctamente', () => {
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <AuthProvider>{children}</AuthProvider>
+    );
+    const { result } = renderHook(() => useAuth(), { wrapper });
+
+    const updatedData = { id: '1', fullName: 'Olga Editado' };
+
+    act(() => {
+      result.current.updateUser(updatedData);
+    });
+
+    expect(result.current.user).toEqual(updatedData);
+    expect(localStorage.getItem('user')).toContain('Olga Editado');
+  });
+
+  it('debe detectar un token inválido', () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <AuthProvider>{children}</AuthProvider>
+    );
+    const { result } = renderHook(() => useAuth(), { wrapper });
+
+    const invalidToken = 'test@test.com'; 
+
+    act(() => {
+      result.current.login(invalidToken);
+    });
+
+    expect(consoleSpy).toHaveBeenCalledWith(
+      expect.stringContaining("TOKEN INVÁLIDO"),
+      invalidToken
+    );
+
+    consoleSpy.mockRestore();
+  });
+
+  it('debe extraer el token correctamente cuando se pasa un objeto', () => {
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <AuthProvider>{children}</AuthProvider>
+    );
+    const { result } = renderHook(() => useAuth(), { wrapper });
+
+    act(() => {
+      result.current.login({ access_token: 'token-formato-a' });
+    });
+    expect(result.current.token).toBe('token-formato-a');
+
+    act(() => {
+      result.current.login({ token: 'token-formato-b' });
+    });
+    expect(result.current.token).toBe('token-formato-b');
   });
 });
