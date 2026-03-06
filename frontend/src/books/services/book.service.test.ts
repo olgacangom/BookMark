@@ -1,8 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import api from '../services/api';
+import api from '../../services/api'; // Ruta real
 import { bookService } from './book.service';
 
-vi.mock('../services/api'); 
+vi.mock('../../services/api', () => ({
+  default: {
+    get: vi.fn(),
+    patch: vi.fn(),
+    post: vi.fn(),
+  },
+}));
 
 describe('bookService', () => {
   beforeEach(() => {
@@ -28,4 +34,16 @@ describe('bookService', () => {
     expect(api.patch).toHaveBeenCalledWith('/books/1', { status: 'Reading' });
     expect(result).toEqual(updatedBook);
   });
+
+  it('create debe enviar los datos correctamente y devolver el nuevo libro', async () => {
+  const newBook = { title: 'Quijote', author: 'Cervantes', status: 'Want to Read', genre: 'Clásico' };
+  const mockResponse = { id: 10, ...newBook };
+  
+  vi.mocked(api.post).mockResolvedValue({ data: mockResponse });
+
+  const result = await bookService.create(newBook);
+
+  expect(api.post).toHaveBeenCalledWith('/books', newBook);
+  expect(result.id).toBe(10);
+});
 });

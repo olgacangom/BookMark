@@ -3,7 +3,6 @@ import api from './api';
 
 describe('API Service', () => {
   beforeEach(() => {
-    // Limpiamos los espías entre tests
     vi.restoreAllMocks();
   });
 
@@ -11,10 +10,7 @@ describe('API Service', () => {
     const mockToken = 'token-secreto-123';
     vi.spyOn(Storage.prototype, 'getItem').mockReturnValue(mockToken);
 
-    /**
-     * Accedemos al interceptor de solicitud.
-     * Cambiamos @ts-ignore por @ts-expect-error para cumplir con las reglas del linter.
-     */
+
     // @ts-expect-error - Accediendo a handlers internos de axios para testing
     const requestInterceptor = api.interceptors.request.handlers[0].fulfilled;
 
@@ -27,9 +23,7 @@ describe('API Service', () => {
   it('no debe añadir el header Authorization si el token no existe', async () => {
     vi.spyOn(Storage.prototype, 'getItem').mockReturnValue(null);
 
-    /**
-     * Cambiamos @ts-ignore por @ts-expect-error aquí también.
-     */
+
     // @ts-expect-error - Accediendo a handlers internos de axios para testing
     const requestInterceptor = api.interceptors.request.handlers[0].fulfilled;
 

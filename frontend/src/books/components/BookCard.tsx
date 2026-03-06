@@ -1,4 +1,4 @@
-import { Book } from "../books/book.service";
+import { Book } from "../services/book.service";
 
 export const BookCard = ({ book }: { book: Book }) => {
   // 🎨 Mapeo de colores según el estado

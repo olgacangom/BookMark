@@ -3,91 +3,91 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { BrowserRouter } from 'react-router-dom';
 import { RegisterView } from './RegisterView';
-import { authService } from '../../auth/auth.service';
 import { AuthProvider } from '../../context/AuthContext';
+import api from '../../services/api';
 
-vi.mock('../../auth/auth.service', () => ({
-  authService: {
-    register: vi.fn(),
-  },
+const mockNavigate = vi.fn();
+vi.mock('react-router-dom', async () => {
+    const actual = await vi.importActual<any>('react-router-dom');
+    return { ...actual, useNavigate: () => mockNavigate };
+});
+
+vi.mock('../../services/api', () => ({
+    default: { post: vi.fn() }
 }));
 
 describe('RegisterView', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.spyOn(console, 'log').mockImplementation(() => { });
-  });
-
-  const renderWithProviders = (ui: React.ReactElement) => {
-    return render(
-      <AuthProvider>
-        <BrowserRouter>
-          {ui}
-        </BrowserRouter>
-      </AuthProvider>
-    );
-  };
-
-  it('debe registrar con éxito y mostrar log', async () => {
-    vi.mocked(authService.register).mockResolvedValue({ id: 1 });
-
-    renderWithProviders(<RegisterView />);
-
-    fireEvent.change(screen.getByLabelText(/Nombre Completo/i), { target: { value: 'Olga Cantalejo' } });
-    fireEvent.change(screen.getByLabelText(/Email/i), { target: { value: 'olga@test.com' } });
-    fireEvent.change(screen.getByLabelText(/Contraseña/i), { target: { value: 'Password123' } });
-
-    fireEvent.click(screen.getByRole('button', { name: /Registrarse/i }));
-
-    await waitFor(() => {
-      expect(authService.register).toHaveBeenCalled();
-      expect(console.log).toHaveBeenCalledWith("¡Registro exitoso! Ya puedes iniciar sesión.");
-    });
-  });
-
-  it('debe mostrar el mensaje de error del servidor en el log', async () => {
-    const errorMsg = "El email ya existe";
-    vi.mocked(authService.register).mockRejectedValue({
-      response: { data: { message: errorMsg } }
+    beforeEach(() => {
+        vi.clearAllMocks();
+        vi.spyOn(console, 'error').mockImplementation(() => { });
     });
 
-    renderWithProviders(<RegisterView />);
+    const renderWithProviders = (ui: React.ReactElement) => {
+        return render(<AuthProvider><BrowserRouter>{ui}</BrowserRouter></AuthProvider>);
+    };
 
-    fireEvent.change(screen.getByLabelText(/Nombre Completo/i), { target: { value: 'Test' } });
-    fireEvent.change(screen.getByLabelText(/Email/i), { target: { value: 'test@test.com' } });
-    fireEvent.change(screen.getByLabelText(/Contraseña/i), { target: { value: 'Password123' } });
+    it('debe registrar con éxito y navegar al login', async () => {
+        vi.mocked(api.post).mockResolvedValue({ data: { id: 1 } });
+        renderWithProviders(<RegisterView />);
 
-    fireEvent.click(screen.getByRole('button', { name: /Registrarse/i }));
+        fireEvent.change(screen.getByLabelText(/Nombre Completo/i), { target: { value: 'Olga' } });
+        fireEvent.change(screen.getByLabelText(/Correo Electrónico/i), { target: { value: 'olga@test.com' } });
+        fireEvent.change(screen.getByLabelText(/Contraseña/i), { target: { value: '123456' } });
 
-    await waitFor(() => {
-      expect(console.log).toHaveBeenCalledWith(errorMsg);
+        fireEvent.click(screen.getByRole('button', { name: /Crear Cuenta/i }));
+
+        await waitFor(() => {
+            expect(mockNavigate).toHaveBeenCalledWith('/login');
+        });
     });
-  });
 
-  it('debe mostrar error genérico si el servidor no envía mensaje', async () => {
-    vi.mocked(authService.register).mockRejectedValue(new Error("Server Error"));
+    it('muestra mensaje de error devuelto por servidor y limpia cargando', async () => {
+        vi.mocked(api.post).mockRejectedValue({
+            response: { data: { message: 'El email ya existe' } }
+        });
 
-    renderWithProviders(<RegisterView />);
+        renderWithProviders(<RegisterView />);
+        
+        fireEvent.change(screen.getByLabelText(/Nombre Completo/i), { target: { value: 'Usuario Test' } });
+        fireEvent.change(screen.getByLabelText(/Correo Electrónico/i), { target: { value: 'test@test.com' } });
+        fireEvent.change(screen.getByLabelText(/Contraseña/i), { target: { value: '123456' } });
 
-    fireEvent.change(screen.getByLabelText(/Nombre Completo/i), { target: { value: 'Test' } });
-    fireEvent.change(screen.getByLabelText(/Email/i), { target: { value: 'test@test.com' } });
-    fireEvent.change(screen.getByLabelText(/Contraseña/i), { target: { value: 'Password123' } });
+        const submitBtn = screen.getByRole('button', { name: /Crear Cuenta/i });
+        fireEvent.click(submitBtn);
 
-    fireEvent.click(screen.getByRole('button', { name: /Registrarse/i }));
-
-    await waitFor(() => {
-      expect(console.log).toHaveBeenCalledWith("Error al registrarse");
+        const errorMsg = await screen.findByText(/El email ya existe/i);
+        expect(errorMsg).toBeInTheDocument();
+        
+        expect(submitBtn).not.toBeDisabled();
     });
-  });
 
-  it('debe mostrar errores de Zod al dejar campos vacíos', async () => {
-    renderWithProviders(<RegisterView />);
+    it('debe alternar la visibilidad de la contraseña al hacer clic en el icono del ojo', () => {
+        renderWithProviders(<RegisterView />);
+        
+        const passwordInput = screen.getByLabelText(/Contraseña/i) as HTMLInputElement;
+        const toggleButton = screen.getAllByRole('button').find(btn => (btn as HTMLButtonElement).type === 'button');
 
-    fireEvent.click(screen.getByRole('button', { name: /Registrarse/i }));
+        expect(passwordInput.type).toBe('password');
 
-    await waitFor(() => {
-      expect(screen.getByText(/El nombre debe tener al menos 2 caracteres/i)).toBeInTheDocument();
-      expect(screen.getByText(/Formato de email inválido/i)).toBeInTheDocument();
+        if (toggleButton) fireEvent.click(toggleButton);
+        expect(passwordInput.type).toBe('text');
+
+        if (toggleButton) fireEvent.click(toggleButton);
+        expect(passwordInput.type).toBe('password');
     });
-  });
+
+    it('muestra mensaje genérico si el servidor falla sin enviar un mensaje específico', async () => {
+        vi.mocked(api.post).mockRejectedValue(new Error('Network Error'));
+
+        renderWithProviders(<RegisterView />);
+
+        fireEvent.change(screen.getByLabelText(/Nombre Completo/i), { target: { value: 'Test' } });
+        fireEvent.change(screen.getByLabelText(/Correo Electrónico/i), { target: { value: 'test@test.com' } });
+        fireEvent.change(screen.getByLabelText(/Contraseña/i), { target: { value: '123456' } });
+
+        fireEvent.click(screen.getByRole('button', { name: /Crear Cuenta/i }));
+
+        const fallbackMsg = await screen.findByText(/Error al crear la cuenta. Inténtalo de nuevo./i);
+        expect(fallbackMsg).toBeInTheDocument();
+    });
 });

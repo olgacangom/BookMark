@@ -1,9 +1,20 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// frontend/vite.config.js
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react()], 
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('lucide-react')) {
+            return 'icons';
+          }
+        },
+      },
+    },
+  },
+  
   test: {
     globals: true,
     environment: 'jsdom',
@@ -14,9 +25,7 @@ export default defineConfig({
       exclude: [
         'node_modules/**',
         'src/setupTests.ts',
-        '**/*.css',          
-        '**/*.test.tsx',     
-        '**/*.test.ts',
+        '**/*.css',
         'src/vite-env.d.ts'
       ],
     },

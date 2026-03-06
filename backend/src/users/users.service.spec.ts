@@ -128,6 +128,22 @@ describe('UsersService', () => {
     });
     const result = await service.getPublicProfile('uuid');
     expect(result).toBeDefined();
-    expect(result).not.toHaveProperty('password'); // Verificamos que se oculte la password
+    expect(result).not.toHaveProperty('password');
+  });
+
+  it('should create a new user successfully', async () => {
+    mockUserRepository.findOneBy.mockResolvedValue(null);
+
+    const dto = {
+      email: 'nuevo@test.com',
+      password: '123',
+      fullName: 'Nuevo Usuario',
+    };
+
+    const result = await service.create(dto);
+
+    expect(result).toBeDefined();
+    expect(result).not.toHaveProperty('password');
+    expect(mockUserRepository.save).toHaveBeenCalled();
   });
 });

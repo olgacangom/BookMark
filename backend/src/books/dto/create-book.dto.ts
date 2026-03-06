@@ -1,5 +1,10 @@
 import { IsString, IsEnum, IsNotEmpty } from 'class-validator';
-import { BookStatus } from '../enum/book-status.enum';
+
+export enum BookStatus {
+  READING = 'Reading',
+  READ = 'Read',
+  WANT_TO_READ = 'Want to Read',
+}
 
 export class CreateBookDto {
   @IsString()
@@ -11,5 +16,10 @@ export class CreateBookDto {
   author: string;
 
   @IsEnum(BookStatus)
+  @IsNotEmpty()
   status: BookStatus;
+
+  @IsString()
+  @IsNotEmpty()
+  genre: string;
 }

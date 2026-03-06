@@ -1,30 +1,38 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { MainLayout } from './layouts/MainLayout';
 import { LoginView } from './pages/auth/LoginView';
 import { RegisterView } from './pages/auth/RegisterView';
-import { DashboardView } from './pages/dashboard/DashboardView'; 
+import { DashboardView } from './pages/dashboard/DashboardView';
+import { LibraryView } from './pages/books/LibraryView';
+import { PerfilView } from './pages/profile/PerfilView';
+import { MyProfileView } from './pages/profile/MyProfileView';
 
 function App() {
   return (
     <AuthProvider>
-      <Router>
+      <BrowserRouter>
         <Routes>
           {/* Rutas Públicas */}
           <Route path="/login" element={<LoginView />} />
           <Route path="/register" element={<RegisterView />} />
 
-          {/* Rutas Protegidas */}
+          {/* Rutas protegidas */}
           <Route element={<ProtectedRoute />}>
-            {/* 📚 Cambiamos el placeholder por el Dashboard real */}
-            <Route path="/dashboard" element={<DashboardView />} />
+            <Route path="/" element={<MainLayout />}>
+              <Route index element={<Navigate to="/dashboard" />} />
+              <Route path="dashboard" element={<DashboardView />} />
+              <Route path="library" element={<LibraryView/>} />
+              <Route path="profile" element={<PerfilView />} />
+              <Route path="myprofile" element={<MyProfileView />} />  
+            </Route>
           </Route>
 
           {/* Redirección por defecto */}
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          <Route path="*" element={<Navigate to="/login" replace />} />
+          <Route path="*" element={<Navigate to="/dashboard" />} />
         </Routes>
-      </Router>
+      </BrowserRouter>
     </AuthProvider>
   );
 }

@@ -20,6 +20,7 @@
     "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "dependencies": {
+    "@hookform/resolvers": "^5.2.2",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.3",
     "@nestjs/core": "^11.0.1",
@@ -36,7 +37,8 @@
     "pg": "^8.18.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
-    "typeorm": "^0.3.28"
+    "typeorm": "^0.3.28",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
@@ -78,14 +80,14 @@
     },
     "collectCoverageFrom": [
       "**/*.(t|j)s",
-      "!main.(t|j)s", 
-      "!**/*.module.(t|j)s", 
+      "!main.(t|j)s",
+      "!**/*.module.(t|j)s",
       "!**/*.entity.(t|j)s"
     ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node",
     "moduleNameMapper": {
-    "^src/(.*)$": "<rootDir>/$1" 
+      "^src/(.*)$": "<rootDir>/$1"
     }
   }
 }
