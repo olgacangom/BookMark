@@ -17,13 +17,11 @@ describe('AuthContext & ProtectedRoute Coverage', () => {
     );
     const { result } = renderHook(() => useAuth(), { wrapper });
 
-    // Caso 1: Login con usuario (Cubre rama "if (userData)")
     act(() => {
       result.current.login('token-1', { name: 'Olga' });
     });
     expect(result.current.user).toEqual({ name: 'Olga' });
 
-    // Caso 2: Login sin usuario (Cubre rama contraria)
     act(() => {
       result.current.login('token-2');
     });

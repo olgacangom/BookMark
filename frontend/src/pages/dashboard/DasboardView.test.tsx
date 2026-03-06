@@ -15,8 +15,18 @@ vi.mock('../../books/book.service', () => ({
 
 describe('DashboardView', () => {
     const mockBooks: Book[] = [
-        { id: 1, title: 'Libro Leyendo', author: 'Autor A', status: 'Reading' },
-        { id: 2, title: 'Libro Leído', author: 'Autor B', status: 'Read' },
+        {
+            id: 1, title: 'Libro Leyendo', author: 'Autor A', status: 'Reading',
+            updatedAt: '',
+            coverUrl: '',
+            genre: 'Fantasía'
+        },
+        {
+            id: 2, title: 'Libro Leído', author: 'Autor B', status: 'Read',
+            updatedAt: '',
+            coverUrl: '',
+            genre: 'Fantasía'
+        },
     ];
 
     beforeEach(() => {

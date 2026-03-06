@@ -1,87 +1,134 @@
-import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext'; // Ajusta la ruta si es necesario
+import { useState } from "react";
+import { useNavigate, Link } from "react-router-dom"; 
+import { useAuth } from "../../context/AuthContext"; 
+import { BookOpen, Mail, Lock, Sparkles, Loader2 } from "lucide-react";
+import api from "../../services/api";
 
 export const LoginView = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  
-  const { login } = useAuth();
+  // ✅ 1. Definimos los estados correctamente (esto es lo que faltaba)
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const { login } = useAuth(); 
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
+    setIsSubmitting(true);
 
     try {
-      await login(email, password);
-      navigate('/dashboard'); // Si sale bien, vamos al home
+      // 🚀 Llamada al backend
+      const response = await api.post('/auth/login', { 
+        email, 
+        password 
+      });
+
+      // Extraemos el token (ajusta si tu backend usa 'token' en lugar de 'access_token')
+      const { access_token, user } = response.data;
+
+      // ✅ Guardamos en el contexto
+      login(access_token, user);
+      
+      navigate("/dashboard");
     } catch (err: any) {
-      setError('Credenciales incorrectas o error de servidor');
+      console.error("Error en login:", err);
+      setError("Credenciales incorrectas. Inténtalo de nuevo.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#fdf2ff] flex items-center justify-center p-6">
-      <div className="bg-white w-full max-w-md rounded-[3rem] shadow-2xl shadow-purple-100 p-12 text-center relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-purple-50 rounded-full -mr-16 -mt-16 blur-3xl"></div>
-        
-        <div className="relative">
-          <div className="bg-gradient-to-br from-purple-400 to-indigo-400 w-24 h-24 rounded-[2rem] mx-auto mb-8 flex items-center justify-center shadow-xl shadow-purple-200">
-             <span className="text-white text-5xl">📖</span>
+    <div className="min-h-screen bg-gradient-to-br from-[#e8e6e2] via-[#f5f3f0] to-[#e3e0da] flex items-center justify-center px-4 py-12 relative overflow-hidden">
+      {/* Fondo decorativo */}
+      <div className="absolute top-20 left-10 w-72 h-72 bg-neutral-300/20 rounded-full blur-3xl" />
+      <div className="absolute bottom-20 right-10 w-96 h-96 bg-stone-300/20 rounded-full blur-3xl" />
+
+      <div className="bg-white/70 backdrop-blur-2xl rounded-[2.5rem] shadow-2xl shadow-neutral-300/20 p-9 border border-neutral-200/40 w-full max-w-md relative z-10">
+        <div className="text-center mb-10">
+          <div className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-br from-primary via-secondary to-accent rounded-[2rem] shadow-2xl shadow-neutral-400/30 mb-6 relative">
+            <BookOpen className="w-12 h-12 text-white" />
+            <Sparkles className="w-5 h-5 text-amber-400 absolute -top-1 -right-1 animate-pulse" />
+          </div>
+          <h1 className="text-5xl mb-3 bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent tracking-tight font-bold">
+            Bienvenido/a
+          </h1>
+          <p className="text-muted-foreground text-lg italic">
+            Entra a tu espacio de lectura
+          </p>
+        </div>
+
+        {/* ✅ Mensaje de error (corregido caso sensible Error/error) */}
+        {error && (
+          <div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 text-destructive rounded-2xl text-sm font-medium animate-in slide-in-from-top-2">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label htmlFor="email" className="block text-sm mb-2.5 text-slate-700 font-medium ml-2">
+              Correo Electrónico
+            </label>
+            <div className="relative group">
+              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-primary" />
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full pl-12 pr-4 py-4 bg-input-background border-2 border-transparent rounded-2xl focus:outline-none focus:border-primary focus:bg-white transition-all text-slate-700 placeholder:text-slate-400 shadow-sm"
+                placeholder="tu@email.com"
+                required
+                disabled={isSubmitting}
+              />
+            </div>
           </div>
 
-          <h2 className="text-4xl font-black text-indigo-900/80 mb-2">Bienvenido/a</h2>
-          <p className="text-gray-400 font-medium mb-10">Entra a tu espacio de lectura</p>
-
-          {/* 🚨 Mensaje de Error */}
-          {error && <p className="bg-red-50 text-red-500 p-3 rounded-xl mb-4 text-sm font-bold">{error}</p>}
-
-          <form onSubmit={handleSubmit} className="space-y-6 text-left">
-            <div>
-              <label className="text-xs font-black text-indigo-900/40 uppercase ml-4 mb-2 block">Correo Electrónico</label>
-              <div className="relative">
-                <span className="absolute left-5 top-4 opacity-40">✉️</span>
-                <input 
-                  type="email" 
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  placeholder="tu@email.com"
-                  className="w-full bg-slate-50 border-none rounded-2xl py-4 pl-14 pr-6 focus:ring-4 focus:ring-purple-100 transition-all outline-none text-gray-600 font-medium"
-                />
-              </div>
+          <div>
+            <label htmlFor="password" className="block text-sm mb-2.5 text-slate-700 font-medium ml-2">
+              Contraseña
+            </label>
+            <div className="relative group">
+              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-primary" />
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full pl-12 pr-4 py-4 bg-input-background border-2 border-transparent rounded-2xl focus:outline-none focus:border-primary focus:bg-white transition-all text-slate-700 placeholder:text-slate-400 shadow-sm"
+                placeholder="••••••••"
+                required
+                disabled={isSubmitting}
+              />
             </div>
+          </div>
 
-            <div>
-              <label className="text-xs font-black text-indigo-900/40 uppercase ml-4 mb-2 block">Contraseña</label>
-              <div className="relative">
-                <span className="absolute left-5 top-4 opacity-40">🔒</span>
-                <input 
-                  type="password" 
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  placeholder="••••••••"
-                  className="w-full bg-slate-50 border-none rounded-2xl py-4 pl-14 pr-6 focus:ring-4 focus:ring-purple-100 transition-all outline-none text-gray-600"
-                />
-              </div>
-            </div>
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="w-full bg-gradient-to-r from-primary via-secondary to-accent text-white py-4 rounded-2xl hover:shadow-2xl hover:shadow-primary/30 hover:scale-[1.02] active:scale-[0.98] transition-all font-bold text-lg flex items-center justify-center gap-2"
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Validando...
+              </>
+            ) : (
+              "Iniciar Sesión"
+            )}
+          </button>
+        </form>
 
-            <button 
-              type="submit"
-              className="w-full bg-gradient-to-r from-indigo-400 to-purple-400 text-white py-4 rounded-[1.5rem] font-bold text-lg shadow-lg shadow-purple-200 hover:scale-[1.02] active:scale-95 transition-all mt-4"
-            >
-              Iniciar Sesión
-            </button>
-          </form>
-
-          <p className="mt-8 text-sm text-gray-500 font-medium">
-            ¿No tienes cuenta?{' '}
-            <Link 
-              to="/register" 
-              className="text-purple-500 font-bold hover:underline"
+        <div className="mt-7 text-center">
+          <p className="text-muted-foreground">
+            ¿No tienes cuenta?{" "}
+            <Link
+              to="/register"
+              className="text-primary hover:text-secondary font-bold transition-colors underline-offset-4 hover:underline"
             >
               Regístrate aquí
             </Link>
@@ -90,4 +137,4 @@ export const LoginView = () => {
       </div>
     </div>
   );
-};
+}

@@ -1,120 +1,141 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
-import { authService } from '../../auth/auth.service';
-import api from '../../services/api'; // Tu instancia de axios
+import { useNavigate, Link } from 'react-router-dom'; // Asegúrate de usar react-router-dom
+import { useAuth } from '../../context/AuthContext'; // Usamos el contexto de autenticación real
+import { BookOpen, User, Mail, Lock, Sparkles, Loader2 } from 'lucide-react';
 
 export const RegisterView = () => {
-  const [formData, setFormData] = useState({ fullName: '', email: '', password: '' });
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const { register } = useAuth(); 
   const navigate = useNavigate();
-  const { login } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // validación básica antes de llamar al backend
-    const emailRegex = /^\S+@\S+\.\S+$/;
-    if (!emailRegex.test(formData.email)) {
-      setError('Formato de email inválido');
-      return;
-    }
+    setError('');
+    setIsSubmitting(true);
 
     try {
-      await api.post('/auth/register', formData);
-      const res = await authService.login({
-        email: formData.email,
-        password: formData.password,
-      });
-      login(res.access_token, res.user);
-      navigate('/dashboard');
+      await register(name, email, password);
+
+      navigate('/login'); 
     } catch (err: any) {
-      if (err?.response?.data?.message) {
-        setError(err.response.data.message);
-      } else {
-        setError('Error al crear la cuenta. El email podría estar en uso.');
-      }
+      setError(err.response?.data?.message || 'Error al crear la cuenta. Inténtalo de nuevo.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#fdf2ff] flex items-center justify-center p-6">
-      <div className="bg-white w-full max-w-md rounded-[3rem] shadow-2xl p-12 text-center">
-        <h2 className="text-4xl font-black text-indigo-900/80 mb-2">Crea tu cuenta</h2>
-        <p className="text-gray-400 mb-8">Únete a tu nueva biblioteca virtual</p>
+    <div className="min-h-screen bg-gradient-to-br from-[#e8e6e2] via-[#f5f3f0] to-[#e3e0da] flex items-center justify-center px-4 py-12 relative overflow-hidden">
+      <div className="absolute top-20 left-10 w-72 h-72 bg-neutral-300/20 rounded-full blur-3xl" />
+      <div className="absolute bottom-20 right-10 w-96 h-96 bg-stone-300/20 rounded-full blur-3xl" />
 
-        {error && <p className="text-red-500 bg-red-50 p-3 rounded-xl mb-4 text-sm">{error}</p>}
-
-        <form onSubmit={handleSubmit} className="space-y-6 text-left">
-          {/* Campo Nombre */}
-          <div>
-            <label className="text-xs font-black text-indigo-900/40 uppercase ml-4 mb-2 block">Nombre Completo</label>
-            <div className="relative">
-              <span className="absolute left-5 top-4 opacity-40">👤</span>
-              <input
-                type="text"
-                value={formData.fullName}
-                onChange={(e) => {
-                  setFormData({ ...formData, fullName: e.target.value });
-                  setError('');
-                }}
-                placeholder="Tu nombre completo"
-                className="w-full bg-slate-50 border-none rounded-2xl py-4 pl-14 pr-6 focus:ring-4 focus:ring-purple-100 transition-all outline-none text-gray-600 font-medium"
-                required
-              />
-            </div>
+      <div className="max-w-md w-full relative z-10">
+        <div className="text-center mb-10">
+          <div className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-br from-primary via-secondary to-accent rounded-[2rem] shadow-2xl shadow-neutral-400/30 mb-6 relative">
+            <BookOpen className="w-12 h-12 text-white" />
+            <Sparkles className="w-5 h-5 text-amber-400 absolute -top-1 -right-1 animate-pulse" />
           </div>
+          <h1 className="text-5xl mb-3 bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent tracking-tight font-bold">
+            Únete
+          </h1>
+          <p className="text-muted-foreground text-lg italic">Crea tu espacio de lectura</p>
+        </div>
 
-          {/* Campo Email */}
-          <div>
-            <label className="text-xs font-black text-indigo-900/40 uppercase ml-4 mb-2 block">Email</label>
-            <div className="relative">
-              <span className="absolute left-5 top-4 opacity-40">✉️</span>
-              <input
-                type="email"
-                value={formData.email}
-                onChange={(e) => {
-                  setFormData({ ...formData, email: e.target.value });
-                  setError('');
-                }}
-                placeholder="tu@email.com"
-                className="w-full bg-slate-50 border-none rounded-2xl py-4 pl-14 pr-6 focus:ring-4 focus:ring-purple-100 transition-all outline-none text-gray-600 font-medium"
-                required
-              />
+        <div className="bg-white/90 backdrop-blur-2xl rounded-[2.5rem] shadow-2xl shadow-neutral-300/20 p-9 border border-neutral-200/40">
+          
+          {error && (
+            <div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 text-destructive rounded-2xl text-sm font-medium animate-in slide-in-from-top-2">
+              {error}
             </div>
-          </div>
+          )}
 
-          {/* Campo Password */}
-          <div>
-            <label className="text-xs font-black text-indigo-900/40 uppercase ml-4 mb-2 block">Contraseña</label>
-            <div className="relative">
-              <span className="absolute left-5 top-4 opacity-40">🔒</span>
-              <input
-                type="password"
-                value={formData.password}
-                onChange={(e) => {
-                  setFormData({ ...formData, password: e.target.value });
-                  setError('');
-                }}
-                placeholder="Mínimo 8 caracteres"
-                className="w-full bg-slate-50 border-none rounded-2xl py-4 pl-14 pr-6 focus:ring-4 focus:ring-purple-100 transition-all outline-none text-gray-600"
-                required
-              />
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div>
+              <label htmlFor="name" className="block text-sm mb-2.5 text-slate-700 font-medium ml-2">
+                Nombre Completo
+              </label>
+              <div className="relative group">
+                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-primary" />
+                <input
+                  id="name"
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full pl-12 pr-4 py-4 bg-input-background border-2 border-transparent rounded-2xl focus:outline-none focus:border-primary focus:bg-white transition-all text-slate-700 placeholder:text-slate-400 shadow-sm"
+                  placeholder="Tu nombre completo"
+                  required
+                />
+              </div>
             </div>
+
+            <div>
+              <label htmlFor="email" className="block text-sm mb-2.5 text-slate-700 font-medium ml-2">
+                Correo Electrónico
+              </label>
+              <div className="relative group">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-primary" />
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full pl-12 pr-4 py-4 bg-input-background border-2 border-transparent rounded-2xl focus:outline-none focus:border-primary focus:bg-white transition-all text-slate-700 placeholder:text-slate-400 shadow-sm"
+                  placeholder="tu@email.com"
+                  required
+                />
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="password" className="block text-sm mb-2.5 text-slate-700 font-medium ml-2">
+                Contraseña
+              </label>
+              <div className="relative group">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-primary" />
+                <input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full pl-12 pr-4 py-4 bg-input-background border-2 border-transparent rounded-2xl focus:outline-none focus:border-primary focus:bg-white transition-all text-slate-700 placeholder:text-slate-400 shadow-sm"
+                  placeholder="Mínimo 6 caracteres"
+                  required
+                  minLength={6}
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="w-full bg-gradient-to-r from-primary via-secondary to-accent text-white py-4 rounded-2xl hover:shadow-2xl hover:shadow-primary/30 hover:scale-[1.02] active:scale-[0.98] transition-all font-bold text-lg flex items-center justify-center gap-2"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  Creando cuenta...
+                </>
+              ) : (
+                "Crear Cuenta"
+              )}
+            </button>
+          </form>
+
+          <div className="mt-7 text-center">
+            <p className="text-muted-foreground">
+              ¿Ya tienes cuenta?{' '}
+              <Link to="/login" className="text-primary hover:text-secondary font-bold transition-colors underline-offset-4 hover:underline">
+                Inicia sesión
+              </Link>
+            </p>
           </div>
-
-          <button className="w-full bg-gradient-to-r from-indigo-400 to-purple-400 text-white py-4 rounded-2xl font-bold shadow-lg hover:scale-[1.02] transition-all">
-            Registrarme
-          </button>
-        </form>
-
-        <p className="mt-6 text-sm text-gray-400">
-          ¿Ya tienes cuenta?{' '}
-          <Link to="/login" className="text-purple-500 font-bold hover:underline">
-            Inicia sesión
-          </Link>
-        </p>
+        </div>
       </div>
     </div>
   );
-};
+}

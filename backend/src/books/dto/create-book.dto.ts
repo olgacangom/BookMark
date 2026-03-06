@@ -16,5 +16,11 @@ export class CreateBookDto {
   author: string;
 
   @IsEnum(BookStatus)
+  @IsNotEmpty()
   status: BookStatus;
+
+  @IsString() 
+  @IsNotEmpty()
+  genre: string;
+
 }

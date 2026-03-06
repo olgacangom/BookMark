@@ -8,7 +8,10 @@ describe('BookCard', () => {
     id: 1,
     title: 'El Quijote',
     author: 'Cervantes',
-    status: 'Reading'
+    status: 'Reading',
+    genre: 'Fantasía',
+    updatedAt: '',
+    coverUrl: ''
   };
 
   it('debe renderizar el título y el autor correctamente', () => {

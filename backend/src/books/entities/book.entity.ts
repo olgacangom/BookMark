@@ -20,6 +20,9 @@ export class Book {
   })
   status: BookStatus;
 
+  @Column() 
+  genre: string;
+
   @ManyToOne(() => User, (user) => user.books)
   user: User;
 

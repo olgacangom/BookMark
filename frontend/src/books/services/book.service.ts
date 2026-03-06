@@ -3,10 +3,13 @@ import api from "../../services/api";
 export type BookStatus = 'Read' | 'Reading' | 'Want to Read';
 
 export interface Book {
+  updatedAt: string | number | Date;
+  coverUrl: string;
   id: number;
   title: string;
   author: string;
   status: BookStatus;
+  genre: 'Fantasía'
 }
 
 export const bookService = {
@@ -15,7 +18,7 @@ export const bookService = {
     return data;
   },
 
-  create: async (bookData: { title: string; author: string; status: string }): Promise<Book> => {
+  create: async (bookData: { title: string; author: string; status: string, genre: string }): Promise<Book> => {
     const { data } = await api.post<Book>('/books', bookData);
     return data;
   },
