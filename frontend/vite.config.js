@@ -12,8 +12,10 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          icons: ['lucide-react'],
+        manualChunks(id) {
+          if (id.includes('lucide-react')) {
+            return 'icons';
+          }
         },
       },
     },

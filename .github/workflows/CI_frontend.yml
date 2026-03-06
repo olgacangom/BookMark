@@ -21,8 +21,8 @@ jobs:
       - name: Install Dependencies
         run: |
           cd frontend
-          npm ci
-          npm install @rolldown/binding-linux-x64-gnu
+          npm install
+          npm install @rolldown/binding-linux-x64-gnu lightningcss-linux-x64-gnu
 
       - name: Run Lint
         run: cd frontend && npm run lint
