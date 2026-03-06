@@ -5,8 +5,8 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineConfig({
   plugins: [
     react(),
-    !process.env.VITEST && tailwindcss(), 
-  ].filter(Boolean),
+    !process.env.VITEST && tailwindcss(),
+  ].filter(Boolean), 
 
   build: {
     rollupOptions: {
@@ -19,7 +19,7 @@ export default defineConfig({
       },
     },
   },
-
+  
   test: {
     globals: true,
     environment: 'jsdom',
@@ -30,9 +30,7 @@ export default defineConfig({
       exclude: [
         'node_modules/**',
         'src/setupTests.ts',
-        '**/*.css',          
-        '**/*.test.tsx',     
-        '**/*.test.ts',
+        '**/*.css',
         'src/vite-env.d.ts'
       ],
     },

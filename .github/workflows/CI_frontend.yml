@@ -21,8 +21,8 @@ jobs:
         run: |
           cd frontend
           rm -rf node_modules package-lock.json          
-          npm install --no-package-lock --os=linux --cpu=x64          
-          npm install lightningcss-linux-x64-gnu --no-save
+          pm install --no-package-lock --os=linux --cpu=x64         
+          npm install lightningcss-linux-x64-gnu
 
       - name: Run Test Coverage
         run: |
