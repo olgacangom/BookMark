@@ -19,7 +19,10 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install Dependencies
-        run: cd frontend && npm ci
+        run: |
+          cd frontend
+          npm ci
+          npm install @rolldown/binding-linux-x64-gnu
 
       - name: Run Lint
         run: cd frontend && npm run lint
