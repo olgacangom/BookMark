@@ -21,7 +21,7 @@ jobs:
         run: |
           cd frontend
           rm -f package-lock.json
-          npm install
+          npm install node_modules package-lock.json
           npm install @rolldown/binding-linux-x64-gnu lightningcss-linux-x64-gnu
 
       - name: Run Test Coverage
