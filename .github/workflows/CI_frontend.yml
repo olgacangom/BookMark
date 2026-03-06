@@ -21,6 +21,7 @@ jobs:
       - name: Install Dependencies
         run: |
           cd frontend
+          rm -f package-lock.json
           npm install
           npm install @rolldown/binding-linux-x64-gnu lightningcss-linux-x64-gnu
 
