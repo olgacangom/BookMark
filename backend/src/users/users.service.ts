@@ -19,22 +19,19 @@ export class UsersService {
   ) {}
 
   async create(createUserDto: CreateUserDto) {
-    // 🔐 Hasheamos aquí antes de guardar
     const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
-    
+
     const newUser = this.usersRepository.create({
       ...createUserDto,
       password: hashedPassword,
     });
-    
+
     const savedUser = await this.usersRepository.save(newUser);
-    
-    // Quitamos la password del objeto devuelto por seguridad
+
     const { password, ...result } = savedUser;
     return result;
   }
 
-  // Método extra útil para el login de JWT más adelante
   async findOneByEmail(email: string) {
     return await this.usersRepository.findOneBy({ email });
   }
@@ -70,7 +67,6 @@ export class UsersService {
     if (!user.isPublic) {
       throw new ForbiddenException('Este perfil es privado');
     }
-    // Seleccionamos solo los campos públicos
     return {
       id: user.id,
       fullName: user.fullName,

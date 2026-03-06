@@ -1,7 +1,7 @@
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { X, BookPlus, Bookmark, ChevronDown, User, Type, Tag, Sparkles } from 'lucide-react';
+import { X, BookPlus, ChevronDown } from 'lucide-react';
 import { BookFormData, bookSchema, BOOK_GENRES } from '../schemas/books.shema';
 
 interface Props {
@@ -16,7 +16,7 @@ export const AddBookModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, crea
     resolver: zodResolver(bookSchema),
     defaultValues: {
       status: 'Want to Read',
-      title: '',   // Es mejor inicializar todo
+      title: '',   
       author: '',
       genre: '' as any
     }
@@ -24,7 +24,6 @@ export const AddBookModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, crea
 
   if (!isOpen) return null;
 
-  // Esta función SOLO se ejecuta si el formulario es VÁLIDO
   const onSubmit = async (data: BookFormData) => {
     console.log("🚀 Datos enviados al backend:", data);
     try {
@@ -37,7 +36,6 @@ export const AddBookModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, crea
     }
   };
 
-  // Esta función se ejecuta si el formulario es INVÁLIDO
   const onInvalid = (formErrors: any) => {
     console.log("⚠️ Errores de validación:", formErrors);
   };
@@ -62,7 +60,6 @@ export const AddBookModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, crea
           </button>
         </div>
 
-        {/* CAMBIO AQUÍ: Añadimos onInvalid para ver qué falla en la consola */}
         <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="p-8 pt-4 space-y-5">
 
           {/* Campo Título */}
@@ -130,7 +127,6 @@ export const AddBookModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, crea
               type="submit"
               className="flex-[2] px-4 py-4 bg-gradient-to-r from-primary to-secondary text-white rounded-2xl font-bold shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2"
             >
-              <Sparkles className="w-5 h-5" />
               Guardar Libro
             </button>
           </div>

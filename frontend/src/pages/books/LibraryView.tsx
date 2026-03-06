@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useEffect, useState, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { bookService, Book } from '../../books/services/book.service';
 import { AddBookModal } from '../../books/components/AddBookModal';
@@ -9,7 +9,10 @@ import {
     CheckCircle,
     Heart,
     Sparkles,
-    Clock
+    Clock,
+    ChevronDown,
+    Filter,
+    LayoutGrid
 } from 'lucide-react';
 
 export const LibraryView = () => {
@@ -21,25 +24,27 @@ export const LibraryView = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
 
     const { user } = useAuth();
-    const navigate = useNavigate();
+
+    const loadData = useCallback(async () => {
+        setLoading(true);
+        try {
+            const data = await bookService.getMyBooks();
+            setBooks(data);
+        } catch (e) {
+            console.error("Error al cargar biblioteca:", e);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
 
     useEffect(() => {
-        const loadData = async () => {
-            try {
-                const data = await bookService.getMyBooks();
-                setBooks(data);
-            } catch (e) {
-                console.error("Error al cargar biblioteca:", e);
-            } finally {
-                setLoading(false);
-            }
-        };
         loadData();
-    }, []);
+    }, [loadData]);
 
     const filteredBooks = books
         .filter(book => {
-            const matchesSearch = book.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            const matchesSearch = 
+                book.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 book.author.toLowerCase().includes(searchTerm.toLowerCase());
             const matchesStatus = filterStatus === 'todos' || book.status === filterStatus;
             return matchesSearch && matchesStatus;
@@ -58,158 +63,187 @@ export const LibraryView = () => {
 
     const getStatusInfo = (status: string) => {
         switch (status) {
-            case 'Reading': return { label: 'Reading', icon: <BookOpen className="w-4 h-4" />, color: 'bg-blue-100/80 text-blue-700 border-blue-200' };
-            case 'Read': return { label: 'Read', icon: <CheckCircle className="w-4 h-4" />, color: 'bg-emerald-100/80 text-emerald-700 border-emerald-200' };
-            case 'Want to Read': return { label: 'Want to Read', icon: <Heart className="w-4 h-4" />, color: 'bg-primary/20 text-primary border-primary/30' };
-            default: return { label: 'Sin estado', icon: <Clock className="w-4 h-4" />, color: 'bg-slate-100 text-slate-600' };
+            case 'Reading': 
+                return { label: 'Leyendo', icon: <Clock className="w-3.5 h-3.5" />, color: 'bg-blue-50 text-blue-600 border-blue-100' };
+            case 'Read': 
+                return { label: 'Leído', icon: <CheckCircle className="w-3.5 h-3.5" />, color: 'bg-emerald-50 text-emerald-600 border-emerald-100' };
+            case 'Want to Read': 
+                return { label: 'Pendiente', icon: <Heart className="w-3.5 h-3.5" />, color: 'bg-rose-50 text-rose-600 border-rose-100' };
+            default: 
+                return { label: 'Sin estado', icon: <BookOpen className="w-3.5 h-3.5" />, color: 'bg-slate-50 text-slate-600 border-slate-100' };
         }
     };
 
-    if (loading) return <div className="p-20 text-center animate-pulse text-primary font-bold">Cargando tu colección...</div>;
-
-    function loadBooks() {
-        throw new Error('Function not implemented.');
+    if (loading) {
+        return (
+            <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4">
+                <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+                <p className="text-primary font-black uppercase tracking-widest text-xs animate-pulse">Organizando estanterías...</p>
+            </div>
+        );
     }
 
     return (
-        <div className="max-w-7xl mx-auto px-4 py-8 pb-24 md:pb-8 animate-in fade-in duration-700">
-            {/* Header */}
-            <div className="mb-8">
-                <div className="flex items-center gap-3 mb-3">
-                    <div className="bg-primary p-2.5 rounded-xl shadow-lg shadow-primary/20">
-                        <BookOpen className="w-6 h-6 text-white" />
+        <div className="max-w-7xl mx-auto px-4 py-8 pb-32 animate-in fade-in duration-700">
+            
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
+                <div>
+                    <div className="flex items-center gap-3 mb-3">
+                        <div className="bg-gradient-to-br from-primary to-secondary p-2.5 rounded-2xl shadow-lg shadow-primary/20">
+                            <LayoutGrid className="w-6 h-6 text-white" />
+                        </div>
+                        <h1 className="text-4xl font-black text-foreground tracking-tight">Mi Biblioteca</h1>
                     </div>
-                    <h1 className="text-4xl font-black text-foreground tracking-tight">Mi Biblioteca</h1>
+                    <p className="text-muted-foreground text-lg font-medium">
+                        Hola <span className="text-primary font-bold">{user?.fullName || 'Lector'}</span>, tienes {books.length} libros en tu colección.
+                    </p>
                 </div>
-                <p className="text-muted-foreground text-lg">Gestiona tu colección personal de {books.length} libros</p>
+                
+                <button
+                    onClick={() => setIsModalOpen(true)}
+                    className="bg-primary text-white px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl shadow-primary/20 hover:scale-[1.05] active:scale-95 transition-all flex items-center justify-center gap-3"
+                >
+                    <Sparkles className="w-4 h-4" />
+                    Añadir Nuevo Libro
+                </button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
-                <StatCard
-                    icon={<BookOpen />}
-                    label="Leyendo"
-                    value={stats.reading}
-                    color="blue"
-                    gradient="from-blue-50 to-indigo-50"
-                />
-                <StatCard
-                    icon={<CheckCircle />}
-                    label="Leídos"
-                    value={stats.read}
-                    color="emerald"
-                    gradient="from-emerald-50 to-teal-50"
-                />
-                <StatCard
-                    icon={<Heart />}
-                    label="Pendientes"
-                    value={stats.want}
-                    color="primary"
-                    gradient="from-primary/10 to-secondary/10"
-                />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-10">
+                <StatCard icon={<Clock />} label="Leyendo" value={stats.reading} color="blue" />
+                <StatCard icon={<CheckCircle />} label="Finalizados" value={stats.read} color="emerald" />
+                <StatCard icon={<Heart />} label="Por leer" value={stats.want} color="rose" />
             </div>
 
-            <div className="bg-white/80 backdrop-blur-sm rounded-[2rem] p-6 shadow-xl shadow-neutral-200/50 mb-8 border border-border">
-                <div className="grid md:grid-cols-3 gap-6">
-                    <FilterGroup label="Buscar">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-primary" />
+            <div className="bg-white/80 backdrop-blur-md rounded-[2.5rem] p-4 mb-10 border border-white shadow-xl shadow-neutral-200/40">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+                    <div className="md:col-span-5 relative group">
+                        <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-primary group-focus-within:scale-110 transition-transform" />
                         <input
                             type="text"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            placeholder="Título o autor..."
-                            className="w-full pl-12 pr-4 py-3 bg-muted/50 border-none rounded-xl focus:ring-2 focus:ring-primary transition-all outline-none"
+                            placeholder="Buscar por título o autor..."
+                            className="w-full pl-14 pr-6 py-4 bg-neutral-50 border-2 border-transparent focus:border-primary/20 focus:bg-white rounded-[1.5rem] transition-all outline-none font-medium"
                         />
-                    </FilterGroup>
+                    </div>
 
-                    <FilterGroup label="Estado">
+                    <div className="md:col-span-3 relative">
+                        <Filter className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-primary/50" />
                         <select
                             value={filterStatus}
                             onChange={(e) => setFilterStatus(e.target.value)}
-                            className="w-full px-4 py-3 bg-muted/50 border-none rounded-xl focus:ring-2 focus:ring-primary outline-none appearance-none cursor-pointer"
+                            className="w-full pl-12 pr-10 py-4 bg-neutral-50 border-2 border-transparent focus:border-primary/20 focus:bg-white rounded-[1.5rem] outline-none appearance-none cursor-pointer font-bold text-xs uppercase tracking-widest"
                         >
-                            <option value="todos">Todos los libros</option>
-                            <option value="Reading"> Leyendo</option>
-                            <option value="Read"> Leído</option>
-                            <option value="Want to Read">Quiero leer</option>
+                            <option value="todos">Todos los estados</option>
+                            <option value="Reading">En progreso</option>
+                            <option value="Read">Leídos</option>
+                            <option value="Want to Read">Pendientes</option>
                         </select>
-                    </FilterGroup>
+                        <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 w-4 h-4 text-primary/30 pointer-events-none" />
+                    </div>
 
-                    <FilterGroup label="Ordenar por">
+                    <div className="md:col-span-4 relative">
                         <select
                             value={sortBy}
                             onChange={(e) => setSortBy(e.target.value as any)}
-                            className="w-full px-4 py-3 bg-muted/50 border-none rounded-xl focus:ring-2 focus:ring-primary outline-none appearance-none cursor-pointer"
+                            className="w-full px-6 py-4 bg-neutral-50 border-2 border-transparent focus:border-primary/20 focus:bg-white rounded-[1.5rem] outline-none appearance-none cursor-pointer font-bold text-xs uppercase tracking-widest text-right"
                         >
-                            <option value="recent">🕐 Más reciente</option>
-                            <option value="title">🔤 Título</option>
-                            <option value="author">✍️ Autor</option>
+                            <option value="recent">Añadidos recientemente</option>
+                            <option value="title">Orden alfabético (Título)</option>
+                            <option value="author">Orden alfabético (Autor)</option>
                         </select>
-                    </FilterGroup>
+                        <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 w-4 h-4 text-primary/30 pointer-events-none" />
+                    </div>
                 </div>
             </div>
 
             {filteredBooks.length === 0 ? (
-                <EmptyState
-                    hasSearch={!!searchTerm}
-                    onAddClick={() => setIsModalOpen(true)}
-                />
+                <EmptyState hasSearch={!!searchTerm} onAddClick={() => setIsModalOpen(true)} />
             ) : (
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-                    {filteredBooks.map(book => (
-                        <Link key={book.id} to={`/libro/${book.id}`} className="...">
-                        </Link>
-                    ))}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                    {filteredBooks.map(book => {
+                        const status = getStatusInfo(book.status);
+                        return (
+                            <Link 
+                                key={book.id} 
+                                to={`/libro/${book.id}`} 
+                                className="group bg-white rounded-[3rem] p-5 shadow-sm hover:shadow-2xl hover:shadow-primary/10 transition-all border border-transparent hover:border-primary/10 flex flex-col h-full relative"
+                            >
+                                <div className="absolute top-8 right-8 z-10 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-[0.15em] text-primary shadow-sm border border-primary/5">
+                                    {book.genre || 'Otros'}
+                                </div>
+
+                                <div className="aspect-[3/4] bg-gradient-to-b from-neutral-50 to-neutral-100 rounded-[2.5rem] mb-6 flex items-center justify-center text-5xl group-hover:scale-[1.03] transition-transform duration-500 overflow-hidden shadow-inner">
+                                    <span className="filter grayscale group-hover:grayscale-0 transition-all duration-500 opacity-30 group-hover:opacity-100">📖</span>
+                                </div>
+
+                                <div className="px-2 flex-grow">
+                                    <h3 className="font-black text-xl text-foreground leading-[1.2] mb-2 group-hover:text-primary transition-colors line-clamp-2 italic">
+                                        {book.title}
+                                    </h3>
+                                    <p className="text-muted-foreground text-sm font-bold uppercase tracking-widest mb-6 opacity-60">
+                                        {book.author}
+                                    </p>
+                                </div>
+
+                                {/* Status Tag */}
+                                <div className={`flex items-center gap-2.5 px-5 py-3 rounded-2xl border transition-colors ${status.color}`}>
+                                    {status.icon}
+                                    <span className="text-[10px] font-black uppercase tracking-widest">{status.label}</span>
+                                </div>
+                            </Link>
+                        );
+                    })}
                 </div>
             )}
 
             <AddBookModal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
-                onSuccess={() => { loadBooks(); }}
+                onSuccess={loadData}
                 createBook={(data) => bookService.create(data)}
             />
         </div>
     );
 };
 
-// Componentes Auxiliares
-const StatCard = ({ icon, label, value, color, gradient }: any) => (
-    <div className={`bg-gradient-to-br ${gradient} p-6 rounded-[2rem] border border-${color}-100 shadow-sm flex items-center gap-5 transition-transform hover:scale-[1.02]`}>
-        <div className={`p-3 bg-white/60 rounded-2xl text-${color}-600 shadow-sm`}>{icon}</div>
-        <div>
-            <p className="text-3xl font-black text-slate-800 leading-none mb-1">{value}</p>
-            <p className={`text-xs font-bold uppercase tracking-widest text-${color}-600/70`}>{label}</p>
-        </div>
-    </div>
-);
 
-const FilterGroup = ({ label, children }: any) => (
-    <div className="flex-1">
-        <label className="block text-xs font-black uppercase tracking-widest text-primary mb-2 ml-2">{label}</label>
-        <div className="relative">{children}</div>
-    </div>
-);
+const StatCard = ({ icon, label, value, color }: any) => {
+    const colors: any = {
+        blue: "bg-blue-50/50 text-blue-600 border-blue-100",
+        emerald: "bg-emerald-50/50 text-emerald-600 border-emerald-100",
+        rose: "bg-rose-50/50 text-rose-600 border-rose-100"
+    };
+
+    return (
+        <div className={`${colors[color]} p-7 rounded-[2.5rem] border shadow-sm flex items-center gap-6 hover:translate-y-[-4px] transition-all duration-300`}>
+            <div className="p-4 bg-white rounded-2xl shadow-sm scale-110">{icon}</div>
+            <div>
+                <p className="text-4xl font-black text-slate-800 leading-none mb-1 tracking-tighter">{value}</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60">{label}</p>
+            </div>
+        </div>
+    );
+};
 
 const EmptyState = ({ hasSearch, onAddClick }: { hasSearch: boolean; onAddClick: () => void }) => (
-    <div className="bg-white rounded-[3rem] p-20 text-center border-2 border-dashed border-border flex flex-col items-center">
-        <div className="w-20 h-20 bg-muted rounded-[2rem] flex items-center justify-center text-4xl mb-6 shadow-sm">📖</div>
-
-        <h3 className="text-2xl font-black text-foreground mb-2 tracking-tight">
-            {hasSearch ? 'Sin resultados' : 'Tu estantería está vacía'}
+    <div className="bg-white/50 backdrop-blur-sm rounded-[4rem] p-20 text-center border-4 border-dashed border-neutral-200 flex flex-col items-center animate-in zoom-in-95">
+        <div className="w-24 h-24 bg-white rounded-[2.5rem] flex items-center justify-center text-5xl mb-8 shadow-xl shadow-neutral-200">
+            {hasSearch ? '🕵️‍♂️' : '📚'}
+        </div>
+        <h3 className="text-3xl font-black text-foreground mb-4 tracking-tight italic">
+            {hasSearch ? 'Búsqueda sin éxito' : 'Tu estantería te espera'}
         </h3>
-
-        <p className="text-muted-foreground mb-8 font-medium max-w-xs mx-auto">
+        <p className="text-muted-foreground mb-10 font-medium max-w-sm mx-auto leading-relaxed">
             {hasSearch
-                ? 'No encontramos libros que coincidan con tu búsqueda. Prueba con otros términos.'
-                : 'Parece que aún no has añadido ninguna joya literaria a tu colección.'}
+                ? 'No hemos encontrado ningún libro con esos criterios. Prueba a buscar por el nombre del autor.'
+                : 'Parece que aún no has registrado ninguna lectura. ¡Es un buen momento para empezar!'}
         </p>
-
         <button
             onClick={onAddClick}
-            className="bg-primary text-white px-8 py-4 rounded-2xl font-bold shadow-lg shadow-primary/20 hover:scale-105 transition-all inline-flex items-center gap-2 cursor-pointer active:scale-95"
+            className="bg-foreground text-white px-10 py-5 rounded-[2rem] font-black uppercase tracking-[0.15em] text-[10px] shadow-2xl hover:bg-primary transition-all active:scale-95"
         >
-            <Sparkles className="w-5 h-5" />
-            {hasSearch ? 'Añadir este libro manualmente' : 'Registrar mi primer libro'}
+            Añadir mi primer libro
         </button>
     </div>
 );

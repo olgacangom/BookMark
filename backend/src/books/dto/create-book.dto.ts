@@ -19,8 +19,7 @@ export class CreateBookDto {
   @IsNotEmpty()
   status: BookStatus;
 
-  @IsString() 
+  @IsString()
   @IsNotEmpty()
   genre: string;
-
 }

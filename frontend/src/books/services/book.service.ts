@@ -9,7 +9,7 @@ export interface Book {
   title: string;
   author: string;
   status: BookStatus;
-  genre: 'Fantasía'
+  genre: string;
 }
 
 export const bookService = {

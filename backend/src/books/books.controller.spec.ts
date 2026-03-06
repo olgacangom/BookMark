@@ -41,8 +41,7 @@ describe('BooksController', () => {
       title: 'New Book',
       author: 'Author',
       status: BookStatus.READING,
-      genre: 'Fantasía'
-
+      genre: 'Fantasía',
     };
     await controller.create(dto, mockReq);
     expect(mockBooksService.create).toHaveBeenCalledWith(dto, 'user-1');

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { ArrowLeft, UserPlus, UserMinus, MessageCircle, BookOpen, Trophy, Lock } from 'lucide-react';
+import { ArrowLeft, UserPlus, MessageCircle, Trophy, Lock } from 'lucide-react';
 import api from '../../services/api';
 
 export const PerfilView = () => {

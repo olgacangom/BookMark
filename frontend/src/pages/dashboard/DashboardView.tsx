@@ -21,10 +21,6 @@ export const DashboardView = () => {
     { id: 1, name: 'Reto 2026', description: 'Lee 12 libros este año', current: 3, target: 12, icon: '🎯' },
   ];
 
-  const activities = [
-    { id: 1, userName: 'Tú', type: 'reading', bookTitle: 'El Quijote', timestamp: new Date(), userAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix' }
-  ];
-
   useEffect(() => {
     const loadData = async () => {
       try {

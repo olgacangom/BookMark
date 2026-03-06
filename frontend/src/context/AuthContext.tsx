@@ -1,6 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, ReactNode } from 'react';
-import api from '../services/api';
 
 interface AuthContextType {
   user: any;
@@ -13,7 +12,6 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// ✅ USAMOS 'export function' para evitar el error de Vite HMR
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
   const [user, setUser] = useState<any>(() => {
@@ -22,7 +20,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
 
   const login = (data: any, userData?: any) => {
-    // Buscamos el string del token
     const tokenString = typeof data === 'string' ? data : (data.access_token || data.token);
 
     if (!tokenString || tokenString.includes('@')) {
@@ -53,7 +50,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
-// ✅ EXPORTACIÓN POR SEPARADO
 export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) throw new Error('useAuth debe usarse dentro de un AuthProvider');
