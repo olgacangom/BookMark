@@ -1,38 +1,110 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { X, BookPlus, ChevronDown } from 'lucide-react';
+import { X, BookPlus, Search, Loader2, ChevronDown, Save } from 'lucide-react';
 import { BookFormData, bookSchema, BOOK_GENRES } from '../schemas/books.shema';
+import axios from 'axios';
+import { Book } from '../services/book.service';
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
   createBook: (data: BookFormData) => Promise<any>;
+  book?: Book | null; 
 }
 
-export const AddBookModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, createBook }) => {
-  const { register, handleSubmit, formState: { errors }, reset } = useForm<BookFormData>({
+export const AddBookModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, createBook, book }) => {
+  const [isSearching, setIsSearching] = useState(false);
+  const [isbn, setIsbn] = useState('');
+
+  const isEditing = !!book;
+
+  const { register, handleSubmit, formState: { errors }, reset, setValue, watch } = useForm<BookFormData>({
     resolver: zodResolver(bookSchema),
     defaultValues: {
-      status: 'Want to Read',
-      title: '',   
+      status: 'Want to Read' as any,
+      title: '',
       author: '',
-      genre: '' as any
+      genre: '' as any,
+      description: '',
+      urlPortada: ''
     }
   });
 
+  // Observamos la portada para mostrar la vista previa en el formulario
+  const currentPortada = watch('urlPortada');
+
+  useEffect(() => {
+    if (isOpen) {
+      if (book) {
+        setValue('title', book.title);
+        setValue('author', book.author);
+        setValue('status', book.status as any);
+        setValue('genre', (book as any).genre || '');
+        setValue('description', (book as any).description || '');
+        setValue('urlPortada', (book as any).urlPortada || '');
+      } else {
+        reset({
+            status: 'Want to Read' as any,
+            title: '',
+            author: '',
+            genre: '' as any,
+            description: '',
+            urlPortada: ''
+        });
+        setIsbn('');
+      }
+    }
+  }, [book, isOpen, setValue, reset]);
+
   if (!isOpen) return null;
 
-  const onSubmit = async (data: BookFormData) => {
-    console.log("🚀 Datos enviados al backend:", data);
+  const handleIsbnSearch = async () => {
+    if (!isbn || isbn.length < 10) return;
+
+    setIsSearching(true);
+    try {
+      const rawToken = localStorage.getItem('token');
+      const token = rawToken?.replace(/"/g, '');
+
+      const response = await axios.get(`http://localhost:3000/books/search/${isbn}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      const bookData = response.data;
+
+      setValue('title', bookData.title, { shouldValidate: true });
+      
+      const authorName = Array.isArray(bookData.authors)
+        ? bookData.authors.join(', ')
+        : bookData.authors;
+      
+      setValue('author', authorName, { shouldValidate: true });
+      setValue('description', bookData.description, { shouldValidate: true });
+      setValue('urlPortada', bookData.urlPortada, { shouldValidate: true });
+
+      if (bookData.genre && BOOK_GENRES.includes(bookData.genre as any)) {
+        setValue('genre', bookData.genre as any, { shouldValidate: true });
+      }
+    } catch (error) {
+      console.error("Error buscando ISBN: ", error);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleOnSubmit = async (data: BookFormData) => {
     try {
       await createBook(data);
       reset();
+      setIsbn('');
       onSuccess();
       onClose();
     } catch (error) {
-      console.error("❌ Error en la petición:", error);
+      console.error("Error al procesar el libro:", error);
     }
   };
 
@@ -50,7 +122,9 @@ export const AddBookModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, crea
             <div className="bg-primary/10 p-2 rounded-xl text-primary">
               <BookPlus className="w-6 h-6" />
             </div>
-            <h2 className="text-2xl font-black text-foreground tracking-tight">Nuevo Libro</h2>
+            <h2 className="text-2xl font-black text-foreground tracking-tight">
+                {isEditing ? 'Editar Libro' : 'Añadir Libro'}
+            </h2>
           </div>
           <button
             onClick={onClose}
@@ -60,14 +134,47 @@ export const AddBookModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, crea
           </button>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="p-8 pt-4 space-y-5">
+        {/* Búsqueda por ISBN (Solo se muestra si NO estamos editando) */}
+        {!isEditing && (
+            <div className="px-8 pt-2">
+            <div className="relative group">
+                <input
+                type="text"
+                value={isbn}
+                onChange={(e) => setIsbn(e.target.value)}
+                placeholder="Escribe el ISBN (ej: 97884...)"
+                className="w-full pl-5 pr-14 py-4 rounded-2xl bg-primary/5 border-2 border-dashed border-primary/20 focus:border-primary focus:bg-white outline-none transition-all text-sm font-medium"
+                />
+                <button
+                type="button"
+                onClick={handleIsbnSearch}
+                disabled={isSearching}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-2.5 bg-primary text-white rounded-xl hover:scale-105 active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center"
+                >
+                {isSearching ? <Loader2 className="w-5 h-5 animate-spin" /> : <Search className="w-5 h-5" />}
+                </button>
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-2 ml-4 font-bold uppercase tracking-tighter italic">Búsqueda rápida por código de barras</p>
+            </div>
+        )}
+
+        <form onSubmit={handleSubmit(handleOnSubmit, onInvalid)} className="p-8 pt-4 space-y-4 max-h-[60vh] overflow-y-auto custom-scrollbar">
+
+          {/* Vista previa de Portada */}
+          {currentPortada && (
+            <div className="flex justify-center mb-2 animate-in zoom-in duration-300">
+              <div className="w-24 h-36 rounded-xl overflow-hidden shadow-lg border-2 border-white">
+                <img src={currentPortada} alt="Vista previa" className="w-full h-full object-cover" />
+              </div>
+            </div>
+          )}
 
           {/* Campo Título */}
           <div className="space-y-1.5">
             <label className="text-xs font-black uppercase tracking-widest text-primary ml-2 italic">Título del libro</label>
             <input
               {...register('title')}
-              className={`w-full px-5 py-4 rounded-2xl bg-white border-2 ${errors.title ? 'border-destructive' : 'border-transparent'} focus:border-primary outline-none shadow-sm`}
+              className={`w-full px-5 py-4 rounded-2xl bg-white border-2 ${errors.title ? 'border-destructive' : 'border-transparent'} focus:border-primary outline-none shadow-sm transition-all`}
               placeholder="Ej: El nombre del viento"
             />
             {errors.title && <p className="text-destructive text-[10px] font-bold ml-4 uppercase">{errors.title.message}</p>}
@@ -78,7 +185,7 @@ export const AddBookModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, crea
             <label className="text-xs font-black uppercase tracking-widest text-primary ml-2 italic">Autor</label>
             <input
               {...register('author')}
-              className={`w-full px-5 py-4 rounded-2xl bg-white border-2 ${errors.author ? 'border-destructive' : 'border-transparent'} focus:border-primary outline-none shadow-sm`}
+              className={`w-full px-5 py-4 rounded-2xl bg-white border-2 ${errors.author ? 'border-destructive' : 'border-transparent'} focus:border-primary outline-none shadow-sm transition-all`}
               placeholder="Ej: Patrick Rothfuss"
             />
             {errors.author && <p className="text-destructive text-[10px] font-bold ml-4 uppercase">{errors.author.message}</p>}
@@ -91,7 +198,7 @@ export const AddBookModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, crea
               <div className="relative">
                 <select
                   {...register('status')}
-                  className="w-full pl-4 pr-10 py-4 rounded-2xl bg-white border-2 border-transparent focus:border-primary outline-none shadow-sm appearance-none font-medium text-sm"
+                  className="w-full pl-4 pr-10 py-4 rounded-2xl bg-white border-2 border-transparent focus:border-primary outline-none shadow-sm appearance-none font-medium text-sm transition-all"
                 >
                   <option value="Want to Read">Pendiente</option>
                   <option value="Reading">Leyendo</option>
@@ -121,13 +228,35 @@ export const AddBookModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, crea
           </div>
           {errors.genre && <p className="text-destructive text-[10px] font-bold ml-4 uppercase">{errors.genre.message}</p>}
 
+          {/* Campo Sinopsis */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-black uppercase tracking-widest text-primary ml-2 italic">Sinopsis</label>
+            <textarea
+              {...register('description')}
+              rows={3}
+              className="w-full px-5 py-3 rounded-2xl bg-white border-2 border-transparent focus:border-primary outline-none shadow-sm text-sm resize-none transition-all"
+              placeholder="Sinopsis del libro..."
+            />
+          </div>
+
+          {/* Campo oculto para la URL */}
+          <input type="hidden" {...register('urlPortada')} />
+
+          {/* Botones */}
           <div className="pt-6 flex gap-4">
-            <button type="button" onClick={onClose} className="flex-1 font-bold text-muted-foreground">Cancelar</button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 font-bold text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Cancelar
+            </button>
             <button
               type="submit"
               className="flex-[2] px-4 py-4 bg-gradient-to-r from-primary to-secondary text-white rounded-2xl font-bold shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2"
             >
-              Guardar Libro
+              {isEditing ? <Save className="w-4 h-4" /> : null}
+              {isEditing ? 'Guardar Cambios' : 'Guardar Libro'}
             </button>
           </div>
         </form>

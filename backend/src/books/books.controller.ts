@@ -38,6 +38,11 @@ export class BooksController {
     return this.booksService.findAll(req.user.id);
   }
 
+  @Get('search/:isbn') 
+  async search(@Param('isbn') isbn: string) {
+    return this.booksService.searchByIsbn(isbn);
+  }
+  
   @Get(':id')
   findOne(@Param('id') id: string, @Request() req: RequestWithUser) {
     return this.booksService.findOne(+id, req.user.id);

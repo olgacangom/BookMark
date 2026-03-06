@@ -20,8 +20,17 @@ export class Book {
   })
   status: BookStatus;
 
-  @Column()
+  @Column({ nullable: true })
   genre: string;
+
+  @Column({ type: 'text', nullable: true }) 
+  description: string;
+
+  @Column({ nullable: true })
+  pageCount: number;
+
+  @Column({ nullable: true })
+  urlPortada: string; 
 
   @ManyToOne(() => User, (user) => user.books)
   user: User;

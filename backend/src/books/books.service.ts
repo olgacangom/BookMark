@@ -4,13 +4,19 @@ import { Repository } from 'typeorm';
 import { Book } from './entities/book.entity';
 import { CreateBookDto } from './dto/create-book.dto';
 import { UpdateBookDto } from './dto/update-book.dto';
+import { GoogleBooksService } from './google-books/google-books.service';
 
 @Injectable()
 export class BooksService {
-  constructor(
+constructor(
     @InjectRepository(Book)
     private readonly bookRepository: Repository<Book>,
+    private readonly googleBooksService: GoogleBooksService,
   ) {}
+
+  async searchByIsbn(isbn: string) {
+    return this.googleBooksService.findByIsbn(isbn);
+  }
 
   async create(createBookDto: CreateBookDto, userId: string) {
     const newBook = this.bookRepository.create({

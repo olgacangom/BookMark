@@ -3,6 +3,7 @@ import api from "../../services/api";
 export type BookStatus = 'Read' | 'Reading' | 'Want to Read';
 
 export interface Book {
+  urlPortada: any;
   updatedAt: string | number | Date;
   coverUrl: string;
   id: number;
@@ -22,9 +23,14 @@ export const bookService = {
     const { data } = await api.post<Book>('/books', bookData);
     return data;
   },
-  
-  updateBookStatus: async (id: number, status: BookStatus): Promise<Book> => {
-    const { data } = await api.patch<Book>(`/books/${id}`, { status });
+
+  update: async (id: number, updates: Partial<Book>): Promise<Book> => {
+    const { data } = await api.patch<Book>(`/books/${id}`, updates);
     return data;
+  },
+  
+  remove: async (id: number): Promise<void> => {
+    await api.delete(`/books/${id}`);
   }
+
 };

@@ -11,14 +11,12 @@ export const BOOK_GENRES = [
 ] as const;
 
 export const bookSchema = z.object({
-  title: z.string().min(1, 'El título es obligatorio'),
-  author: z.string().min(1, 'El autor es obligatorio'),
-  status: z.enum(['Reading', 'Read', 'Want to Read'], {
-    message: 'Selecciona un estado válido',
-  }),
-  genre: z.enum(BOOK_GENRES as unknown as [string, ...string[]], {
-    message: 'Selecciona un género válido',
-  }),
+  title: z.string().min(1, "El título es obligatorio"),
+  author: z.string().min(1, "El autor es obligatorio"),
+  status: z.enum(['Want to Read', 'Reading', 'Read']),
+  genre: z.string().optional().nullable(),
+  description: z.string().optional().nullable(), 
+  urlPortada: z.string().optional().nullable(),   
 });
 
 export type BookFormData = z.infer<typeof bookSchema>;
