@@ -20,16 +20,13 @@ export const LoginView = () => {
     setIsSubmitting(true);
 
     try {
-      // 🚀 Llamada al backend
       const response = await api.post('/auth/login', { 
         email, 
         password 
       });
 
-      // Extraemos el token (ajusta si tu backend usa 'token' en lugar de 'access_token')
       const { access_token, user } = response.data;
 
-      // ✅ Guardamos en el contexto
       login(access_token, user);
       
       navigate("/dashboard");

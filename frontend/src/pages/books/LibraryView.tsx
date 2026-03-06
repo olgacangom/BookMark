@@ -95,7 +95,7 @@ export const LibraryView = () => {
                         <h1 className="text-4xl font-black text-foreground tracking-tight">Mi Biblioteca</h1>
                     </div>
                     <p className="text-muted-foreground text-lg font-medium">
-                        Hola <span className="text-primary font-bold">{user?.fullName || 'Lector'}</span>, tienes {books.length} libros en tu colección.
+                        Hola <span className="text-primary font-bold">{user?.fullName?.split(' ')[0] || 'Lector'}</span>, tienes {books.length} libros en tu colección.
                     </p>
                 </div>
                 
@@ -160,7 +160,7 @@ export const LibraryView = () => {
             {filteredBooks.length === 0 ? (
                 <EmptyState hasSearch={!!searchTerm} onAddClick={() => setIsModalOpen(true)} />
             ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-8">
                     {filteredBooks.map(book => {
                         const status = getStatusInfo(book.status);
                         return (
@@ -178,9 +178,9 @@ export const LibraryView = () => {
                                 </div>
 
                                 <div className="px-2 flex-grow">
-                                    <h3 className="font-black text-xl text-foreground leading-[1.2] mb-2 group-hover:text-primary transition-colors line-clamp-2 italic">
+                                    <h2 className="font-bold text-l text-foreground leading-[1.2] mb-2 group-hover:text-primary transition-colors line-clamp-2">
                                         {book.title}
-                                    </h3>
+                                    </h2>
                                     <p className="text-muted-foreground text-sm font-bold uppercase tracking-widest mb-6 opacity-60">
                                         {book.author}
                                     </p>

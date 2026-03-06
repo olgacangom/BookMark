@@ -15,7 +15,8 @@ import { JwtStrategy } from './jwt.strategy';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_SECRET') || 'clave-de-emergencia',
+        secret:
+          configService.get<string>('JWT_SECRET') || 'clave-de-emergencia',
         signOptions: { expiresIn: '1h' },
       }),
     }),

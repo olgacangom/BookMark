@@ -1,5 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, ReactNode } from 'react';
+import api from '../services/api'; //
 
 interface AuthContextType {
   user: any;
@@ -7,6 +8,7 @@ interface AuthContextType {
   login: (data: any, userData?: any) => void;
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
+  updateUser: (userData: any) => void;
   isAuthenticated: boolean;
 }
 
@@ -19,6 +21,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return savedUser ? JSON.parse(savedUser) : null;
   });
 
+  const register = async (name: string, email: string, password: string) => {
+    try {
+      await api.post('/auth/register', { 
+        fullName: name, 
+        email, 
+        password 
+      });
+    } catch (error) {
+      console.error("Error en registro:", error);
+      throw error;
+    }
+  };
+
   const login = (data: any, userData?: any) => {
     const tokenString = typeof data === 'string' ? data : (data.access_token || data.token);
 
@@ -27,11 +42,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    localStorage.setItem('token', tokenString);
-    localStorage.setItem('user', JSON.stringify(userData || data.user || {}));
+    const userToSave = userData || data.user || {};
     
+    localStorage.setItem('token', tokenString);
+    localStorage.setItem('user', JSON.stringify(userToSave));
+
     setToken(tokenString);
-    setUser(userData || data.user || {});
+    setUser(userToSave);
+  };
+
+  const updateUser = (updatedUserData: any) => {
+    localStorage.setItem('user', JSON.stringify(updatedUserData));
+    setUser(updatedUserData);
   };
 
   const logout = () => {
@@ -42,9 +64,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const isAuthenticated = !!token;
-
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, isAuthenticated, register: async () => {} }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      token, 
+      login, 
+      logout, 
+      updateUser, 
+      register, //
+      isAuthenticated 
+    }}>
       {children}
     </AuthContext.Provider>
   );

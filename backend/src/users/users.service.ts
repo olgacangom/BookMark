@@ -1,6 +1,5 @@
 import {
   Injectable,
-  BadRequestException,
   NotFoundException,
   ForbiddenException,
 } from '@nestjs/common';
@@ -29,6 +28,7 @@ export class UsersService {
     const savedUser = await this.usersRepository.save(newUser);
 
     const { password, ...result } = savedUser;
+    void password;
     return result;
   }
 

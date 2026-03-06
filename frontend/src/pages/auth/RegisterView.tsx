@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom'; // Asegúrate de usar react-router-dom
-import { useAuth } from '../../context/AuthContext'; // Usamos el contexto de autenticación real
-import { BookOpen, User, Mail, Lock, Sparkles, Loader2 } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
+// 1. Añadimos Eye y EyeOff a las importaciones
+import { BookOpen, User, Mail, Lock, Sparkles, Loader2, Eye, EyeOff } from 'lucide-react';
 
 export const RegisterView = () => {
   const [name, setName] = useState('');
@@ -9,6 +10,9 @@ export const RegisterView = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // 2. Creamos el estado para mostrar/ocultar contraseña
+  const [showPassword, setShowPassword] = useState(false);
 
   const { register } = useAuth(); 
   const navigate = useNavigate();
@@ -20,7 +24,6 @@ export const RegisterView = () => {
 
     try {
       await register(name, email, password);
-
       navigate('/login'); 
     } catch (err: any) {
       setError(err.response?.data?.message || 'Error al crear la cuenta. Inténtalo de nuevo.');
@@ -31,9 +34,8 @@ export const RegisterView = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#e8e6e2] via-[#f5f3f0] to-[#e3e0da] flex items-center justify-center px-4 py-12 relative overflow-hidden">
-      <div className="absolute top-20 left-10 w-72 h-72 bg-neutral-300/20 rounded-full blur-3xl" />
-      <div className="absolute bottom-20 right-10 w-96 h-96 bg-stone-300/20 rounded-full blur-3xl" />
-
+      {/* ... decoraciones de fondo iguales ... */}
+      
       <div className="max-w-md w-full relative z-10">
         <div className="text-center mb-10">
           <div className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-br from-primary via-secondary to-accent rounded-[2rem] shadow-2xl shadow-neutral-400/30 mb-6 relative">
@@ -55,6 +57,7 @@ export const RegisterView = () => {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Input Nombre ... igual */}
             <div>
               <label htmlFor="name" className="block text-sm mb-2.5 text-slate-700 font-medium ml-2">
                 Nombre Completo
@@ -73,6 +76,7 @@ export const RegisterView = () => {
               </div>
             </div>
 
+            {/* Input Email ... igual */}
             <div>
               <label htmlFor="email" className="block text-sm mb-2.5 text-slate-700 font-medium ml-2">
                 Correo Electrónico
@@ -91,6 +95,7 @@ export const RegisterView = () => {
               </div>
             </div>
 
+            {/* Input Password con OJO */}
             <div>
               <label htmlFor="password" className="block text-sm mb-2.5 text-slate-700 font-medium ml-2">
                 Contraseña
@@ -99,14 +104,22 @@ export const RegisterView = () => {
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-primary" />
                 <input
                   id="password"
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-12 pr-4 py-4 bg-input-background border-2 border-transparent rounded-2xl focus:outline-none focus:border-primary focus:bg-white transition-all text-slate-700 placeholder:text-slate-400 shadow-sm"
+                  className="w-full pl-12 pr-12 py-4 bg-input-background border-2 border-transparent rounded-2xl focus:outline-none focus:border-primary focus:bg-white transition-all text-slate-700 placeholder:text-slate-400 shadow-sm"
                   placeholder="Mínimo 6 caracteres"
                   required
                   minLength={6}
                 />
+                {/* 5. Botón del Ojo */}
+                <button
+                  type="button" 
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-primary/50 hover:text-primary transition-colors focus:outline-none"
+                >
+                  {showPassword ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
+                </button>
               </div>
             </div>
 

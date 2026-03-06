@@ -37,7 +37,7 @@ export const MainLayout = () => {
 
         <div className="flex-1 flex items-center justify-end gap-5">
           <Link 
-            to="/profile" 
+            to="/myprofile" 
             className="flex items-center gap-3 bg-muted/50 px-4 py-2 rounded-2xl border border-border hover:bg-muted transition-all hover:shadow-sm"
           >
             <span className="text-sm font-bold text-foreground" title="Mi Perfil">{user?.fullName}</span>

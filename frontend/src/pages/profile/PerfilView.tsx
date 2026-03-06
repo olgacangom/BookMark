@@ -15,7 +15,7 @@ export const PerfilView = () => {
       try {
         const { data } = await api.get(`/users/profile/${id}`);
         setTargetUser(data);
-      } catch (e) {
+      } catch {
         console.error("Usuario no encontrado");
       } finally {
         setLoading(false);
