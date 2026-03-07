@@ -11,6 +11,7 @@ export interface Book {
   urlPortada?: string;
   pageCount?: number;
   updatedAt: string | number | Date;
+  isbn: string
 }
 
 export const bookService = {
@@ -19,7 +20,7 @@ export const bookService = {
     return data;
   },
 
-  create: async (bookData: { title: string; author: string; status: string, genre: string }): Promise<Book> => {
+  create: async (bookData: Partial<Book>): Promise<Book> => {
     const { data } = await api.post<Book>('/books', bookData);
     return data;
   },
