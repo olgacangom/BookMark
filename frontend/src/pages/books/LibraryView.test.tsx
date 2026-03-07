@@ -137,10 +137,9 @@ describe('LibraryView - Cobertura Exhaustiva', () => {
 
     it('debe abrir el modal de edición al hacer clic en una tarjeta', async () => {
         renderView();
-        const bookCard = await screen.findByText('Z-Libro');
-        fireEvent.click(bookCard); 
-
-        expect(screen.getByText('Editando Z-Libro')).toBeInTheDocument();
+        const editBtn = await screen.findByRole('button', { name: /Editar libro Z-Libro/i });
+        fireEvent.click(editBtn); 
+        expect(await screen.findByText(/Editando Z-Libro/i)).toBeInTheDocument();
     });
 
     it('debe ordenar por autor y manejar el guardado de edición', async () => {
@@ -152,10 +151,12 @@ describe('LibraryView - Cobertura Exhaustiva', () => {
         fireEvent.click(screen.getByText(/Orden alfabético \(Autor\)/i));
 
         const titles = screen.getAllByRole('heading', { level: 2 }).map(h => h.textContent);
-        expect(titles[0]).toBe('A-Libro'); 
+        expect(titles[0]).toBe('A-Libro');
 
-        fireEvent.click(screen.getByText('A-Libro'));
-        const saveBtn = screen.getByText('Guardar');
+        const editBtn = screen.getByRole('button', { name: /Editar libro A-Libro/i });
+        fireEvent.click(editBtn);
+
+        const saveBtn = await screen.findByText('Guardar');
         fireEvent.click(saveBtn);
 
         await waitFor(() => {
@@ -175,7 +176,8 @@ describe('LibraryView - Cobertura Exhaustiva', () => {
 
     it('debe manejar la rama de creación de libro nuevo', async () => {
         renderView();
-        const addNewBtn = await screen.findByText(/Añadir Nuevo Libro/i);
+        
+        const addNewBtn = await screen.findByRole('button', { name: /Añadir Nuevo Libro/i });
         fireEvent.click(addNewBtn);
 
         const saveBtn = screen.getByText('Guardar');
@@ -185,6 +187,7 @@ describe('LibraryView - Cobertura Exhaustiva', () => {
             expect(bookService.create).toHaveBeenCalled();
         });
     });
+
     it('debe mostrar el nombre por defecto Lector si el usuario no tiene nombre', async () => {
         localStorage.setItem('user', JSON.stringify({ email: 'test@test.com' }));
         renderView();
@@ -212,34 +215,34 @@ describe('LibraryView - Cobertura Exhaustiva', () => {
 
     it('debe ejecutar la rama de edición dentro del modal', async () => {
         renderView();
-        const bookCard = await screen.findByText('Z-Libro');
-        fireEvent.click(bookCard); 
+        const bookCardBtn = await screen.findByRole('button', { name: /Editar libro Z-Libro/i });
+        fireEvent.click(bookCardBtn);
 
-        const saveBtn = screen.getByText('Guardar');
+        const saveBtn = await screen.findByText('Guardar');
         fireEvent.click(saveBtn);
 
         await waitFor(() => {
             expect(bookService.update).toHaveBeenCalled();
         });
     });
-    
+
     it('debe limpiar el estado al cerrar los modales', async () => {
         renderView();
-        
+
         const addBtn = await screen.findByText(/Añadir Nuevo Libro/i);
         fireEvent.click(addBtn);
-        
+
         const closeAddBtn = screen.getByText('Cerrar');
         fireEvent.click(closeAddBtn);
-        
+
         expect(screen.queryByTestId('mock-modal')).not.toBeInTheDocument();
 
         const deleteBtn = screen.getAllByRole('button').filter(b => b.className.includes('bg-rose-500'))[0];
         fireEvent.click(deleteBtn);
-        
+
         const cancelDeleteBtn = screen.getByText('Cancelar');
         fireEvent.click(cancelDeleteBtn);
-        
+
         expect(screen.queryByText('¿Eliminar libro?')).not.toBeInTheDocument();
     });
 });

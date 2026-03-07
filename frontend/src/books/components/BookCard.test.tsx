@@ -61,7 +61,12 @@ describe('BookCard', () => {
     );
     
     expect(screen.getByText('📖')).toBeInTheDocument();
-    expect(screen.queryByRole('img')).not.toBeInTheDocument();
+    const fallbackIcon = screen.getByRole('img', { name: /Libro sin portada/i });
+    expect(fallbackIcon).toBeInTheDocument();
+
+    const images = screen.queryAllByRole('img');
+    const hasHtmlImgTag = images.some(el => el.tagName === 'IMG');
+    expect(hasHtmlImgTag).toBe(false);
   });
 
   it('debe mostrar "Otros" cuando el género no está definido', () => {
@@ -102,8 +107,8 @@ describe('BookCard', () => {
       />
     );
     
-    const card = screen.getByText('El Quijote').closest('div');
-    fireEvent.click(card!);
+    const editButton = screen.getByRole('button', { name: new RegExp(`Editar libro ${mockBook.title}`, 'i') });
+    fireEvent.click(editButton);
     
     expect(mockOnEdit).toHaveBeenCalledWith(mockBook);
   });
