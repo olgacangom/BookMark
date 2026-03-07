@@ -184,3 +184,31 @@
 html {
   font-size: var(--font-size);
 }
+
+/* Estilos para limpiar la interfaz del scanner */
+#reader img {
+  display: none; /* Oculta la imagen de carga de archivo si no la quieres */
+}
+
+#reader__dashboard_section_csr button {
+  background-color: var(--primary); 
+  color: var(--primary-foreground); 
+  padding: 8px 16px;
+  border-radius: var(--radius); 
+  border: none;
+  font-weight: var(--font-weight-medium);
+  margin-top: 10px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+#reader__dashboard_section_csr button:hover {
+  opacity: 0.9;
+}
+
+#reader__camera_selection {
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  margin: 10px 0;
+}

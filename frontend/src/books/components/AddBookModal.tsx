@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { X, BookPlus, Search, Loader2, ChevronDown, Save } from 'lucide-react';
+import { X, BookPlus, Search, Loader2, ChevronDown, Save, Camera } from 'lucide-react';
 import { BookFormData, bookSchema, BOOK_GENRES } from '../schemas/books.shema';
 import axios from 'axios';
 import { Book } from '../services/book.service';
+import { ScannerModal } from './ScannerModal';
 
 interface Props {
   isOpen: boolean;
@@ -18,6 +19,7 @@ export const AddBookModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, crea
   const [isSearching, setIsSearching] = useState(false);
   const [isbn, setIsbn] = useState('');
   const [searchError, setSearchError] = useState<string | null>(null);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
 
   const isEditing = !!book;
 
@@ -30,11 +32,20 @@ export const AddBookModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, crea
       genre: '' as any,
       description: '',
       pageCount: 0,
-      urlPortada: ''
+      urlPortada: '',
+      isbn:'',
     }
   });
 
   const currentPortada = watch('urlPortada');
+
+  const handleScanSuccess = (decodedIsbn: string) => {
+    const cleanIsbn = decodedIsbn.replace(/[^0-9X]/gi, "");
+    setIsbn(cleanIsbn); 
+    setValue('isbn', cleanIsbn); 
+    setIsScannerOpen(false);
+    triggerIsbnSearch(cleanIsbn);
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -47,6 +58,7 @@ export const AddBookModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, crea
         setValue('description', (book as any).description || '');
         setValue('pageCount', book.pageCount || 0);
         setValue('urlPortada', (book as any).urlPortada || '');
+        setValue('isbn', book.isbn || '');
       } else {
         reset({
           status: 'Want to Read' as any,
@@ -64,8 +76,8 @@ export const AddBookModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, crea
 
   if (!isOpen) return null;
 
-  const handleIsbnSearch = async () => {
-    if (!isbn || isbn.length < 10) return;
+  const triggerIsbnSearch = async (targetIsbn: string) => {
+    if (!targetIsbn || targetIsbn.length < 10) return;
 
     setIsSearching(true);
     setSearchError(null);
@@ -74,7 +86,7 @@ export const AddBookModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, crea
       const rawToken = localStorage.getItem('token');
       const token = rawToken?.replace(/"/g, '');
 
-      const response = await axios.get(`http://localhost:3000/books/search/${isbn}`, {
+      const response = await axios.get(`http://localhost:3000/books/search/${targetIsbn}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -83,11 +95,7 @@ export const AddBookModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, crea
       const bookData = response.data;
 
       setValue('title', bookData.title, { shouldValidate: true });
-
-      const authorName = Array.isArray(bookData.authors)
-        ? bookData.authors.join(', ')
-        : bookData.authors;
-
+      const authorName = Array.isArray(bookData.authors) ? bookData.authors.join(', ') : bookData.authors;
       const pages = Number(bookData.pageCount);
 
       setValue('author', authorName, { shouldValidate: true });
@@ -148,27 +156,39 @@ export const AddBookModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, crea
           </button>
         </div>
 
-        {/* Búsqueda por ISBN */}
+        {/* Búsqueda por ISBN + Cámara */}
         {!isEditing && (
           <div className="px-8 pt-2">
-            <div className="relative group">
-              <input
-                type="text"
-                value={isbn}
-                onChange={(e) => {
-                  setIsbn(e.target.value);
-                  if (searchError) setSearchError(null);
-                }}
-                placeholder="Escribe el ISBN (ej: 97884...)" 
-                className={`w-full pl-5 pr-14 py-4 rounded-2xl bg-primary/5 border-2 border-dashed ${searchError ? 'border-destructive bg-destructive/5' : 'border-primary/20'
-                  } focus:border-primary focus:bg-white outline-none transition-all text-sm font-medium`}
-              />
+            <div className="flex gap-2 relative group">
+              <div className="relative flex-grow">
+                <input
+                  type="text"
+                  value={isbn}
+                  onChange={(e) => {
+                    setIsbn(e.target.value);
+                    if (searchError) setSearchError(null);
+                  }}
+                  placeholder="ISBN (ej: 97884...)"
+                  className={`w-full pl-5 pr-12 py-4 rounded-2xl bg-primary/5 border-2 border-dashed ${searchError ? 'border-destructive bg-destructive/5' : 'border-primary/20'
+                    } focus:border-primary focus:bg-white outline-none transition-all text-sm font-medium`}
+                />
+                {/* Botón de Cámara integrado en el input */}
+                <button
+                  type="button"
+                  onClick={() => setIsScannerOpen(true)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-2 bg-primary/10 text-primary rounded-xl hover:bg-primary hover:text-white transition-all shadow-sm"
+                  title="Abrir cámara para escanear"
+                >
+                  <Camera className="w-4 h-4" />
+                </button>
+              </div>
+
               <button
                 type="button"
-                onClick={handleIsbnSearch}
+                onClick={() => triggerIsbnSearch(isbn)}
                 disabled={isSearching}
                 aria-label="Buscar por ISBN"
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-2.5 bg-primary text-white rounded-xl hover:scale-105 active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center"
+                className="p-4 bg-primary text-white rounded-2xl hover:scale-105 active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center shadow-lg shadow-primary/20"
               >
                 {isSearching ? <Loader2 className="w-5 h-5 animate-spin" /> : <Search className="w-5 h-5" />}
               </button>
@@ -179,15 +199,13 @@ export const AddBookModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, crea
               </p>
             ) : (
               <p className="text-[10px] text-muted-foreground mt-2 ml-4 font-bold uppercase tracking-tighter italic">
-                Búsqueda rápida por código de barras
+                Búsqueda manual o mediante cámara
               </p>
             )}
           </div>
         )}
 
         <form onSubmit={handleSubmit(handleOnSubmit)} className="p-8 pt-4 space-y-4 max-h-[60vh] overflow-y-auto custom-scrollbar">
-
-          {/* Vista previa de Portada */}
           {currentPortada && (
             <div className="flex justify-center mb-2 animate-in zoom-in duration-300">
               <div className="w-24 h-36 rounded-xl overflow-hidden shadow-lg border-2 border-white">
@@ -196,7 +214,6 @@ export const AddBookModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, crea
             </div>
           )}
 
-          {/* Campo Título */}
           <div className="space-y-1.5">
             <label className="text-xs font-black uppercase tracking-widest text-primary ml-2 italic">Título del libro</label>
             <input
@@ -207,7 +224,6 @@ export const AddBookModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, crea
             {errors.title && <p className="text-destructive text-[10px] font-bold ml-4 uppercase">{errors.title.message}</p>}
           </div>
 
-          {/* Campo Autor */}
           <div className="space-y-1.5">
             <label className="text-xs font-black uppercase tracking-widest text-primary ml-2 italic">Autor</label>
             <input
@@ -218,7 +234,6 @@ export const AddBookModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, crea
             {errors.author && <p className="text-destructive text-[10px] font-bold ml-4 uppercase">{errors.author.message}</p>}
           </div>
 
-          {/* Grid de 3 Columnas para Estado, Páginas y Género */}
           <div className="grid grid-cols-3 gap-3">
             <div className="space-y-1.5">
               <label className="text-xs font-black uppercase tracking-widest text-primary ml-2 italic">Estado</label>
@@ -263,7 +278,6 @@ export const AddBookModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, crea
             </div>
           </div>
 
-          {/* Campo Sinopsis */}
           <div className="space-y-1.5">
             <label className="text-xs font-black uppercase tracking-widest text-primary ml-2 italic">Sinopsis</label>
             <textarea
@@ -276,7 +290,6 @@ export const AddBookModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, crea
 
           <input type="hidden" {...register('urlPortada')} />
 
-          {/* Botones */}
           <div className="pt-6 flex gap-4">
             <button
               type="button"
@@ -296,6 +309,13 @@ export const AddBookModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, crea
           </div>
         </form>
       </div>
+
+      {/* Modal del Escáner */}
+      <ScannerModal
+        isOpen={isScannerOpen}
+        onClose={() => setIsScannerOpen(false)}
+        onScanSuccess={handleScanSuccess}
+      />
     </div>
   );
 };
