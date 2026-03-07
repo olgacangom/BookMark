@@ -14,12 +14,17 @@ vi.mock('../../books/services/book.service', () => ({
 
 describe('DashboardView', () => {
     const mockBooks: Book[] = [
-        { id: 1, title: 'Libro Leyendo', author: 'Autor A', status: 'Reading', updatedAt: '', coverUrl: '', genre: 'Fantasía' },
-        { id: 2, title: 'Libro Leído', author: 'Autor B', status: 'Read', updatedAt: '', coverUrl: '', genre: 'Fantasía' },
+        { id: 1, title: 'Libro Leyendo', author: 'Autor A', status: 'Reading', updatedAt: '2026-01-01', urlPortada: '', genre: 'Fantasía' },
+        { id: 2, title: 'Libro Leído', author: 'Autor B', status: 'Read', updatedAt: '2026-01-02', urlPortada: '', genre: 'Fantasía' },
     ];
+
+    const mockUser = { fullName: 'Olga Cantalejo', email: 'olga@test.com' };
 
     beforeEach(() => {
         vi.clearAllMocks();
+        localStorage.clear();
+        localStorage.setItem('user', JSON.stringify(mockUser));
+        localStorage.setItem('token', 'fake-token');
     });
 
     const renderWithProviders = (ui: React.ReactElement) => {
@@ -32,6 +37,14 @@ describe('DashboardView', () => {
         );
     };
 
+    it('debe mostrar el saludo personalizado con el primer nombre del usuario', async () => {
+        vi.mocked(bookService.getMyBooks).mockResolvedValue(mockBooks);
+        renderWithProviders(<DashboardView />);
+        await waitFor(() => {
+            expect(screen.getByText(/¡Hola, Olga!/i)).toBeInTheDocument();
+        });
+    });
+
     it('debe mostrar el estado de carga y luego los libros', async () => {
         vi.mocked(bookService.getMyBooks).mockResolvedValue(mockBooks);
         renderWithProviders(<DashboardView />);
@@ -43,6 +56,18 @@ describe('DashboardView', () => {
             const stats = screen.getAllByText('1');
             expect(stats.length).toBeGreaterThanOrEqual(1);
             expect(screen.getByText(/libros leídos/i)).toBeInTheDocument();
+        });
+    });
+
+    it('debe manejar la rama donde el usuario no tiene nombre (edge case)', async () => {
+        localStorage.setItem('user', JSON.stringify({ email: 'test@test.com' }));
+        vi.mocked(bookService.getMyBooks).mockResolvedValue([]);
+        
+        renderWithProviders(<DashboardView />);
+        
+        await waitFor(() => {
+            const title = screen.getByRole('heading', { level: 1 });
+            expect(title.textContent).toContain('¡Hola,');
         });
     });
 

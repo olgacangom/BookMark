@@ -45,7 +45,11 @@ describe('UsersController', () => {
 
   describe('CRUD Operations', () => {
     it('should call create', async () => {
-      const dto: CreateUserDto = { email: 'test@test.com', password: '123', fullName: 'Test' };
+      const dto: CreateUserDto = {
+        email: 'test@test.com',
+        password: '123',
+        fullName: 'Test',
+      };
       mockUsersService.create.mockResolvedValue({ id: '1', ...dto });
       expect(await controller.create(dto)).toBeDefined();
     });
@@ -62,7 +66,10 @@ describe('UsersController', () => {
 
     it('should call update with id and dto', async () => {
       const id = 'uuid-test';
-      const updateDto: UpdateUserDto = { fullName: 'Olga Modificado', bio: 'Nueva Bio' };
+      const updateDto: UpdateUserDto = {
+        fullName: 'Olga Modificado',
+        bio: 'Nueva Bio',
+      };
       const expectedResponse = { id, ...updateDto };
 
       mockUsersService.update.mockResolvedValue(expectedResponse);
@@ -81,14 +88,17 @@ describe('UsersController', () => {
 
   describe('updateProfile', () => {
     it('should update the profile of the authenticated user', async () => {
-      const mockReq: RequestWithUser = { 
-        user: { id: 'uuid-auth', email: 'auth@test.com' } 
+      const mockReq: RequestWithUser = {
+        user: { id: 'uuid-auth', email: 'auth@test.com' },
       };
       const dto: UpdateUserDto = { fullName: 'Perfil Editado' };
 
       mockUsersService.update.mockResolvedValue({ id: 'uuid-auth', ...dto });
 
-      const result = await controller.updateProfile(mockReq as unknown as RequestWithUser, dto);
+      const result = await controller.updateProfile(
+        mockReq as unknown as RequestWithUser,
+        dto,
+      );
 
       expect(result).toBeDefined();
       expect(mockUsersService.update).toHaveBeenCalledWith('uuid-auth', dto);

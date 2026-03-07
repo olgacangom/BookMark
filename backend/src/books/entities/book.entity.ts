@@ -23,14 +23,14 @@ export class Book {
   @Column({ nullable: true })
   genre: string;
 
-  @Column({ type: 'text', nullable: true }) 
+  @Column({ type: 'text', nullable: true })
   description: string;
 
   @Column({ nullable: true })
   pageCount: number;
 
   @Column({ nullable: true })
-  urlPortada: string; 
+  urlPortada: string;
 
   @ManyToOne(() => User, (user) => user.books)
   user: User;

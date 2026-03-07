@@ -16,6 +16,7 @@ export const bookSchema = z.object({
   status: z.enum(['Want to Read', 'Reading', 'Read']),
   genre: z.string().optional().nullable(),
   description: z.string().optional().nullable(), 
+  pageCount: z.number().optional().nullable(),
   urlPortada: z.string().optional().nullable(),   
 });
 

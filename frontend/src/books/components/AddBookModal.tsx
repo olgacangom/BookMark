@@ -11,12 +11,13 @@ interface Props {
   onClose: () => void;
   onSuccess: () => void;
   createBook: (data: BookFormData) => Promise<any>;
-  book?: Book | null; 
+  book?: Book | null;
 }
 
 export const AddBookModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, createBook, book }) => {
   const [isSearching, setIsSearching] = useState(false);
   const [isbn, setIsbn] = useState('');
+  const [searchError, setSearchError] = useState<string | null>(null);
 
   const isEditing = !!book;
 
@@ -28,30 +29,33 @@ export const AddBookModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, crea
       author: '',
       genre: '' as any,
       description: '',
+      pageCount: 0,
       urlPortada: ''
     }
   });
 
-  // Observamos la portada para mostrar la vista previa en el formulario
   const currentPortada = watch('urlPortada');
 
   useEffect(() => {
     if (isOpen) {
+      setSearchError(null);
       if (book) {
         setValue('title', book.title);
         setValue('author', book.author);
         setValue('status', book.status as any);
         setValue('genre', (book as any).genre || '');
         setValue('description', (book as any).description || '');
+        setValue('pageCount', book.pageCount || 0);
         setValue('urlPortada', (book as any).urlPortada || '');
       } else {
         reset({
-            status: 'Want to Read' as any,
-            title: '',
-            author: '',
-            genre: '' as any,
-            description: '',
-            urlPortada: ''
+          status: 'Want to Read' as any,
+          title: '',
+          author: '',
+          genre: '' as any,
+          description: '',
+          pageCount: 0,
+          urlPortada: ''
         });
         setIsbn('');
       }
@@ -64,6 +68,8 @@ export const AddBookModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, crea
     if (!isbn || isbn.length < 10) return;
 
     setIsSearching(true);
+    setSearchError(null);
+
     try {
       const rawToken = localStorage.getItem('token');
       const token = rawToken?.replace(/"/g, '');
@@ -77,20 +83,28 @@ export const AddBookModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, crea
       const bookData = response.data;
 
       setValue('title', bookData.title, { shouldValidate: true });
-      
+
       const authorName = Array.isArray(bookData.authors)
         ? bookData.authors.join(', ')
         : bookData.authors;
-      
+
+      const pages = Number(bookData.pageCount);
+
       setValue('author', authorName, { shouldValidate: true });
       setValue('description', bookData.description, { shouldValidate: true });
       setValue('urlPortada', bookData.urlPortada, { shouldValidate: true });
+      setValue('pageCount', isNaN(pages) ? 0 : pages, { shouldValidate: true });
 
       if (bookData.genre && BOOK_GENRES.includes(bookData.genre as any)) {
         setValue('genre', bookData.genre as any, { shouldValidate: true });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error buscando ISBN: ", error);
+      if (error.response?.status === 404) {
+        setSearchError("No se encontró ningún libro con ese ISBN");
+      } else {
+        setSearchError("Error al conectar con el servidor");
+      }
     } finally {
       setIsSearching(false);
     }
@@ -98,7 +112,11 @@ export const AddBookModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, crea
 
   const handleOnSubmit = async (data: BookFormData) => {
     try {
-      await createBook(data);
+      const formattedData = {
+        ...data,
+        pageCount: Number(data.pageCount)
+      };
+      await createBook(formattedData);
       reset();
       setIsbn('');
       onSuccess();
@@ -106,10 +124,6 @@ export const AddBookModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, crea
     } catch (error) {
       console.error("Error al procesar el libro:", error);
     }
-  };
-
-  const onInvalid = (formErrors: any) => {
-    console.log("⚠️ Errores de validación:", formErrors);
   };
 
   return (
@@ -123,7 +137,7 @@ export const AddBookModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, crea
               <BookPlus className="w-6 h-6" />
             </div>
             <h2 className="text-2xl font-black text-foreground tracking-tight">
-                {isEditing ? 'Editar Libro' : 'Añadir Libro'}
+              {isEditing ? 'Editar Libro' : 'Añadir Libro'}
             </h2>
           </div>
           <button
@@ -134,31 +148,44 @@ export const AddBookModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, crea
           </button>
         </div>
 
-        {/* Búsqueda por ISBN (Solo se muestra si NO estamos editando) */}
+        {/* Búsqueda por ISBN */}
         {!isEditing && (
-            <div className="px-8 pt-2">
+          <div className="px-8 pt-2">
             <div className="relative group">
-                <input
+              <input
                 type="text"
                 value={isbn}
-                onChange={(e) => setIsbn(e.target.value)}
-                placeholder="Escribe el ISBN (ej: 97884...)"
-                className="w-full pl-5 pr-14 py-4 rounded-2xl bg-primary/5 border-2 border-dashed border-primary/20 focus:border-primary focus:bg-white outline-none transition-all text-sm font-medium"
-                />
-                <button
+                onChange={(e) => {
+                  setIsbn(e.target.value);
+                  if (searchError) setSearchError(null);
+                }}
+                placeholder="Escribe el ISBN (ej: 97884...)" 
+                className={`w-full pl-5 pr-14 py-4 rounded-2xl bg-primary/5 border-2 border-dashed ${searchError ? 'border-destructive bg-destructive/5' : 'border-primary/20'
+                  } focus:border-primary focus:bg-white outline-none transition-all text-sm font-medium`}
+              />
+              <button
                 type="button"
                 onClick={handleIsbnSearch}
                 disabled={isSearching}
+                aria-label="Buscar por ISBN"
                 className="absolute right-2 top-1/2 -translate-y-1/2 p-2.5 bg-primary text-white rounded-xl hover:scale-105 active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center"
-                >
+              >
                 {isSearching ? <Loader2 className="w-5 h-5 animate-spin" /> : <Search className="w-5 h-5" />}
-                </button>
+              </button>
             </div>
-            <p className="text-[10px] text-muted-foreground mt-2 ml-4 font-bold uppercase tracking-tighter italic">Búsqueda rápida por código de barras</p>
-            </div>
+            {searchError ? (
+              <p className="text-destructive text-[10px] font-bold mt-2 ml-4 animate-in slide-in-from-top-1 uppercase italic">
+                {searchError}
+              </p>
+            ) : (
+              <p className="text-[10px] text-muted-foreground mt-2 ml-4 font-bold uppercase tracking-tighter italic">
+                Búsqueda rápida por código de barras
+              </p>
+            )}
+          </div>
         )}
 
-        <form onSubmit={handleSubmit(handleOnSubmit, onInvalid)} className="p-8 pt-4 space-y-4 max-h-[60vh] overflow-y-auto custom-scrollbar">
+        <form onSubmit={handleSubmit(handleOnSubmit)} className="p-8 pt-4 space-y-4 max-h-[60vh] overflow-y-auto custom-scrollbar">
 
           {/* Vista previa de Portada */}
           {currentPortada && (
@@ -191,30 +218,39 @@ export const AddBookModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, crea
             {errors.author && <p className="text-destructive text-[10px] font-bold ml-4 uppercase">{errors.author.message}</p>}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            {/* Campo Estado */}
+          {/* Grid de 3 Columnas para Estado, Páginas y Género */}
+          <div className="grid grid-cols-3 gap-3">
             <div className="space-y-1.5">
               <label className="text-xs font-black uppercase tracking-widest text-primary ml-2 italic">Estado</label>
               <div className="relative">
                 <select
                   {...register('status')}
-                  className="w-full pl-4 pr-10 py-4 rounded-2xl bg-white border-2 border-transparent focus:border-primary outline-none shadow-sm appearance-none font-medium text-sm transition-all"
+                  className="w-full pl-3 pr-8 py-4 rounded-2xl bg-white border-2 border-transparent focus:border-primary outline-none shadow-sm appearance-none font-medium text-[13px] transition-all"
                 >
                   <option value="Want to Read">Pendiente</option>
                   <option value="Reading">Leyendo</option>
                   <option value="Read">Leído</option>
                 </select>
-                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary/40" />
+                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-primary/40" />
               </div>
             </div>
 
-            {/* Campo Género */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-black uppercase tracking-widest text-primary ml-2 italic">Páginas</label>
+              <input
+                type="number"
+                {...register('pageCount', { valueAsNumber: true })}
+                className={`w-full px-4 py-4 rounded-2xl bg-white border-2 ${errors.pageCount ? 'border-destructive' : 'border-transparent'} focus:border-primary outline-none shadow-sm transition-all text-[13px] font-medium`}
+                placeholder="0"
+              />
+            </div>
+
             <div className="space-y-1.5">
               <label className="text-xs font-black uppercase tracking-widest text-primary ml-2 italic">Género</label>
               <div className="relative">
                 <select
                   {...register('genre')}
-                  className={`w-full pl-4 pr-10 py-4 rounded-2xl bg-white border-2 transition-all outline-none shadow-sm appearance-none font-medium text-sm
+                  className={`w-full pl-3 pr-8 py-4 rounded-2xl bg-white border-2 transition-all outline-none shadow-sm appearance-none font-medium text-[13px]
                     ${errors.genre ? 'border-destructive' : 'border-transparent focus:border-primary'}`}
                 >
                   <option value="" disabled>Elegir...</option>
@@ -222,11 +258,10 @@ export const AddBookModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, crea
                     <option key={g} value={g}>{g}</option>
                   ))}
                 </select>
-                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary/40" />
+                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-primary/40" />
               </div>
             </div>
           </div>
-          {errors.genre && <p className="text-destructive text-[10px] font-bold ml-4 uppercase">{errors.genre.message}</p>}
 
           {/* Campo Sinopsis */}
           <div className="space-y-1.5">
@@ -239,7 +274,6 @@ export const AddBookModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, crea
             />
           </div>
 
-          {/* Campo oculto para la URL */}
           <input type="hidden" {...register('urlPortada')} />
 
           {/* Botones */}
@@ -247,6 +281,7 @@ export const AddBookModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, crea
             <button
               type="button"
               onClick={onClose}
+              aria-label="Cerrar modal"
               className="flex-1 font-bold text-muted-foreground hover:text-foreground transition-colors"
             >
               Cancelar
@@ -255,7 +290,7 @@ export const AddBookModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, crea
               type="submit"
               className="flex-[2] px-4 py-4 bg-gradient-to-r from-primary to-secondary text-white rounded-2xl font-bold shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2"
             >
-              {isEditing ? <Save className="w-4 h-4" /> : null}
+              {isEditing && <Save className="w-4 h-4" />}
               {isEditing ? 'Guardar Cambios' : 'Guardar Libro'}
             </button>
           </div>

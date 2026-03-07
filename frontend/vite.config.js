@@ -5,8 +5,8 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineConfig({
   plugins: [
     react(),
-    tailwindcss(), 
-  ], 
+    tailwindcss(),
+  ],
   build: {
     rollupOptions: {
       output: {
@@ -18,7 +18,7 @@ export default defineConfig({
       },
     },
   },
-  
+
   test: {
     globals: true,
     environment: 'jsdom',
@@ -28,9 +28,13 @@ export default defineConfig({
       reporter: ['text', 'lcov'],
       exclude: [
         'node_modules/**',
-        'src/setupTests.ts',
-        '**/*.css',
-        'src/vite-env.d.ts'
+        'dist/**',
+        '*.config.js',       // Excluye vite.config.js, tailwind.config.js, etc.
+        '*.config.cjs',
+        'eslint.config.js',
+        'src/main.tsx',      
+        'src/vite-env.d.ts',
+        'src/components/shared/**',
       ],
     },
   },

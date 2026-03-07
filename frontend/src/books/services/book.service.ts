@@ -3,14 +3,14 @@ import api from "../../services/api";
 export type BookStatus = 'Read' | 'Reading' | 'Want to Read';
 
 export interface Book {
-  urlPortada: any;
-  updatedAt: string | number | Date;
-  coverUrl: string;
   id: number;
   title: string;
   author: string;
   status: BookStatus;
-  genre: string;
+  genre?: string;
+  urlPortada?: string;
+  pageCount?: number;
+  updatedAt: string | number | Date;
 }
 
 export const bookService = {

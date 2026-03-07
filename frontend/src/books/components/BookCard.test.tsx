@@ -1,7 +1,8 @@
-import { render, screen } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
 import { BookCard } from '../components/BookCard';
 import { Book } from '../services/book.service';
+import { CheckCircle } from 'lucide-react';
 
 describe('BookCard', () => {
   const mockBook: Book = {
@@ -10,21 +11,116 @@ describe('BookCard', () => {
     author: 'Cervantes',
     status: 'Reading',
     genre: 'Fantasía',
-    updatedAt: '',
-    coverUrl: ''
+    updatedAt: '2023-10-01',
+    urlPortada: 'https://ejemplo.com/portada.jpg',
+    pageCount: 500,
   };
 
-  it('debe renderizar el título y el autor correctamente', () => {
-    render(<BookCard book={mockBook} />);
+  const mockStatusInfo = {
+    label: 'Leyendo',
+    icon: <CheckCircle data-testid="status-icon" />,
+    color: 'bg-blue-50 text-blue-600'
+  };
+
+  const mockOnEdit = vi.fn();
+  const mockOnDelete = vi.fn();
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('debe renderizar todos los datos del libro incluyendo género y páginas', () => {
+    render(
+      <BookCard 
+        book={mockBook} 
+        onEdit={mockOnEdit} 
+        onDelete={mockOnDelete} 
+        statusInfo={mockStatusInfo} 
+      />
+    );
     
     expect(screen.getByText('El Quijote')).toBeInTheDocument();
     expect(screen.getByText('Cervantes')).toBeInTheDocument();
+    expect(screen.getByText('Fantasía')).toBeInTheDocument();
+    expect(screen.getByText('500 PÁGINAS')).toBeInTheDocument();
+    expect(screen.getByText('Leyendo')).toBeInTheDocument();
+    
+    const img = screen.getByRole('img');
+    expect(img).toHaveAttribute('src', mockBook.urlPortada);
   });
 
-  it('debe mostrar el badge con el estado correcto', () => {
-    render(<BookCard book={mockBook} />);
-    const badge = screen.getByText('Reading');
-    expect(badge).toBeInTheDocument();
-    expect(badge).toHaveClass('bg-blue-100');
+  it('debe mostrar el icono de libro (fallback) cuando no hay urlPortada', () => {
+    const bookWithoutCover = { ...mockBook, urlPortada: undefined };
+    render(
+      <BookCard 
+        book={bookWithoutCover} 
+        onEdit={mockOnEdit} 
+        onDelete={mockOnDelete} 
+        statusInfo={mockStatusInfo} 
+      />
+    );
+    
+    expect(screen.getByText('📖')).toBeInTheDocument();
+    expect(screen.queryByRole('img')).not.toBeInTheDocument();
+  });
+
+  it('debe mostrar "Otros" cuando el género no está definido', () => {
+    const bookWithoutGenre = { ...mockBook, genre: undefined };
+    render(
+      <BookCard 
+        book={bookWithoutGenre} 
+        onEdit={mockOnEdit} 
+        onDelete={mockOnDelete} 
+        statusInfo={mockStatusInfo} 
+      />
+    );
+    
+    expect(screen.getByText('Otros')).toBeInTheDocument();
+  });
+
+  it('no debe mostrar la sección de páginas si pageCount es 0 o indefinido', () => {
+    const bookWithoutPages = { ...mockBook, pageCount: 0 };
+    render(
+      <BookCard 
+        book={bookWithoutPages} 
+        onEdit={mockOnEdit} 
+        onDelete={mockOnDelete} 
+        statusInfo={mockStatusInfo} 
+      />
+    );
+    
+    expect(screen.queryByText(/PÁGINAS/i)).not.toBeInTheDocument();
+  });
+
+  it('debe llamar a onEdit cuando se hace click en la tarjeta', () => {
+    render(
+      <BookCard 
+        book={mockBook} 
+        onEdit={mockOnEdit} 
+        onDelete={mockOnDelete} 
+        statusInfo={mockStatusInfo} 
+      />
+    );
+    
+    const card = screen.getByText('El Quijote').closest('div');
+    fireEvent.click(card!);
+    
+    expect(mockOnEdit).toHaveBeenCalledWith(mockBook);
+  });
+
+  it('debe llamar a onDelete y detener la propagación cuando se pulsa el botón de borrar', () => {
+    render(
+      <BookCard 
+        book={mockBook} 
+        onEdit={mockOnEdit} 
+        onDelete={mockOnDelete} 
+        statusInfo={mockStatusInfo} 
+      />
+    );
+    
+    const deleteButton = screen.getByRole('button', { name: /eliminar libro/i });
+    fireEvent.click(deleteButton);
+    expect(mockOnDelete).toHaveBeenCalledTimes(1);
+    expect(mockOnEdit).not.toHaveBeenCalled();
   });
 });

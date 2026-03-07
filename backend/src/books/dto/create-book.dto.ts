@@ -1,4 +1,10 @@
-import { IsString, IsEnum, IsNotEmpty, IsOptional, IsNumber } from 'class-validator';
+import {
+  IsString,
+  IsEnum,
+  IsNotEmpty,
+  IsOptional,
+  IsNumber,
+} from 'class-validator';
 import { BookStatus } from '../enum/book-status.enum';
 
 export class CreateBookDto {

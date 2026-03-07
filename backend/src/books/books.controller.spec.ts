@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { BooksController, RequestWithUser } from './books.controller';
 import { BooksService } from './books.service';
 import { BookStatus } from './enum/book-status.enum';
+import { CreateBookDto } from './dto/create-book.dto';
 
 describe('BooksController', () => {
   let controller: BooksController;
@@ -9,6 +10,7 @@ describe('BooksController', () => {
   const mockBooksService = {
     create: jest.fn(),
     findAll: jest.fn(),
+    searchByIsbn: jest.fn(),
     findOne: jest.fn(),
     update: jest.fn(),
     remove: jest.fn(),
@@ -19,6 +21,8 @@ describe('BooksController', () => {
   };
 
   beforeEach(async () => {
+    jest.clearAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       controllers: [BooksController],
       providers: [
@@ -37,11 +41,14 @@ describe('BooksController', () => {
   });
 
   it('should call create service', async () => {
-    const dto = {
+    const dto: CreateBookDto = {
       title: 'New Book',
       author: 'Author',
       status: BookStatus.READING,
       genre: 'Fantasía',
+      description: '',
+      pageCount: 0,
+      urlPortada: '',
     };
     await controller.create(dto, mockReq);
     expect(mockBooksService.create).toHaveBeenCalledWith(dto, 'user-1');
@@ -50,6 +57,12 @@ describe('BooksController', () => {
   it('should call findAll service', async () => {
     await controller.findAll(mockReq);
     expect(mockBooksService.findAll).toHaveBeenCalledWith('user-1');
+  });
+
+  it('should call search service', async () => {
+    const isbn = '9788415594079';
+    await controller.search(isbn);
+    expect(mockBooksService.searchByIsbn).toHaveBeenCalledWith(isbn);
   });
 
   it('should call findOne service', async () => {

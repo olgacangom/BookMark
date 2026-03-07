@@ -8,7 +8,7 @@ import { GoogleBooksService } from './google-books/google-books.service';
 
 @Injectable()
 export class BooksService {
-constructor(
+  constructor(
     @InjectRepository(Book)
     private readonly bookRepository: Repository<Book>,
     private readonly googleBooksService: GoogleBooksService,
