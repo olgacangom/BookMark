@@ -30,6 +30,7 @@ jobs:
       - name: Install Frontend Dependencies
         run: |
           cd frontend
+          npm install --platform=linux --arch=x64 lightningcss
           npm install
           npm rebuild lightningcss 
 
