@@ -28,7 +28,10 @@ jobs:
 
       # --- FRONTEND ---
       - name: Install Frontend Dependencies
-        run: cd frontend && npm ci
+        run: |
+          cd frontend
+          npm ci
+          npm rebuild lightningcss 
 
       - name: Run Frontend Tests
         run: cd frontend && npm run test:coverage
