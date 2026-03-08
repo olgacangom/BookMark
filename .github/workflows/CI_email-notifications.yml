@@ -1,0 +1,58 @@
+name: 📧 Email Notification - Project Movements
+
+on:
+  issues:
+    types: [opened, closed, reopened, labeled]
+
+jobs:
+  notify-movement:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Detect Status and Color
+        id: info
+        run: |
+          # Obtenemos el estado (columna) actual
+          STATUS="${{ github.event.project_item.status || github.event.issue.state }}"
+          ACTION="${{ github.event.action }}"
+          
+          # Lógica de colores y textos
+          if [[ "$STATUS" == "Todo" || "$ACTION" == "opened" ]]; then
+            echo "color=#28a745" >> $GITHUB_OUTPUT
+            echo "status_text=TODO (NUEVA)" >> $GITHUB_OUTPUT
+          elif [[ "$STATUS" == "In progress" ]]; then
+            echo "color=#ffc107" >> $GITHUB_OUTPUT
+            echo "status_text=IN PROGRESS (EN CURSO)" >> $GITHUB_OUTPUT
+          elif [[ "$STATUS" == "Done" || "$ACTION" == "closed" ]]; then
+            echo "color=#d73a49" >> $GITHUB_OUTPUT
+            echo "status_text=DONE (TERMINADA)" >> $GITHUB_OUTPUT
+          else
+            echo "color=#6a737d" >> $GITHUB_OUTPUT
+            echo "status_text=ACTUALIZADA" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Send mail
+        # El if evita que se envíen correos vacíos si por alguna razón se dispara un push
+        if: github.event_name != 'push'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          
+          subject: "BookMark TFG: Task ${{ steps.info.outputs.status_text }} - ${{ github.event.issue.title || github.event.project_item.content.title }}"
+          to: olgacantalejog@gmail.com
+          from: "GitHub BookMark Bot"
+          html_body: |
+            <div style="border-left: 10px solid ${{ steps.info.outputs.color }}; padding: 20px; background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; border-radius: 4px;">
+              <h2 style="color: ${{ steps.info.outputs.color }}; margin-top: 0; text-transform: uppercase;">
+                📌 ${{ steps.info.outputs.status_text }}
+              </h2>
+              <p style="font-size: 16px;"><strong>Tarea:</strong> ${{ github.event.issue.title || github.event.project_item.content.title }}</p>
+              <p><strong>Actualizado por:</strong> ${{ github.actor }}</p>
+              <hr style="border: 0; border-top: 1px solid #dee2e6; margin: 20px 0;">
+              <a href="${{ github.event.issue.html_url || github.event.project_item.content.html_url }}" 
+                 style="display: inline-block; padding: 12px 25px; color: white; background-color: ${{ steps.info.outputs.color }}; text-decoration: none; border-radius: 5px; font-weight: bold;">
+                Ver detalle en GitHub
+              </a>
+            </div>

@@ -1,0 +1,55 @@
+name: SonarCloud Analysis
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  sonarcloud:
+    name: SonarCloud Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # --- BACKEND ---
+      - name: Install Backend Dependencies
+        run: cd backend && npm ci
+
+      - name: Run Backend Tests
+        run: cd backend && npm run test:cov
+
+      # --- FRONTEND ---
+      - name: Install Frontend Dependencies
+        run: |
+          cd frontend
+          npm install --platform=linux --arch=x64 lightningcss
+          npm install
+          npm rebuild lightningcss 
+
+      - name: Run Frontend Tests
+        run: cd frontend && npm run test:coverage
+
+      # --- ANÁLISIS GLOBAL ---
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.projectKey=olgacangom_BookMark
+            -Dsonar.organization=olgacangom
+            -Dsonar.sources=backend/src,frontend/src
+            -Dsonar.tests=backend/src,frontend/src
+            -Dsonar.test.inclusions=**/*.spec.ts,**/*.test.tsx,**/*.test.ts
+            -Dsonar.exclusions=**/*.spec.ts,**/*.test.tsx,**/*.test.ts,backend/test/**,backend/src/main.ts,frontend/src/main.tsx,frontend/src/vite-env.d.ts
+            -Dsonar.javascript.lcov.reportPaths=backend/coverage/lcov.info,frontend/coverage/lcov.info
+            -Dsonar.cpd.exclusions=**/*.test.tsx,**/*.test.ts
