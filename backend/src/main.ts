@@ -1,5 +1,5 @@
-import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { NestFactory, Reflector } from '@nestjs/core'; // 1. Importa Reflector
+import { ClassSerializerInterceptor, ValidationPipe } from '@nestjs/common'; // 2. Importa ClassSerializerInterceptor
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -7,12 +7,13 @@ async function bootstrap() {
 
   app.enableCors();
 
-  // Activa la validación global
+  app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
+
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist: true, // Borra datos que no estén en el DTO (seguridad extra)
-      forbidNonWhitelisted: true, // Lanza error si envían campos "inventados"
-      transform: true, // Convierte los datos a los tipos de TypeScript automáticamente
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
     }),
   );
 

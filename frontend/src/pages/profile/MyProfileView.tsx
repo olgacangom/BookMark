@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Lock, Unlock, Camera, LogOut, Save, Edit } from 'lucide-react';
+import { Lock, Unlock, Camera, Save, Edit, Loader2 } from 'lucide-react';
 import api from '../../services/api';
 
 export const MyProfileView = () => {
@@ -9,117 +9,197 @@ export const MyProfileView = () => {
   const navigate = useNavigate();
 
   const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({
-    name: user?.fullName || '',
-    bio: user?.bio || '',
-    isPublic: user?.isPublic ?? true
+    name: '',
+    bio: '',
+    isPublic: true
   });
+
+  useEffect(() => {
+    const refreshData = async () => {
+      if (!user?.id) return;
+      try {
+        const { data } = await api.get(`/users/${user.id}`);
+        updateUser(data); 
+      } catch (error) {
+        console.error("Error al refrescar contadores:", error);
+      }
+    };
+
+    refreshData();
+  }, [user?.id, updateUser]);
+
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        name: user.fullName || '',
+        bio: user.bio || '',
+        isPublic: user.isPublic ?? true
+      });
+    }
+  }, [user]);
 
   if (!user) return null;
 
   const handleSave = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert("Tu sesión ha expirado. Por favor, inicia sesión de nuevo.");
+      logout();
+      navigate('/login');
+      return;
+    }
+
+    setIsSaving(true);
     try {
-      const response = await api.patch('/users/profile', {
-        fullName: formData.name, 
+      const { data } = await api.patch('/users/profile', {
+        fullName: formData.name,
         bio: formData.bio,
         isPublic: formData.isPublic
       });
 
-      updateUser(response.data);
-
+      updateUser(data);
       setIsEditing(false);
-      console.log("✅ Perfil actualizado y persistido");
-    } catch (error) {
+      console.log("✅ Perfil actualizado correctamente");
+    } catch (error: any) {
       console.error("❌ Error al guardar perfil:", error);
+
+      if (error.response?.status === 401) {
+        alert("Sesión no válida. Por favor, vuelve a entrar.");
+        logout();
+        navigate('/login');
+      } else {
+        alert("Error al conectar con el servidor. Revisa tu conexión.");
+      }
+    } finally {
+      setIsSaving(false);
     }
   };
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8 pb-24 animate-in slide-in-from-bottom-4 duration-700">
+    <div className="max-w-5xl mx-auto px-4 py-6 md:py-8 pb-24 animate-in slide-in-from-bottom-4 duration-700">
 
       {/* Profile Header */}
-      <div className="bg-white rounded-[3rem] shadow-sm overflow-hidden mb-8 border border-border">
-        <div className="h-40 bg-gradient-to-br from-[#9b8b7e] to-[#c5b5aa] relative">
-          <button className="absolute bottom-4 right-8 bg-white/20 backdrop-blur-md text-white p-2 rounded-xl border border-white/30 hover:bg-white/40 transition-all">
+      <div className="bg-white rounded-[2.5rem] md:rounded-[3rem] shadow-sm overflow-hidden mb-8 border border-border">
+        <div className="h-28 md:h-32 bg-gradient-to-br from-[#9b8b7e] to-[#c5b5aa] relative">
+          <button className="absolute bottom-4 right-4 md:right-8 bg-white/20 backdrop-blur-md text-white p-2 rounded-xl border border-white/30 hover:bg-white/40 transition-all">
             <Camera className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="px-10 pb-10">
-          <div className="flex flex-col md:flex-row items-start md:items-end gap-6 -mt-16">
-            <div className="relative group">
+        <div className="px-6 md:px-10 pb-8 md:pb-10">
+          <div className="flex flex-col md:flex-row items-center md:items-start gap-4 md:gap-6 -mt-12 md:mt-[-4rem]">
+
+            {/* Avatar  */}
+            <div className="relative group shrink-0">
               <img
                 src={user.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}`}
-                className="w-40 h-40 rounded-[3rem] border-8 border-white shadow-2xl bg-white object-cover"
+                className="w-32 h-32 md:w-40 md:h-40 rounded-[2.5rem] md:rounded-[3rem] border-4 md:border-8 border-white shadow-2xl bg-white object-cover"
+                alt="Avatar"
               />
-              <div className="absolute inset-0 bg-black/20 rounded-[3rem] opacity-0 group-hover:opacity-100 flex items-center justify-center cursor-pointer transition-opacity">
-                <Camera className="text-white w-8 h-8" />
+            </div>
+
+            {/* Info Container - Centrado en móvil */}
+            <div className="flex-1 pt-2 md:pt-20 text-center md:text-left w-full">
+              {isEditing ? (
+                <input
+                  className="text-2xl md:text-3xl font-black bg-muted border-none rounded-xl px-4 py-1 focus:ring-2 focus:ring-primary outline-none w-full text-center md:text-left"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  autoFocus
+                />
+              ) : (
+                <h1 className="text-2xl md:text-4xl font-black text-foreground leading-tight break-words">
+                  {user.fullName || 'Usuario de BookMark'}
+                </h1>
+              )}
+              <p className="text-primary font-bold mt-1 text-sm md:text-base">@{user.email.split('@')[0]}</p>
+
+              {/* Seguidores */}
+              <div className="flex justify-center md:justify-start gap-6 mt-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-base md:text-lg font-black text-foreground">{user.followers?.length || 0}</span>
+                  <span className="text-[10px] md:text-[11px] font-black uppercase tracking-widest text-muted-foreground/70">Seguidores</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-base md:text-lg font-black text-foreground">{user.following?.length || 0}</span>
+                  <span className="text-[10px] md:text-[11px] font-black uppercase tracking-widest text-muted-foreground/70">Siguiendo</span>
+                </div>
               </div>
             </div>
 
-            <div className="flex-1">
-              {isEditing ? (
-                <input
-                  className="text-3xl font-black bg-muted border-none rounded-xl px-4 py-1 focus:ring-2 focus:ring-primary outline-none"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                />
-              ) : (
-                <h1 className="text-4xl font-black text-foreground">{formData.name}</h1>
-              )}
-              <p className="text-primary font-bold mt-1">@{user.email.split('@')[0]}</p>
-            </div>
-
-            <div className="flex gap-3">
+            {/* Botones de Acción - Ancho completo en móvil */}
+            <div className="flex gap-3 w-full md:w-auto md:pt-20 shrink-0">
               <button
                 onClick={() => isEditing ? handleSave() : setIsEditing(true)}
-                className="flex items-center gap-2 bg-primary text-white px-8 py-3 rounded-2xl font-bold shadow-lg shadow-primary/20 hover:-translate-y-1 transition-all"
+                disabled={isSaving}
+                className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-primary text-white px-6 md:px-8 py-3 rounded-2xl font-bold shadow-lg shadow-primary/20 hover:-translate-y-1 transition-all disabled:opacity-70"
               >
-                {isEditing ? <><Save className="w-5 h-5" /> Guardar</> : <><Edit className="w-5 h-5" /> Editar</>}
-              </button>
-              <button
-                onClick={() => { logout(); navigate('/login'); }}
-                className="text-muted-foreground hover:text-destructive transition-colors p-2 hover:bg-destructive/5 rounded-xl"
-                title="Cerrar Sesión"
-              >
-                <LogOut className="w-5 h-5" />
+                {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : (
+                  isEditing ? <><Save className="w-5 h-5" /> Guardar</> : <><Edit className="w-5 h-5" /> Editar</>
+                )}
               </button>
             </div>
           </div>
 
           {/* Biografía */}
-          <div className="mt-10">
-            <label className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-2 block">Biografía</label>
+          <div className="mt-8 md:mt-12">
             {isEditing ? (
               <textarea
-                className="w-full bg-muted rounded-2xl p-4 border-none focus:ring-2 focus:ring-primary outline-none text-foreground"
+                className="w-full bg-muted rounded-2xl p-4 md:p-5 border-none focus:ring-2 focus:ring-primary outline-none text-foreground font-medium text-sm md:text-base"
                 rows={3}
                 value={formData.bio}
                 onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
               />
             ) : (
-              <p className="text-lg text-foreground leading-relaxed">{formData.bio || 'Aún no has escrito nada sobre ti...'}</p>
+              <p className="text-base md:text-lg text-foreground leading-relaxed font-medium">
+                {user.bio || 'Escribe algo sobre ti para que la comunidad te conozca...'}
+              </p>
             )}
           </div>
         </div>
       </div>
 
-      {/* Ajustes de Privacidad (Estilo Switch de Figma) */}
-      <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-border flex items-center justify-between">
-        <div className="flex items-center gap-5">
-          <div className={`p-4 rounded-2xl ${formData.isPublic ? 'bg-green-50 text-green-600' : 'bg-slate-100 text-slate-500'}`}>
-            {formData.isPublic ? <Unlock /> : <Lock />}
+      {/* Switch de Privacidad - Ajustado para móvil */}
+      <div className="bg-white rounded-[2rem] p-6 md:p-8 shadow-sm border border-border flex items-center justify-between transition-all hover:shadow-md">
+        <div className="flex items-center gap-4 md:gap-5">
+          <div className={`p-3 md:p-4 rounded-2xl transition-colors ${formData.isPublic ? 'bg-green-50 text-green-600' : 'bg-slate-100 text-slate-500'}`}>
+            {formData.isPublic ? <Unlock className="w-5 h-5 md:w-6 md:h-6" /> : <Lock className="w-5 h-5 md:w-6 md:h-6" />}
           </div>
           <div>
-            <h3 className="font-bold text-foreground">Visibilidad del perfil</h3>
-            <p className="text-sm text-muted-foreground">Tu biblioteca es {formData.isPublic ? 'visible para todos' : 'privada'}</p>
+            <h3 className="font-bold text-foreground text-sm md:text-base">Visibilidad del perfil</h3>
+            <p className="text-[11px] md:text-sm text-muted-foreground font-medium">
+              {formData.isPublic ? 'Perfil visible para todos' : 'Perfil privado'}
+            </p>
           </div>
         </div>
         <button
-          onClick={() => setFormData({ ...formData, isPublic: !formData.isPublic })}
-          className={`w-14 h-8 rounded-full transition-colors relative ${formData.isPublic ? 'bg-primary' : 'bg-switch-background'}`}
+          onClick={async () => {
+            const newStatus = !formData.isPublic;
+            setFormData(prev => ({ ...prev, isPublic: newStatus }));
+            if (!isEditing) {
+              try {
+                setIsSaving(true);
+                const { data } = await api.patch('/users/profile', {
+                  fullName: formData.name,
+                  bio: formData.bio,
+                  isPublic: newStatus 
+                });
+                updateUser(data); 
+                console.log("✅ Privacidad actualizada");
+              } catch (error) {
+                console.error("❌ Error al cambiar privacidad", error);
+                setFormData(prev => ({ ...prev, isPublic: !newStatus }));
+              } finally {
+                setIsSaving(false);
+              }
+            }
+          }}
+          disabled={isSaving}
+          className={`w-12 h-7 md:w-14 md:h-8 rounded-full transition-colors relative ${formData.isPublic ? 'bg-primary' : 'bg-slate-300'}`}
         >
-          <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${formData.isPublic ? 'left-7' : 'left-1'}`} />
+          <div className={`absolute top-1 w-5 h-5 md:w-6 md:h-6 bg-white rounded-full shadow-sm transition-all ${formData.isPublic ? 'left-6 md:left-7' : 'left-1'}`} />
         </button>
       </div>
     </div>

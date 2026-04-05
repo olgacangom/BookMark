@@ -5,17 +5,20 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { ILike, Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { User } from './entities/user.entity';
+import { Follow, FollowStatus } from './entities/follow.entity';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User)
     private readonly usersRepository: Repository<User>,
+    @InjectRepository(Follow)
+    private readonly followRepository: Repository<Follow>,
   ) {}
 
   async create(createUserDto: CreateUserDto) {
@@ -23,32 +26,42 @@ export class UsersService {
     if (existingUser) {
       throw new BadRequestException('El email ya está registrado');
     }
-
     const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
-
     const newUser = this.usersRepository.create({
       ...createUserDto,
       password: hashedPassword,
     });
-
-    const savedUser = await this.usersRepository.save(newUser);
-
-    const { password, ...result } = savedUser;
-    void password;
-    return result;
+    return await this.usersRepository.save(newUser);
   }
 
   async findOneByEmail(email: string) {
     return await this.usersRepository.findOneBy({ email });
   }
 
-  findAll() {
-    return this.usersRepository.find();
+  async findAll() {
+    return await this.usersRepository.find({
+      relations: ['followerRelations', 'followerRelations.follower'],
+      select: {
+        id: true,
+        email: true,
+        fullName: true,
+        avatarUrl: true,
+        bio: true,
+        isPublic: true,
+      },
+    });
   }
 
   async findOne(id: string) {
-    // Cambiado a string por el UUID
-    const user = await this.usersRepository.findOneBy({ id });
+    const user = await this.usersRepository.findOne({
+      where: { id },
+      relations: [
+        'followerRelations',
+        'followerRelations.follower',
+        'followingRelations',
+        'followingRelations.following',
+      ],
+    });
     if (!user) throw new NotFoundException('Usuario no encontrado');
     return user;
   }
@@ -59,44 +72,117 @@ export class UsersService {
       ...updateUserDto,
     });
     if (!user) throw new NotFoundException('Usuario no encontrado');
-    return this.usersRepository.save(user);
+
+    await this.usersRepository.save(user);
+    return this.findOne(id);
   }
 
-  async remove(id: string) {
-    const user = await this.findOne(id);
-    return this.usersRepository.remove(user);
+  async followUser(followerId: string, targetUserId: string) {
+    if (followerId === targetUserId) {
+      throw new BadRequestException('No puedes seguirte a ti mismo');
+    }
+
+    const targetUser = await this.usersRepository.findOneBy({
+      id: targetUserId,
+    });
+    if (!targetUser) throw new NotFoundException('Usuario no encontrado');
+
+    let follow = await this.followRepository.findOne({
+      where: { follower: { id: followerId }, following: { id: targetUserId } },
+    });
+
+    if (follow) return follow;
+
+    follow = this.followRepository.create({
+      follower: { id: followerId },
+      following: { id: targetUserId },
+      status: targetUser.isPublic
+        ? FollowStatus.ACCEPTED
+        : FollowStatus.PENDING,
+    });
+
+    return await this.followRepository.save(follow);
   }
 
-  async getPublicProfile(id: string) {
-    const user = await this.findOne(id);
+  async unfollowUser(followerId: string, targetUserId: string) {
+    const follow = await this.followRepository.findOne({
+      where: { follower: { id: followerId }, following: { id: targetUserId } },
+    });
 
-    if (!user.isPublic) {
+    if (!follow) {
+      return { message: 'No había relación previa' };
+    }
+
+    await this.followRepository.remove(follow);
+    return { message: 'Relación eliminada' };
+  }
+
+  async getPendingRequests(userId: string) {
+    return await this.followRepository.find({
+      where: {
+        following: { id: userId },
+        status: FollowStatus.PENDING,
+      },
+      relations: ['follower'],
+    });
+  }
+
+  async acceptFollowRequest(requestId: string) {
+    const request = await this.followRepository.findOneBy({ id: requestId });
+    if (!request) throw new NotFoundException('Solicitud no encontrada');
+
+    request.status = FollowStatus.ACCEPTED;
+    return await this.followRepository.save(request);
+  }
+
+  async declineFollowRequest(requestId: string) {
+    const request = await this.followRepository.findOneBy({ id: requestId });
+    if (!request) throw new NotFoundException('Solicitud no encontrada');
+
+    return await this.followRepository.remove(request);
+  }
+
+  async searchUsers(query: string) {
+    return this.usersRepository.find({
+      where: [
+        { fullName: ILike(`%${query}%`) },
+        { email: ILike(`%${query}%`) },
+      ],
+      select: ['id', 'fullName', 'avatarUrl', 'bio', 'isPublic'],
+    });
+  }
+
+  async findOneProfile(id: string, requesterId: string) {
+    const user = await this.usersRepository.findOne({
+      where: { id },
+      relations: ['followerRelations', 'followerRelations.follower'],
+    });
+
+    if (!user) throw new NotFoundException('Usuario no encontrado');
+
+    const isFollowing = user.followerRelations.some(
+      (f) =>
+        f.follower.id === requesterId && f.status === FollowStatus.ACCEPTED,
+    );
+
+    const hasPendingRequest = user.followerRelations.some(
+      (f) => f.follower.id === requesterId && f.status === FollowStatus.PENDING,
+    );
+
+    if (!user.isPublic && user.id !== requesterId && !isFollowing) {
       throw new ForbiddenException('Este perfil es privado');
     }
+
     return {
-      id: user.id,
-      fullName: user.fullName,
-      bio: user.bio,
-      avatarUrl: user.avatarUrl,
-      isPublic: user.isPublic,
+      ...user,
+      isFollowing,
+      hasPendingRequest,
     };
   }
 
-  async findOneProfile(
-    id: string,
-    requesterId?: string,
-  ): Promise<Partial<User>> {
-    const user = await this.findOne(id);
-
-    if (!user.isPublic && user.id !== requesterId) {
-      throw new ForbiddenException('Este perfil es privado');
-    }
-
-    // Para el perfil completo (pero sin password), devolvemos todo excepto el password
-    // Usamos esta forma para que el linter no detecte 'password' como variable no usada
-    const { password, ...result } = user;
-    void password; // Esto le dice al linter que 'password' ha sido "usada" (ignorada conscientemente)
-
-    return result;
+  async remove(id: string) {
+    const user = await this.usersRepository.findOneBy({ id });
+    if (!user) throw new NotFoundException('Usuario no encontrado');
+    return this.usersRepository.remove(user);
   }
 }

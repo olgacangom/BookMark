@@ -6,19 +6,20 @@ import {
   UpdateDateColumn,
   OneToMany,
 } from 'typeorm';
-import { Exclude } from 'class-transformer';
+import { Exclude, Expose } from 'class-transformer';
 import { Book } from '../../books/entities/book.entity';
+import { Follow, FollowStatus } from './follow.entity';
 
 @Entity('users')
 export class User {
-  @PrimaryGeneratedColumn('uuid') // Seguridad: los UUID evitan que se adivine el número de usuarios
+  @PrimaryGeneratedColumn('uuid')
   id: string;
 
   @Column({ unique: true })
   email: string;
 
   @Column()
-  @Exclude() // Seguridad: evita que el hash de la contraseña se filtre en las respuestas de la API
+  @Exclude()
   password: string;
 
   @Column({ nullable: true })
@@ -44,4 +45,28 @@ export class User {
 
   @UpdateDateColumn()
   updatedAt: Date;
+
+  @OneToMany(() => Follow, (follow) => follow.following)
+  followerRelations: Follow[];
+
+  @OneToMany(() => Follow, (follow) => follow.follower)
+  followingRelations: Follow[];
+
+  @Expose()
+  get followers() {
+    return (
+      this.followerRelations
+        ?.filter((f) => f.status === FollowStatus.ACCEPTED)
+        .map((f) => f.follower) || []
+    );
+  }
+
+  @Expose()
+  get following() {
+    return (
+      this.followingRelations
+        ?.filter((f) => f.status === FollowStatus.ACCEPTED)
+        .map((f) => f.following) || []
+    );
+  }
 }
