@@ -5,6 +5,9 @@ import { Book } from './entities/book.entity';
 import { CreateBookDto } from './dto/create-book.dto';
 import { UpdateBookDto } from './dto/update-book.dto';
 import { GoogleBooksService } from './google-books/google-books.service';
+import { ActivitiesService } from 'src/users/activities.service';
+import { ActivityType } from 'src/users/entities/activity.entity';
+import { BookStatus } from './enum/book-status.enum';
 
 @Injectable()
 export class BooksService {
@@ -12,6 +15,7 @@ export class BooksService {
     @InjectRepository(Book)
     private readonly bookRepository: Repository<Book>,
     private readonly googleBooksService: GoogleBooksService,
+    private readonly activitiesService: ActivitiesService,
   ) {}
 
   async searchByIsbn(isbn: string) {
@@ -23,7 +27,21 @@ export class BooksService {
       ...createBookDto,
       userId: userId,
     });
-    return await this.bookRepository.save(newBook);
+
+    const savedBook = await this.bookRepository.save(newBook);
+
+    try {
+      await this.activitiesService.create(
+        userId,
+        ActivityType.BOOK_ADDED,
+        savedBook.id.toString(),
+      );
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error('Error al registrar actividad:', message);
+    }
+
+    return savedBook;
   }
 
   async findAll(userId: string) {
@@ -43,8 +61,45 @@ export class BooksService {
 
   async update(id: number, updateBookDto: UpdateBookDto, userId: string) {
     const book = await this.findOne(id, userId);
-    Object.assign(book, updateBookDto);
-    return await this.bookRepository.save(book);
+    const oldStatus = book.status;
+
+    const fields: (keyof UpdateBookDto)[] = [
+      'title',
+      'author',
+      'status',
+      'genre',
+      'description',
+      'pageCount',
+      'urlPortada',
+    ];
+
+    fields.forEach((field) => {
+      const value = updateBookDto[field];
+      if (value !== undefined) {
+        const key = field as keyof Book;
+        (book[key] as any) = value;
+      }
+    });
+
+    const updatedBook = await this.bookRepository.save(book);
+
+    if (
+      updateBookDto.status === BookStatus.READ &&
+      oldStatus !== BookStatus.READ
+    ) {
+      try {
+        await this.activitiesService.create(
+          userId,
+          ActivityType.BOOK_FINISHED,
+          updatedBook.id.toString(),
+        );
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : String(error);
+        console.error('Error al registrar actividad:', message);
+      }
+    }
+
+    return updatedBook;
   }
 
   async remove(id: number, userId: string) {

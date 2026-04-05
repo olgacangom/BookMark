@@ -1,297 +1,355 @@
+/* eslint-disable @typescript-eslint/unbound-method */
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { UsersService } from './users.service';
 import { User } from './entities/user.entity';
 import { Follow, FollowStatus } from './entities/follow.entity';
+import { ActivitiesService } from './activities.service';
 import {
   BadRequestException,
-  ForbiddenException,
   NotFoundException,
+  ForbiddenException,
 } from '@nestjs/common';
-import { CreateUserDto } from './dto/create-user.dto'; // Asegúrate de que esté importado
+import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
+import * as bcrypt from 'bcrypt';
+
+jest.mock('bcrypt', () => ({
+  hash: jest.fn().mockResolvedValue('hashed_password'),
+}));
 
 describe('UsersService', () => {
   let service: UsersService;
+  let userRepo: jest.Mocked<Repository<User>>;
+  let followRepo: jest.Mocked<Repository<Follow>>;
+  let actService: jest.Mocked<ActivitiesService>;
 
   const mockUser = {
-    id: 'uuid-1',
-    email: 'test@test.com',
-    password: 'hashed_password',
+    id: 'u1',
+    email: 'a@a.com',
+    fullName: 'Test User',
+    password: 'password123',
     isPublic: true,
-    bio: 'My bio',
     followerRelations: [],
-  };
+  } as unknown as User;
 
   const mockFollow = {
-    id: 'follow-uuid',
-    follower: { id: 'follower-id' },
-    following: { id: 'uuid-1' },
+    id: 'f1',
+    follower: { id: 'u1' },
+    following: { id: 'u2' },
     status: FollowStatus.PENDING,
-  };
-
-  const mockUserRepository = {
-    findOneBy: jest.fn(),
-    findOne: jest.fn(),
-    create: jest.fn().mockReturnValue(mockUser),
-    save: jest.fn().mockResolvedValue(mockUser),
-    find: jest.fn().mockResolvedValue([mockUser]),
-    preload: jest.fn(),
-    remove: jest.fn().mockResolvedValue(mockUser),
-  };
-
-  const mockFollowRepository = {
-    findOne: jest.fn(),
-    findOneBy: jest.fn(),
-    create: jest.fn().mockReturnValue(mockFollow),
-    save: jest.fn().mockResolvedValue(mockFollow),
-    find: jest.fn().mockResolvedValue([mockFollow]),
-    remove: jest.fn().mockResolvedValue({ deleted: true }),
-  };
+  } as unknown as Follow;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
-        { provide: UsersService, useClass: UsersService },
-        { provide: getRepositoryToken(User), useValue: mockUserRepository },
-        { provide: getRepositoryToken(Follow), useValue: mockFollowRepository },
+        UsersService,
+        {
+          provide: getRepositoryToken(User),
+          useValue: {
+            create: jest.fn(),
+            save: jest.fn(),
+            findOneBy: jest.fn(),
+            find: jest.fn(),
+            findOne: jest.fn(),
+            preload: jest.fn(),
+            remove: jest.fn(),
+          },
+        },
+        {
+          provide: getRepositoryToken(Follow),
+          useValue: {
+            findOne: jest.fn(),
+            create: jest.fn(),
+            save: jest.fn(),
+            find: jest.fn(),
+            findOneBy: jest.fn(),
+            remove: jest.fn(),
+          },
+        },
+        { provide: ActivitiesService, useValue: { create: jest.fn() } },
       ],
     }).compile();
 
     service = module.get<UsersService>(UsersService);
+    userRepo = module.get(getRepositoryToken(User));
+    followRepo = module.get(getRepositoryToken(Follow));
+    actService = module.get(ActivitiesService);
+  });
+
+  afterEach(() => {
     jest.clearAllMocks();
   });
 
-  describe('CRUD & Basic Operations', () => {
-    it('create: should throw BadRequestException if email exists', async () => {
-      mockUserRepository.findOneBy.mockResolvedValue(mockUser);
-
-      // CORRECCIÓN: Usar casting a CreateUserDto en lugar de any
-      const dto = {
-        email: 'test@test.com',
-        password: '123',
-        fullName: 'Test',
-      } as CreateUserDto;
-
-      await expect(service.create(dto)).rejects.toThrow(BadRequestException);
+  describe('create', () => {
+    it('debe lanzar BadRequest si el email ya existe', async () => {
+      userRepo.findOneBy.mockResolvedValue(mockUser);
+      await expect(
+        service.create({ email: 'a@a.com' } as CreateUserDto),
+      ).rejects.toThrow(BadRequestException);
     });
 
-    it('create: should create user and return it', async () => {
-      mockUserRepository.findOneBy.mockResolvedValue(null);
+    it('debe crear un usuario y hashear la contraseña', async () => {
+      userRepo.findOneBy.mockResolvedValue(null);
+      userRepo.create.mockReturnValue(mockUser);
+      userRepo.save.mockResolvedValue(mockUser);
 
-      const savedUserFromDb = {
-        id: 'uuid-new',
-        email: 'new@test.com',
-        password: 'hashed_password',
-        fullName: 'New User',
-      };
-
-      mockUserRepository.save.mockResolvedValue(savedUserFromDb);
-
-      // CORRECCIÓN: Definir el DTO con el tipo correcto
-      const dto: CreateUserDto = {
-        email: 'new@test.com',
+      const res = await service.create({
+        email: 'new@a.com',
         password: '123',
-        fullName: 'New User',
-      };
+      } as CreateUserDto);
 
-      const result = await service.create(dto);
-
-      expect(result.email).toBe('new@test.com');
-      expect(result.id).toBe('uuid-new');
-      expect(mockUserRepository.save).toHaveBeenCalled();
+      expect(bcrypt.hash).toHaveBeenCalled();
+      expect(res).toEqual(mockUser);
     });
+  });
 
-    it('findOne: should throw NotFoundException if user missing', async () => {
-      mockUserRepository.findOne.mockResolvedValue(null);
-      await expect(service.findOne('any-id')).rejects.toThrow(
+  describe('update', () => {
+    it('debe lanzar NotFound si preload falla', async () => {
+      userRepo.preload.mockResolvedValue(undefined);
+      await expect(service.update('1', {} as UpdateUserDto)).rejects.toThrow(
         NotFoundException,
       );
     });
 
-    it('update: should throw NotFoundException if preload fails', async () => {
-      mockUserRepository.preload.mockResolvedValue(null);
-      await expect(service.update('id', {})).rejects.toThrow(NotFoundException);
-    });
-
-    it('remove: should find and remove user', async () => {
-      mockUserRepository.findOneBy.mockResolvedValue(mockUser);
-      mockUserRepository.remove.mockResolvedValue(mockUser);
-
-      const result = await service.remove('uuid-1');
-
-      expect(result).toBeDefined();
-      expect(mockUserRepository.findOneBy).toHaveBeenCalledWith({
-        id: 'uuid-1',
-      });
-      expect(mockUserRepository.remove).toHaveBeenCalledWith(mockUser);
+    it('debe actualizar correctamente', async () => {
+      userRepo.preload.mockResolvedValue(mockUser);
+      jest.spyOn(service, 'findOne').mockResolvedValue(mockUser);
+      await service.update('u1', { fullName: 'Nuevo' } as UpdateUserDto);
+      expect(userRepo.save).toHaveBeenCalled();
     });
   });
 
-  describe('Follow System Logic', () => {
-    it('followUser: should throw error if following self', async () => {
-      await expect(service.followUser('uuid', 'uuid')).rejects.toThrow(
+  describe('followUser', () => {
+    it('debe lanzar BadRequest si el followerId es igual al targetUserId', async () => {
+      await expect(service.followUser('u1', 'u1')).rejects.toThrow(
         BadRequestException,
       );
     });
 
-    it('followUser: should throw error if target user not found', async () => {
-      mockUserRepository.findOneBy.mockResolvedValue(null);
-      await expect(service.followUser('id1', 'id2')).rejects.toThrow(
+    it('debe lanzar NotFound si el usuario objetivo no existe', async () => {
+      userRepo.findOneBy.mockResolvedValue(null);
+      await expect(service.followUser('u1', 'u2')).rejects.toThrow(
         NotFoundException,
       );
     });
 
-    it('followUser: should return existing follow if already exists', async () => {
-      mockUserRepository.findOneBy.mockResolvedValue(mockUser);
-      mockFollowRepository.findOne.mockResolvedValue(mockFollow);
-      const result = await service.followUser('follower', 'target');
-      expect(result).toEqual(mockFollow);
-      expect(mockFollowRepository.save).not.toHaveBeenCalled();
+    it('debe retornar la relación si ya existía', async () => {
+      userRepo.findOneBy.mockResolvedValue({ id: 'u2' } as User);
+      followRepo.findOne.mockResolvedValue(mockFollow);
+      const res = await service.followUser('u1', 'u2');
+      expect(res).toEqual(mockFollow);
     });
 
-    it('followUser: should create ACCEPTED follow if target is public', async () => {
-      mockUserRepository.findOneBy.mockResolvedValue({
-        ...mockUser,
+    it('debe crear con estado ACCEPTED si el target es público', async () => {
+      userRepo.findOneBy.mockResolvedValue({
+        id: 'u2',
         isPublic: true,
-      });
-      mockFollowRepository.findOne.mockResolvedValue(null);
-
-      await service.followUser('follower', 'target');
-
-      expect(mockFollowRepository.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          status: FollowStatus.ACCEPTED,
-        }),
+      } as User);
+      followRepo.findOne.mockResolvedValue(null);
+      followRepo.create.mockReturnValue({ status: '' } as unknown as Follow);
+      await service.followUser('u1', 'u2');
+      expect(followRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({ status: FollowStatus.ACCEPTED }),
       );
     });
 
-    it('followUser: should create PENDING follow if target is private', async () => {
-      mockUserRepository.findOneBy.mockResolvedValue({
-        ...mockUser,
+    it('debe crear con estado PENDING si el target es privado', async () => {
+      userRepo.findOneBy.mockResolvedValue({
+        id: 'u2',
         isPublic: false,
-      });
-      mockFollowRepository.findOne.mockResolvedValue(null);
-      await service.followUser('follower', 'target');
-      expect(mockFollowRepository.create).toHaveBeenCalledWith(
+      } as User);
+      followRepo.findOne.mockResolvedValue(null);
+      followRepo.create.mockReturnValue({ status: '' } as unknown as Follow);
+      await service.followUser('u1', 'u2');
+      expect(followRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({ status: FollowStatus.PENDING }),
+      );
+    });
+  });
+
+  describe('unfollowUser', () => {
+    it('debe informar si no había relación previa', async () => {
+      followRepo.findOne.mockResolvedValue(null);
+      const res = await service.unfollowUser('u1', 'u2');
+      expect(res.message).toBe('No había relación previa');
+    });
+
+    it('debe eliminar la relación existente', async () => {
+      followRepo.findOne.mockResolvedValue(mockFollow);
+      const res = await service.unfollowUser('u1', 'u2');
+      expect(followRepo.remove).toHaveBeenCalled();
+      expect(res.message).toBe('Relación eliminada');
+    });
+  });
+
+  describe('accept/decline requests', () => {
+    it('acceptFollowRequest: éxito y crea actividad', async () => {
+      const f = {
+        id: 'r1',
+        follower: { id: 'u1' },
+        following: { id: 'u2' },
+        status: '',
+      };
+      followRepo.findOne.mockResolvedValue(f as any);
+      await service.acceptFollowRequest('r1');
+      expect(f.status).toBe(FollowStatus.ACCEPTED);
+      expect(actService.create).toHaveBeenCalled();
+    });
+
+    it('acceptFollowRequest: lanza NotFound si no existe', async () => {
+      followRepo.findOne.mockResolvedValue(null);
+      await expect(service.acceptFollowRequest('r1')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('declineFollowRequest: elimina solicitud', async () => {
+      followRepo.findOneBy.mockResolvedValue(mockFollow);
+      await service.declineFollowRequest('r1');
+      expect(followRepo.remove).toHaveBeenCalled();
+    });
+
+    it('declineFollowRequest: lanza NotFound', async () => {
+      followRepo.findOneBy.mockResolvedValue(null);
+      await expect(service.declineFollowRequest('r1')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+  });
+
+  describe('findOneProfile (Privacidad y Flags)', () => {
+    it('debe permitir ver perfil si es público', async () => {
+      userRepo.findOne.mockResolvedValue({
+        id: 'u2',
+        isPublic: true,
+        followerRelations: [],
+      } as any);
+      const res = await service.findOneProfile('u2', 'u1');
+      expect(res.id).toBe('u2');
+    });
+
+    it('debe permitir ver perfil privado si eres el dueño', async () => {
+      userRepo.findOne.mockResolvedValue({
+        id: 'u1',
+        isPublic: false,
+        followerRelations: [],
+      } as any);
+      const res = await service.findOneProfile('u1', 'u1');
+      expect(res.id).toBe('u1');
+    });
+
+    it('debe permitir ver perfil privado si ya le sigues (ACCEPTED)', async () => {
+      const target = {
+        id: 'u2',
+        isPublic: false,
+        followerRelations: [
+          { follower: { id: 'u1' }, status: FollowStatus.ACCEPTED },
+        ],
+      };
+      userRepo.findOne.mockResolvedValue(target as any);
+      const res = await service.findOneProfile('u2', 'u1');
+      expect(res.isFollowing).toBe(true);
+    });
+
+    it('debe lanzar Forbidden si es privado y no le sigues', async () => {
+      userRepo.findOne.mockResolvedValue({
+        id: 'u2',
+        isPublic: false,
+        followerRelations: [],
+      } as any);
+      await expect(service.findOneProfile('u2', 'u1')).rejects.toThrow(
+        ForbiddenException,
+      );
+    });
+
+    it('debe identificar correctamente una solicitud PENDING', async () => {
+      const target = {
+        id: 'u2',
+        isPublic: false,
+        followerRelations: [
+          { follower: { id: 'u1' }, status: FollowStatus.PENDING },
+        ],
+      };
+      userRepo.findOne.mockResolvedValue(target as any);
+      await expect(service.findOneProfile('u2', 'u1')).rejects.toThrow(
+        ForbiddenException,
+      );
+    });
+
+    it('debe lanzar NotFound si el perfil no existe', async () => {
+      userRepo.findOne.mockResolvedValue(null);
+      await expect(service.findOneProfile('u2', 'u1')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+  });
+
+  describe('Otros métodos', () => {
+    it('findAll: llama a find con relaciones', async () => {
+      await service.findAll();
+      expect(userRepo.find).toHaveBeenCalled();
+    });
+
+    it('getPendingRequests: llama a find con filtro PENDING', async () => {
+      await service.getPendingRequests('u1');
+      expect(followRepo.find).toHaveBeenCalledWith(
         expect.objectContaining({
-          status: FollowStatus.PENDING,
+          where: { following: { id: 'u1' }, status: FollowStatus.PENDING },
         }),
       );
     });
 
-    it('findOneByEmail: should return user when found by email', async () => {
-      mockUserRepository.findOneBy.mockResolvedValue(mockUser);
-      const result = await service.findOneByEmail('test@test.com');
-      expect(result).toEqual(mockUser);
-      expect(mockUserRepository.findOneBy).toHaveBeenCalledWith({
+    it('searchUsers: llama a find con ILike', async () => {
+      await service.searchUsers('olga');
+      expect(userRepo.find).toHaveBeenCalled();
+    });
+
+    it('remove: borra usuario si existe', async () => {
+      userRepo.findOneBy.mockResolvedValue(mockUser);
+      await service.remove('u1');
+      expect(userRepo.remove).toHaveBeenCalled();
+    });
+
+    it('remove: lanza NotFound si no existe', async () => {
+      userRepo.findOneBy.mockResolvedValue(null);
+      await expect(service.remove('u1')).rejects.toThrow(NotFoundException);
+    });
+
+    it('findOneByEmail: busca correctamente', async () => {
+      await service.findOneByEmail('test@test.com');
+      expect(userRepo.findOneBy).toHaveBeenCalledWith({
         email: 'test@test.com',
       });
     });
-
-    it('findAll: should return all users with relations and selected fields', async () => {
-      const mockUsersList = [mockUser];
-      mockUserRepository.find.mockResolvedValue(mockUsersList);
-
-      const result = await service.findAll();
-
-      expect(mockUserRepository.find).toHaveBeenCalledWith({
-        relations: ['followerRelations', 'followerRelations.follower'],
-        select: {
-          id: true,
-          email: true,
-          fullName: true,
-          avatarUrl: true,
-          bio: true,
-          isPublic: true,
-        },
-      });
-
-      expect(result).toEqual(mockUsersList);
-    });
-
-    it('update: should call findOne after saving to return relations', async () => {
-      mockUserRepository.preload.mockResolvedValue(mockUser);
-      mockUserRepository.save.mockResolvedValue(mockUser);
-      mockUserRepository.findOne.mockResolvedValue(mockUser);
-
-      const result = await service.update('uuid-1', { fullName: 'Updated' });
-
-      expect(result).toBeDefined();
-      expect(mockUserRepository.findOne).toHaveBeenCalled();
-    });
-
-    it('unfollowUser: should remove follow if exists', async () => {
-      mockFollowRepository.findOne.mockResolvedValue(mockFollow);
-      await service.unfollowUser('f', 't');
-      expect(mockFollowRepository.remove).toHaveBeenCalled();
-    });
-
-    it('unfollowUser: should return message if no relationship', async () => {
-      mockFollowRepository.findOne.mockResolvedValue(null);
-      const result = await service.unfollowUser('f', 't');
-      expect(result.message).toBeDefined();
-    });
   });
 
-  describe('Follow Requests Management', () => {
-    it('getPendingRequests: should return list of pending follows', async () => {
-      const result = await service.getPendingRequests('id');
-      expect(result).toEqual([mockFollow]);
-    });
+  describe('findOne', () => {
+    it('debe retornar el usuario si existe con todas sus relaciones', async () => {
+      userRepo.findOne.mockResolvedValue(mockUser as unknown as User);
 
-    it('acceptFollowRequest: should change status to ACCEPTED', async () => {
-      mockFollowRepository.findOneBy.mockResolvedValue(mockFollow);
-      await service.acceptFollowRequest('req-id');
-      expect(mockFollowRepository.save).toHaveBeenCalledWith(
-        expect.objectContaining({
-          status: FollowStatus.ACCEPTED,
-        }),
-      );
-    });
+      const result = await service.findOne('u1');
 
-    it('declineFollowRequest: should remove the request', async () => {
-      mockFollowRepository.findOneBy.mockResolvedValue(mockFollow);
-      await service.declineFollowRequest('req-id');
-      expect(mockFollowRepository.remove).toHaveBeenCalled();
-    });
-
-    it('request actions: should throw NotFound if request missing', async () => {
-      mockFollowRepository.findOneBy.mockResolvedValue(null);
-      await expect(service.acceptFollowRequest('id')).rejects.toThrow(
-        NotFoundException,
-      );
-      await expect(service.declineFollowRequest('id')).rejects.toThrow(
-        NotFoundException,
-      );
-    });
-  });
-
-  describe('Profile & Privacy Logic', () => {
-    it('findOneProfile: should throw Forbidden if private and not owner', async () => {
-      mockUserRepository.findOne.mockResolvedValue({
-        ...mockUser,
-        isPublic: false,
-      });
-      await expect(
-        service.findOneProfile('uuid-1', 'other-id'),
-      ).rejects.toThrow(ForbiddenException);
-    });
-
-    it('findOneProfile: should allow if private but is following (accepted)', async () => {
-      mockUserRepository.findOne.mockResolvedValue({
-        ...mockUser,
-        isPublic: false,
-        followerRelations: [
-          { follower: { id: 'my-id' }, status: FollowStatus.ACCEPTED },
+      const findOneSpy = userRepo.findOne;
+      expect(findOneSpy).toHaveBeenCalledWith({
+        where: { id: 'u1' },
+        relations: [
+          'followerRelations',
+          'followerRelations.follower',
+          'followingRelations',
+          'followingRelations.following',
         ],
       });
-      const result = await service.findOneProfile('uuid-1', 'my-id');
-      expect(result).toBeDefined();
+
+      expect(result).toEqual(mockUser);
     });
 
-    it('searchUsers: should call find with ILike', async () => {
-      await service.searchUsers('query');
-      expect(mockUserRepository.find).toHaveBeenCalled();
+    it('debe lanzar NotFoundException si el usuario no existe', async () => {
+      userRepo.findOne.mockResolvedValue(null);
+      await expect(service.findOne('non-existent')).rejects.toThrow(
+        new NotFoundException('Usuario no encontrado'),
+      );
     });
   });
 });
