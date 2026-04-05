@@ -8,6 +8,8 @@ import { DashboardView } from './pages/dashboard/DashboardView';
 import { LibraryView } from './pages/books/LibraryView';
 import { PerfilView } from './pages/profile/PerfilView';
 import { MyProfileView } from './pages/profile/MyProfileView';
+import { ExploreView } from './users/pages/ExploreView';
+import { RequestsView } from './users/pages/RequestView';
 
 function App() {
   return (
@@ -24,6 +26,8 @@ function App() {
               <Route index element={<Navigate to="/dashboard" />} />
               <Route path="dashboard" element={<DashboardView />} />
               <Route path="library" element={<LibraryView/>} />
+              <Route path="explore" element={<ExploreView/>} />
+              <Route path="requests" element={<RequestsView/>} />
               <Route path="profile" element={<PerfilView />} />
               <Route path="myprofile" element={<MyProfileView />} />  
             </Route>
