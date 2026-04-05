@@ -1,139 +1,186 @@
+/* eslint-disable @typescript-eslint/unbound-method */
 import { Test, TestingModule } from '@nestjs/testing';
 import { BooksService } from './books.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Book } from './entities/book.entity';
-import { BookStatus } from './enum/book-status.enum';
-import { NotFoundException } from '@nestjs/common';
-import { Repository, ObjectLiteral } from 'typeorm';
-import { CreateBookDto } from './dto/create-book.dto';
 import { GoogleBooksService } from './google-books/google-books.service';
-
-type MockRepository<T extends ObjectLiteral> = {
-  [P in keyof Repository<T>]?: jest.Mock;
-};
+import { ActivitiesService } from '../users/activities.service';
+import { Repository } from 'typeorm';
+import { NotFoundException } from '@nestjs/common';
+import { BookStatus } from './enum/book-status.enum';
+import { ActivityType } from '../users/entities/activity.entity';
+import { CreateBookDto } from './dto/create-book.dto';
+import { UpdateBookDto } from './dto/update-book.dto';
 
 describe('BooksService', () => {
   let service: BooksService;
-  let repository: MockRepository<Book>;
-  let googleService: Partial<Record<keyof GoogleBooksService, jest.Mock>>;
+  let repository: jest.Mocked<Repository<Book>>;
+  let googleService: jest.Mocked<GoogleBooksService>;
+  let activitiesService: jest.Mocked<ActivitiesService>;
 
+  const mockUserId = 'user-123';
   const mockBook = {
     id: 1,
-    title: 'Test Book',
-    author: 'Author',
-    userId: 'user-1',
-  };
-
-  const mockBookRepository: MockRepository<Book> = {
-    create: jest.fn().mockImplementation((dto: CreateBookDto) => dto),
-    save: jest
-      .fn()
-      .mockImplementation((book: Book) => Promise.resolve({ ...book, id: 1 })),
-    find: jest.fn().mockResolvedValue([{ id: 1, title: 'Test Book' }]),
-    findOne: jest.fn(),
-    remove: jest.fn().mockResolvedValue({ deleted: true }),
-  };
-
-  const mockGoogleBookService = {
-    findByIsbn: jest.fn(),
-  };
+    title: 'Test',
+    author: 'A',
+    status: BookStatus.WANT_TO_READ,
+    userId: mockUserId,
+  } as Book;
 
   beforeEach(async () => {
-    jest.clearAllMocks();
-
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         BooksService,
         {
           provide: getRepositoryToken(Book),
-          useValue: mockBookRepository,
+          useValue: {
+            create: jest.fn(),
+            save: jest.fn(),
+            find: jest.fn(),
+            findOne: jest.fn(),
+            remove: jest.fn(),
+          },
         },
-        {
-          provide: GoogleBooksService,
-          useValue: mockGoogleBookService,
-        },
+        { provide: GoogleBooksService, useValue: { findByIsbn: jest.fn() } },
+        { provide: ActivitiesService, useValue: { create: jest.fn() } },
       ],
     }).compile();
 
-    service = module.get<BooksService>(BooksService);
-    repository = module.get<MockRepository<Book>>(getRepositoryToken(Book));
+    service = module.get(BooksService);
+    repository = module.get(getRepositoryToken(Book));
     googleService = module.get(GoogleBooksService);
+    activitiesService = module.get(ActivitiesService);
+
+    jest.spyOn(console, 'error').mockImplementation(() => {});
   });
 
-  it('should be defined', () => {
-    expect(service).toBeDefined();
+  afterEach(() => {
+    jest.clearAllMocks();
   });
 
-  it('should create a new book', async () => {
-    const dto: CreateBookDto = {
-      title: 'Moby Dick',
-      author: 'Herman Melville',
-      status: BookStatus.WANT_TO_READ,
-      genre: '',
-      description: '',
-      pageCount: 0,
-      urlPortada: '',
-    };
-    const userId = 'user-uuid';
-    const result = await service.create(dto, userId);
+  it('should be defined', () => expect(service).toBeDefined());
 
-    expect(result).toHaveProperty('id');
-    expect(repository.save).toHaveBeenCalled();
-  });
+  describe('create', () => {
+    const dto = {
+      title: 'New',
+      author: 'A',
+      isbn: '123',
+    } as unknown as CreateBookDto;
 
-  it('should return all books for a user', async () => {
-    const userId = 'user-uuid';
-    const result = await service.findAll(userId);
+    it('debe crear y registrar actividad', async () => {
+      repository.create.mockReturnValue(mockBook);
+      repository.save.mockResolvedValue(mockBook);
+      await service.create(dto, mockUserId);
+      expect(activitiesService.create).toHaveBeenCalledWith(
+        mockUserId,
+        ActivityType.BOOK_ADDED,
+        '1',
+      );
+    });
 
-    expect(result).toBeInstanceOf(Array);
-    expect(repository.find).toHaveBeenCalledWith({
-      where: { userId },
-      order: { title: 'ASC' },
+    it('debe capturar error (instancia de Error) si falla actividad al crear', async () => {
+      repository.save.mockResolvedValue(mockBook);
+      activitiesService.create.mockRejectedValue(new Error('Error de Objeto'));
+
+      await service.create(dto, mockUserId);
+
+      expect(console.error).toHaveBeenCalledWith(
+        'Error al registrar actividad:',
+        'Error de Objeto',
+      );
+    });
+
+    it('debe capturar error (string/desconocido) si falla actividad al crear', async () => {
+      repository.save.mockResolvedValue(mockBook);
+      activitiesService.create.mockRejectedValue('Error de String');
+
+      await service.create(dto, mockUserId);
+
+      expect(console.error).toHaveBeenCalledWith(
+        'Error al registrar actividad:',
+        'Error de String',
+      );
     });
   });
 
-  it('should find one book', async () => {
-    mockBookRepository.findOne!.mockResolvedValue(mockBook);
-    const result = await service.findOne(1, 'user-1');
-    expect(result).toEqual(mockBook);
-  });
+  describe('update', () => {
+    it('debe actualizar campos dinámicamente y disparar actividad', async () => {
+      repository.findOne.mockResolvedValue({ ...mockBook });
+      repository.save.mockImplementation((b) =>
+        Promise.resolve({ ...b, id: 1 } as Book),
+      );
 
-  it('should search by ISBN using GoogleBooksService', async () => {
-    const isbn = '9781234567890';
-    const googleResult = { title: 'Google Book', authors: ['Author'] };
-    googleService.findByIsbn!.mockResolvedValue(googleResult);
+      const res = await service.update(
+        1,
+        { status: BookStatus.READ } as UpdateBookDto,
+        mockUserId,
+      );
 
-    const result = await service.searchByIsbn(isbn);
-
-    expect(googleService.findByIsbn).toHaveBeenCalledWith(isbn);
-    expect(result).toEqual(googleResult);
-  });
-
-  it('should throw NotFoundException if book not found', async () => {
-    mockBookRepository.findOne!.mockResolvedValue(null);
-    await expect(service.findOne(999, 'user-1')).rejects.toThrow(
-      NotFoundException,
-    );
-  });
-
-  it('should update a book', async () => {
-    mockBookRepository.findOne!.mockResolvedValue({ ...mockBook });
-    mockBookRepository.save!.mockResolvedValue({
-      ...mockBook,
-      title: 'Updated',
+      expect(res.status).toBe(BookStatus.READ);
+      expect(activitiesService.create).toHaveBeenCalled();
     });
 
-    const result = await service.update(1, { title: 'Updated' }, 'user-1');
-    expect(result.title).toBe('Updated');
-    expect(repository.save).toHaveBeenCalled();
+    it('debe capturar error si falla actividad al actualizar', async () => {
+      repository.findOne.mockResolvedValue({
+        ...mockBook,
+        status: BookStatus.WANT_TO_READ,
+      });
+      repository.save.mockResolvedValue({
+        ...mockBook,
+        id: 1,
+        status: BookStatus.READ,
+      });
+      activitiesService.create.mockRejectedValue(new Error('Update Fail'));
+
+      await service.update(
+        1,
+        { status: BookStatus.READ } as UpdateBookDto,
+        mockUserId,
+      );
+
+      expect(console.error).toHaveBeenCalledWith(
+        'Error al registrar actividad:',
+        'Update Fail',
+      );
+    });
+
+    it('no debe disparar actividad si ya era READ', async () => {
+      repository.findOne.mockResolvedValue({
+        ...mockBook,
+        status: BookStatus.READ,
+      });
+      await service.update(
+        1,
+        { status: BookStatus.READ } as UpdateBookDto,
+        mockUserId,
+      );
+      expect(activitiesService.create).not.toHaveBeenCalled();
+    });
   });
 
-  it('should remove a book', async () => {
-    mockBookRepository.findOne!.mockResolvedValue(mockBook);
-    mockBookRepository.remove!.mockResolvedValue(mockBook);
+  it('findAll: debe retornar libros', async () => {
+    repository.find.mockResolvedValue([mockBook]);
+    const res = await service.findAll(mockUserId);
+    expect(res).toHaveLength(1);
+  });
 
-    const result = await service.remove(1, 'user-1');
-    expect(result).toEqual({ deleted: true });
+  it('findOne: debe lanzar 404', async () => {
+    repository.findOne.mockResolvedValue(null);
+    await expect(service.findOne(1, '1')).rejects.toThrow(NotFoundException);
+  });
+
+  it('remove: debe eliminar libro', async () => {
+    repository.findOne.mockResolvedValue(mockBook);
+    const res = await service.remove(1, '1');
+    expect(res).toEqual({ deleted: true });
     expect(repository.remove).toHaveBeenCalled();
+  });
+
+  it('searchByIsbn: debe usar googleService', async () => {
+    googleService.findByIsbn.mockResolvedValue({
+      title: 'G',
+    } as unknown as any);
+    await service.searchByIsbn('123');
+    expect(googleService.findByIsbn).toHaveBeenCalled();
   });
 });

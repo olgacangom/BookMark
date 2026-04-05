@@ -10,6 +10,7 @@ import { PerfilView } from './pages/profile/PerfilView';
 import { MyProfileView } from './pages/profile/MyProfileView';
 import { ExploreView } from './users/pages/ExploreView';
 import { RequestsView } from './users/pages/RequestView';
+import { FeedView } from './users/pages/FeedView';
 
 function App() {
   return (
@@ -25,11 +26,12 @@ function App() {
             <Route path="/" element={<MainLayout />}>
               <Route index element={<Navigate to="/dashboard" />} />
               <Route path="dashboard" element={<DashboardView />} />
-              <Route path="library" element={<LibraryView/>} />
-              <Route path="explore" element={<ExploreView/>} />
-              <Route path="requests" element={<RequestsView/>} />
+              <Route path="library" element={<LibraryView />} />
+              <Route path="explore" element={<ExploreView />} />
+              <Route path="feed" element={<FeedView />} />
+              <Route path="requests" element={<RequestsView />} />
               <Route path="profile" element={<PerfilView />} />
-              <Route path="myprofile" element={<MyProfileView />} />  
+              <Route path="myprofile" element={<MyProfileView />} />
             </Route>
           </Route>
 

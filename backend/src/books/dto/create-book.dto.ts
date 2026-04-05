@@ -35,4 +35,8 @@ export class CreateBookDto {
   @IsString()
   @IsOptional()
   urlPortada: string;
+
+  @IsString()
+  @IsOptional()
+  isbn: string;
 }

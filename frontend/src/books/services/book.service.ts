@@ -7,6 +7,7 @@ export interface Book {
   title: string;
   author: string;
   status: BookStatus;
+  description?: string;
   genre?: string;
   urlPortada?: string;
   pageCount?: number;
@@ -26,7 +27,27 @@ export const bookService = {
   },
 
   update: async (id: number, updates: Partial<Book>): Promise<Book> => {
-    const { data } = await api.patch<Book>(`/books/${id}`, updates);
+    const { 
+      title, 
+      author, 
+      status, 
+      genre, 
+      description, 
+      pageCount, 
+      urlPortada 
+    } = updates;
+
+    const cleanData = { 
+      title, 
+      author, 
+      status, 
+      genre, 
+      description, 
+      pageCount, 
+      urlPortada 
+    };
+
+    const { data } = await api.patch<Book>(`/books/${id}`, cleanData);
     return data;
   },
   

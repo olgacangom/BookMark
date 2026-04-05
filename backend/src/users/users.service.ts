@@ -11,6 +11,8 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { User } from './entities/user.entity';
 import { Follow, FollowStatus } from './entities/follow.entity';
+import { ActivitiesService } from './activities.service';
+import { ActivityType } from './entities/activity.entity';
 
 @Injectable()
 export class UsersService {
@@ -19,6 +21,7 @@ export class UsersService {
     private readonly usersRepository: Repository<User>,
     @InjectRepository(Follow)
     private readonly followRepository: Repository<Follow>,
+    private readonly activitiesService: ActivitiesService,
   ) {}
 
   async create(createUserDto: CreateUserDto) {
@@ -128,11 +131,23 @@ export class UsersService {
   }
 
   async acceptFollowRequest(requestId: string) {
-    const request = await this.followRepository.findOneBy({ id: requestId });
+    const request = await this.followRepository.findOne({
+      where: { id: requestId },
+      relations: ['follower', 'following'],
+    });
+
     if (!request) throw new NotFoundException('Solicitud no encontrada');
 
     request.status = FollowStatus.ACCEPTED;
-    return await this.followRepository.save(request);
+    await this.followRepository.save(request);
+
+    await this.activitiesService.create(
+      request.follower.id,
+      ActivityType.FOLLOW,
+      request.following.id,
+    );
+
+    return request;
   }
 
   async declineFollowRequest(requestId: string) {
@@ -173,8 +188,10 @@ export class UsersService {
       throw new ForbiddenException('Este perfil es privado');
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password: _password, ...result } = user;
     return {
-      ...user,
+      ...result,
       isFollowing,
       hasPendingRequest,
     };
