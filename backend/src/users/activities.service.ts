@@ -3,8 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { Activity, ActivityType } from './entities/activity.entity';
 import { User } from './entities/user.entity';
-import { FollowStatus } from './entities/follow.entity'; // <--- IMPORTADO
-import { Book } from 'src/books/entities/book.entity'; // <--- IMPORTADO
+import { FollowStatus } from './entities/follow.entity';
+import { Book } from 'src/books/entities/book.entity';
 
 @Injectable()
 export class ActivitiesService {

@@ -8,10 +8,12 @@ import { GoogleBooksService } from './google-books/google-books.service';
 import { ActivitiesService } from 'src/users/activities.service';
 import { ActivityType } from 'src/users/entities/activity.entity';
 import { BookStatus } from './enum/book-status.enum';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 @Injectable()
 export class BooksService {
   constructor(
+    private eventEmitter: EventEmitter2,
     @InjectRepository(Book)
     private readonly bookRepository: Repository<Book>,
     private readonly googleBooksService: GoogleBooksService,
@@ -72,13 +74,9 @@ export class BooksService {
       'pageCount',
       'urlPortada',
     ];
-
     fields.forEach((field) => {
       const value = updateBookDto[field];
-      if (value !== undefined) {
-        const key = field as keyof Book;
-        (book[key] as any) = value;
-      }
+      if (value !== undefined) (book[field as keyof Book] as any) = value;
     });
 
     const updatedBook = await this.bookRepository.save(book);
@@ -87,16 +85,8 @@ export class BooksService {
       updateBookDto.status === BookStatus.READ &&
       oldStatus !== BookStatus.READ
     ) {
-      try {
-        await this.activitiesService.create(
-          userId,
-          ActivityType.BOOK_FINISHED,
-          updatedBook.id.toString(),
-        );
-      } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : String(error);
-        console.error('Error al registrar actividad:', message);
-      }
+      console.log('📢 EMITIENDO EVENTO book.finished para el usuario:', userId);
+      this.eventEmitter.emit('book.finished', { userId, points: 150 });
     }
 
     return updatedBook;

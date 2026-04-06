@@ -13,6 +13,8 @@ import { User } from './entities/user.entity';
 import { Follow, FollowStatus } from './entities/follow.entity';
 import { ActivitiesService } from './activities.service';
 import { ActivityType } from './entities/activity.entity';
+import { UserStats } from './entities/user-stats.entity';
+import { Badge } from './badge.entity';
 
 @Injectable()
 export class UsersService {
@@ -21,7 +23,11 @@ export class UsersService {
     private readonly usersRepository: Repository<User>,
     @InjectRepository(Follow)
     private readonly followRepository: Repository<Follow>,
+    @InjectRepository(UserStats)
+    private readonly userStatsRepository: Repository<UserStats>,
     private readonly activitiesService: ActivitiesService,
+    @InjectRepository(Badge)
+    private readonly badgeRepository: Repository<Badge>,
   ) {}
 
   async create(createUserDto: CreateUserDto) {
@@ -34,7 +40,18 @@ export class UsersService {
       ...createUserDto,
       password: hashedPassword,
     });
-    return await this.usersRepository.save(newUser);
+    const savedUser = await this.usersRepository.save(newUser);
+
+    const initialStats = this.userStatsRepository.create({
+      user: savedUser,
+      xp: 0,
+      level: 1,
+      totalBooksFinished: 0,
+      currentStreak: 0,
+    });
+    await this.userStatsRepository.save(initialStats);
+
+    return savedUser;
   }
 
   async findOneByEmail(email: string) {
@@ -63,6 +80,8 @@ export class UsersService {
         'followerRelations.follower',
         'followingRelations',
         'followingRelations.following',
+        'stats',
+        'badges',
       ],
     });
     if (!user) throw new NotFoundException('Usuario no encontrado');
@@ -170,7 +189,12 @@ export class UsersService {
   async findOneProfile(id: string, requesterId: string) {
     const user = await this.usersRepository.findOne({
       where: { id },
-      relations: ['followerRelations', 'followerRelations.follower'],
+      relations: [
+        'followerRelations',
+        'followerRelations.follower',
+        'stats',
+        'badges',
+      ],
     });
 
     if (!user) throw new NotFoundException('Usuario no encontrado');
@@ -201,5 +225,104 @@ export class UsersService {
     const user = await this.usersRepository.findOneBy({ id });
     if (!user) throw new NotFoundException('Usuario no encontrado');
     return this.usersRepository.remove(user);
+  }
+
+  async addExperience(userId: string, xpAmount: number) {
+    let stats = await this.userStatsRepository.findOne({
+      where: { user: { id: userId } },
+    });
+
+    // SI NO EXISTEN, LAS CREAMOS
+    if (!stats) {
+      stats = this.userStatsRepository.create({
+        user: { id: userId },
+        xp: 0,
+        level: 1,
+        totalBooksFinished: 0,
+        currentStreak: 1,
+        lastActivityDate: new Date(),
+      });
+    }
+
+    stats.xp += xpAmount;
+    stats.level = Math.floor(0.1 * Math.sqrt(stats.xp)) + 1;
+
+    return await this.userStatsRepository.save(stats);
+  }
+
+  async updateStreak(userId: string) {
+    const stats = await this.userStatsRepository.findOne({
+      where: { user: { id: userId } },
+    });
+    if (!stats) return;
+
+    stats.totalBooksFinished += 1;
+    console.log(
+      `📈 Sumando libro terminado. Total ahora: ${stats.totalBooksFinished}`,
+    );
+
+    const now = new Date();
+    const lastActivity = stats.lastActivityDate;
+
+    if (!lastActivity) {
+      stats.currentStreak = 1;
+      stats.lastActivityDate = now;
+    } else {
+      const diffInMs = now.getTime() - lastActivity.getTime();
+      const diffInHours = diffInMs / (1000 * 60 * 60);
+
+      if (diffInHours >= 24 && diffInHours < 48) {
+        // Ha pasado un día: aumenta racha
+        stats.currentStreak += 1;
+        stats.lastActivityDate = now;
+      } else if (diffInHours >= 48) {
+        // Ha pasado demasiado tiempo: reset racha
+        stats.currentStreak = 1;
+        stats.lastActivityDate = now;
+      }
+      // Si diffInHours < 24, simplemente NO tocamos la racha ni la fecha,
+    }
+
+    await this.userStatsRepository.save(stats);
+  }
+
+  async assignBadge(userId: string, badgeId: string) {
+    const user = await this.usersRepository.findOne({
+      where: { id: userId },
+      relations: ['badges'], // Cargamos las que ya tiene
+    });
+
+    const badge = await this.badgeRepository.findOneBy({ id: badgeId });
+
+    if (user && badge) {
+      if (!user.badges.find((b) => b.id === badge.id)) {
+        user.badges.push(badge);
+        await this.usersRepository.save(user);
+        console.log(`🏅 Medalla '${badge.name}' asignada a ${user.fullName}`);
+      }
+    }
+  }
+
+  async onModuleInit() {
+    const count = await this.badgeRepository.count();
+    if (count === 0) {
+      await this.badgeRepository.save([
+        {
+          name: 'Primeras Páginas',
+          description: '¡Has terminado tu primer libro!',
+          icon: '📚',
+          requirementType: 'BOOKS_READ',
+          requirementValue: 1,
+        },
+        {
+          name: 'Erudito',
+          description: 'Has leído 5 libros. ¡Increíble!',
+          icon: '🎓',
+          requirementType: 'BOOKS_READ',
+          requirementValue: 5,
+        },
+      ]);
+      console.log('✅ Medallas de BookMark inicializadas');
+    }
   }
 }

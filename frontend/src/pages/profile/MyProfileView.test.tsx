@@ -1,141 +1,163 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { MyProfileView } from './MyProfileView';
-import { AuthProvider } from '../../context/AuthContext';
-import { BrowserRouter } from 'react-router-dom';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { MyProfileView } from './MyProfileView';
+import { useAuth } from '../../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 
-vi.mock('../../services/api', () => ({
-  default: {
-    get: vi.fn(),
-    patch: vi.fn(),
-  },
+vi.mock('../../context/AuthContext');
+vi.mock('react-router-dom');
+vi.mock('../../services/api');
+vi.mock('../../users/components/LevelProgress', () => ({
+  LevelProgress: () => <div data-testid="level-progress" />
 }));
 
-const mockNavigate = vi.fn();
-vi.mock('react-router-dom', async () => {
-  const actual = await vi.importActual<any>('react-router-dom');
-  return { ...actual, useNavigate: () => mockNavigate };
-});
+const mockUser = {
+  id: '123',
+  fullName: 'Olguí Test',
+  email: 'olgui@test.com',
+  bio: 'Mi bio de prueba',
+  avatarUrl: null,
+  isPublic: true,
+  stats: { level: 3, xp: 450, currentStreak: 1 },
+  badges: [{ id: 'b1', name: 'Medalla 1', description: 'Desc', icon: '📚' }],
+  followers: [],
+  following: []
+};
 
-describe('MyProfileView Complete Coverage', () => {
-  const mockUser = {
-    id: 'uuid-123',
-    fullName: 'Olga',
-    email: 'olga@test.com',
-    bio: '',
-    isPublic: true,
-    avatarUrl: null,
-    followers: [],
-    following: [],
-  };
+describe('MyProfileView Component', () => {
+  const mockUpdateUser = vi.fn();
+  const mockLogout = vi.fn();
+  const mockNavigate = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
-    localStorage.setItem('user', JSON.stringify(mockUser));
-    localStorage.setItem('token', 'fake-token');
-    vi.spyOn(console, 'log').mockImplementation(() => {});
-    vi.spyOn(console, 'error').mockImplementation(() => {});
-    vi.spyOn(window, 'alert').mockImplementation(() => {});
-    
-    (api.get as any).mockResolvedValue({ data: mockUser });
+    (useAuth as any).mockReturnValue({
+      user: mockUser,
+      updateUser: mockUpdateUser,
+      logout: mockLogout
+    });
+    (useNavigate as any).mockReturnValue(mockNavigate);
+
+    const localStorageMock = (() => {
+      let store: Record<string, string> = { token: 'fake-token' };
+      return {
+        getItem: (key: string) => store[key] || null,
+        setItem: (key: string, value: string) => { store[key] = value },
+        clear: () => { store = {} }
+      };
+    })();
+    Object.defineProperty(window, 'localStorage', { value: localStorageMock });
+
+    vi.spyOn(window, 'alert').mockImplementation(() => { });
   });
 
-  const renderComponent = () =>
-    render(
-      <AuthProvider>
-        <BrowserRouter>
-          <MyProfileView />
-        </BrowserRouter>
-      </AuthProvider>
-    );
-
-  it('debe mostrar el texto por defecto cuando la biografía está vacía', async () => {
-    renderComponent();
-    expect(screen.getByText(/Escribe algo sobre ti para que la comunidad te conozca.../i)).toBeInTheDocument();
+  it('debe retornar null si no hay usuario', () => {
+    (useAuth as any).mockReturnValue({ user: null });
+    const { container } = render(<MyProfileView />);
+    expect(container.firstChild).toBeNull();
   });
 
-  it('debe entrar en modo edición y actualizar el nombre y la bio con éxito', async () => {
-    const updatedUser = { ...mockUser, fullName: 'Olga Editada', bio: 'Nueva Bio' };
-    (api.patch as any).mockResolvedValue({ data: updatedUser });
-
-    renderComponent();
-
-    fireEvent.click(screen.getByText(/Editar/i));
-
-    const textboxes = screen.getAllByRole('textbox');
-    const nameInput = textboxes[0];
-    const bioInput = textboxes[1];
-
-    fireEvent.change(nameInput, { target: { value: 'Olga Editada' } });
-    fireEvent.change(bioInput, { target: { value: 'Nueva Bio' } });
-
-    fireEvent.click(screen.getByText(/Guardar/i));
+  it('debe sincronizar datos de gamificación al montar', async () => {
+    (api.get as any).mockResolvedValue({ data: { ...mockUser, xp: 500 } });
+    render(<MyProfileView />);
 
     await waitFor(() => {
-      expect(api.patch).toHaveBeenCalledWith('/users/profile', expect.objectContaining({
-        fullName: 'Olga Editada',
-        bio: 'Nueva Bio'
-      }));
-      expect(console.log).toHaveBeenCalledWith("✅ Perfil actualizado correctamente");
+      expect(api.get).toHaveBeenCalledWith(`/users/${mockUser.id}`);
+      expect(mockUpdateUser).toHaveBeenCalled();
     });
   });
 
-  it('debe interactuar con el switch de privacidad con éxito', async () => {
-    (api.patch as any).mockResolvedValue({ data: { ...mockUser, isPublic: false } });
-    renderComponent();
-    const buttons = screen.getAllByRole('button');
-    const switchBtn = buttons[buttons.length - 1];
+  it('debe cambiar a modo edición y actualizar los campos', () => {
+    render(<MyProfileView />);
 
-    fireEvent.click(switchBtn);
+    const editBtn = screen.getByText(/Editar/i);
+    fireEvent.click(editBtn);
 
-    await waitFor(() => {
-      expect(screen.getByText(/Perfil privado/i)).toBeInTheDocument();
-      expect(console.log).toHaveBeenCalledWith("✅ Privacidad actualizada");
-    });
+    const nameInput = screen.getByDisplayValue(mockUser.fullName);
+    fireEvent.change(nameInput, { target: { value: 'Nuevo Nombre' } });
+
+    expect(screen.getByDisplayValue('Nuevo Nombre')).toBeDefined();
   });
 
-
-  it('debe manejar error al cambiar la privacidad (catch block)', async () => {
-    (api.patch as any).mockRejectedValue(new Error('Privacy Error'));
-    renderComponent();
-    
-    const buttons = screen.getAllByRole('button');
-    const switchBtn = buttons[buttons.length - 1];
-
-    fireEvent.click(switchBtn);
-
-    await waitFor(() => {
-      expect(console.error).toHaveBeenCalledWith("❌ Error al cambiar privacidad", expect.any(Error));
-      expect(screen.getByText(/Perfil visible para todos/i)).toBeInTheDocument();
-    });
-  });
-
-  it('debe mostrar error si el token no existe al intentar guardar', async () => {
-    renderComponent();
-    localStorage.removeItem('token');
+  it('debe fallar el guardado si no hay token en localStorage', async () => {
+    window.localStorage.clear();
+    render(<MyProfileView />);
 
     fireEvent.click(screen.getByText(/Editar/i));
     fireEvent.click(screen.getByText(/Guardar/i));
 
-    expect(window.alert).toHaveBeenCalledWith("Tu sesión ha expirado. Por favor, inicia sesión de nuevo.");
+    expect(window.alert).toHaveBeenCalledWith(expect.stringContaining("expirado"));
+    expect(mockLogout).toHaveBeenCalled();
     expect(mockNavigate).toHaveBeenCalledWith('/login');
   });
 
-  it('debe manejar error en el refresco inicial de datos (catch block)', async () => {
-    (api.get as any).mockRejectedValue(new Error('Refresh Error'));
-    
-    renderComponent();
+  it('debe guardar los cambios correctamente (Happy Path)', async () => {
+    (api.patch as any).mockResolvedValue({ data: { ...mockUser, fullName: 'Update' } });
+    render(<MyProfileView />);
+
+    fireEvent.click(screen.getByText(/Editar/i));
+    fireEvent.click(screen.getByText(/Guardar/i));
 
     await waitFor(() => {
-      expect(console.error).toHaveBeenCalledWith("Error al refrescar contadores:", expect.any(Error));
+      expect(api.patch).toHaveBeenCalledWith('/users/profile', expect.any(Object));
+      expect(mockUpdateUser).toHaveBeenCalled();
+      expect(screen.queryByText(/Guardar/i)).toBeNull(); // Vuelve a modo lectura
     });
   });
 
+  it('debe manejar error 401 al guardar', async () => {
+    (api.patch as any).mockRejectedValue({ response: { status: 401 } });
+    render(<MyProfileView />);
 
-  it('debe manejar errores genéricos al intentar guardar', async () => {
-    (api.patch as any).mockRejectedValue(new Error('Network Error'));
-    renderComponent();
+    fireEvent.click(screen.getByText(/Editar/i));
+    fireEvent.click(screen.getByText(/Guardar/i));
+
+    await waitFor(() => {
+      expect(window.alert).toHaveBeenCalledWith(expect.stringContaining("Sesión no válida"));
+      expect(mockLogout).toHaveBeenCalled();
+    });
+  });
+
+  it('debe alternar la privacidad desde el switch', async () => {
+    (api.patch as any).mockResolvedValue({ data: { ...mockUser, isPublic: false } });
+    render(<MyProfileView />);
+
+    const switchBtn = screen.getByLabelText(/cambiar visibilidad del perfil/i);
+    fireEvent.click(switchBtn);
+
+    await waitFor(() => {
+      expect(api.patch).toHaveBeenCalledWith('/users/profile', expect.objectContaining({
+        isPublic: false
+      }));
+      expect(mockUpdateUser).toHaveBeenCalled();
+    });
+  });
+
+  it('debe mostrar medallas y placeholders si tiene menos de 4', () => {
+    render(<MyProfileView />);
+    expect(screen.getByText('Medalla 1')).toBeDefined();
+    expect(screen.getByText('Próximamente')).toBeDefined();
+  });
+
+  it('debe manejar el error cuando falla la sincronización inicial', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    (api.get as any).mockRejectedValue(new Error('Network Error'));
+    
+    render(<MyProfileView />);
+
+    await waitFor(() => {
+      expect(consoleSpy).toHaveBeenCalledWith("Error al refrescar datos:", expect.any(Error));
+    });
+    consoleSpy.mockRestore();
+  });
+
+  it('debe manejar un error genérico del servidor al guardar el perfil', async () => {
+    (api.patch as any).mockRejectedValue({ 
+      response: { status: 500 } 
+    });
+
+    render(<MyProfileView />);
     
     fireEvent.click(screen.getByText(/Editar/i));
     fireEvent.click(screen.getByText(/Guardar/i));
@@ -145,15 +167,22 @@ describe('MyProfileView Complete Coverage', () => {
     });
   });
 
-  it('debe redirigir al login si el token expira (401) durante el guardado', async () => {
-    (api.patch as any).mockRejectedValue({ response: { status: 401 } });
-    renderComponent();
+  it('debe manejar el error y revertir el estado cuando falla el switch de privacidad', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    (api.patch as any).mockRejectedValue(new Error('Update failed'));
+
+    render(<MyProfileView />);
     
-    fireEvent.click(screen.getByText(/Editar/i));
-    fireEvent.click(screen.getByText(/Guardar/i));
+    const switchBtn = screen.getByLabelText(/cambiar visibilidad del perfil/i);
+    fireEvent.click(switchBtn);
 
     await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith('/login');
+      expect(consoleSpy).toHaveBeenCalledWith("❌ Error al cambiar privacidad", expect.any(Error));
     });
+
+    const switchCircle = screen.getByLabelText(/cambiar visibilidad del perfil/i).firstChild;
+    expect(switchCircle).toHaveClass('left-6 md:left-7'); 
+    
+    consoleSpy.mockRestore();
   });
 });

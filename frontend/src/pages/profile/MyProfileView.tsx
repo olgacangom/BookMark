@@ -3,6 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Lock, Unlock, Camera, Save, Edit, Loader2 } from 'lucide-react';
 import api from '../../services/api';
+import { LevelProgress } from '../../users/components/LevelProgress';
+
+interface Badge {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+}
 
 export const MyProfileView = () => {
   const { user, updateUser, logout } = useAuth();
@@ -18,15 +26,15 @@ export const MyProfileView = () => {
 
   useEffect(() => {
     const refreshData = async () => {
-      if (!user?.id) return;
+      if (!user?.id) return; 
+
       try {
         const { data } = await api.get(`/users/${user.id}`);
-        updateUser(data); 
+        updateUser(data);
       } catch (error) {
-        console.error("Error al refrescar contadores:", error);
+        console.error("Error al refrescar datos:", error);
       }
     };
-
     refreshData();
   }, [user?.id, updateUser]);
 
@@ -41,6 +49,8 @@ export const MyProfileView = () => {
   }, [user]);
 
   if (!user) return null;
+  console.log("DEBUG - Datos del usuario:", user);
+  console.log("DEBUG - ¿Tiene stats?:", !!user.stats);
 
   const handleSave = async () => {
     const token = localStorage.getItem('token');
@@ -77,6 +87,7 @@ export const MyProfileView = () => {
     }
   };
 
+  console.log("PROGRESO ACTUAL:", user.stats?.xp);
   return (
     <div className="max-w-5xl mx-auto px-4 py-6 md:py-8 pb-24 animate-in slide-in-from-bottom-4 duration-700">
 
@@ -98,6 +109,13 @@ export const MyProfileView = () => {
                 className="w-32 h-32 md:w-40 md:h-40 rounded-[2.5rem] md:rounded-[3rem] border-4 md:border-8 border-white shadow-2xl bg-white object-cover"
                 alt="Avatar"
               />
+
+              {/* INSIGNIA DE NIVEL */}
+              {user.stats && (
+                <div className="absolute -bottom-1 -right-1 bg-gradient-to-br from-amber-400 to-orange-600 text-white w-12 h-12 md:w-14 md:h-14 rounded-2xl border-[6px] border-white flex items-center justify-center font-black text-xl shadow-xl transform rotate-12">
+                  {user.stats.level}
+                </div>
+              )}
             </div>
 
             {/* Info Container - Centrado en móvil */}
@@ -126,6 +144,14 @@ export const MyProfileView = () => {
                   <span className="text-base md:text-lg font-black text-foreground">{user.following?.length || 0}</span>
                   <span className="text-[10px] md:text-[11px] font-black uppercase tracking-widest text-muted-foreground/70">Siguiendo</span>
                 </div>
+                {/* RACHA (STREAK) */}
+                {user.stats?.currentStreak > 0 && (
+                  <div className="flex items-center gap-2 bg-orange-50 px-3 py-1.5 rounded-2xl border border-orange-100 animate-pulse hover:scale-105 transition-transform cursor-help" title="Días seguidos de actividad">
+                    <span className="text-lg">🔥</span>
+                    <span className="text-base md:text-lg font-black text-orange-600">{user.stats.currentStreak}</span>
+                    <span className="text-[10px] md:text-[11px] font-black uppercase tracking-widest text-orange-400">Días</span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -161,6 +187,56 @@ export const MyProfileView = () => {
         </div>
       </div>
 
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10 items-stretch">
+
+        {/* PROGRESO DE NIVEL */}
+        <div className="bg-white rounded-[2.5rem] p-6 md:p-8 shadow-sm border border-border flex flex-col justify-center">
+          <div className="mb-4">
+            <h3 className="font-black text-foreground text-lg md:text-xl">Progreso de Nivel</h3>
+            <p className="text-xs md:text-sm text-muted-foreground font-medium">Sigue leyendo para subir de rango</p>
+          </div>
+
+          {/* Componente de la barra */}
+          <div className="flex-1 flex items-center">
+            <LevelProgress xp={user.stats?.xp || 0} />
+          </div>
+        </div>
+
+        {/* VITRINA DE MEDALLAS */}
+        <div className="bg-white rounded-[2.5rem] p-6 md:p-8 shadow-sm border border-border flex flex-col">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="font-black text-foreground text-lg md:text-xl">Mis Logros</h3>
+              <p className="text-xs md:text-sm text-muted-foreground font-medium">Medallas desbloqueadas</p>
+            </div>
+            <span className="bg-primary/10 text-primary text-xs font-black px-3 py-1 rounded-full whitespace-nowrap">
+              {user.badges?.length || 0} obtenidos
+            </span>
+          </div>
+
+          <div className="grid grid-cols-4 sm:grid-cols-5 gap-4">
+            {/* Medallas Desbloqueadas */}
+            {user.badges?.map((badge: Badge) => (
+              <div key={badge.id} className="flex flex-col items-center group cursor-help" title={badge.description}>
+                <div className="w-12 h-12 md:w-14 md:h-14 bg-gradient-to-br from-yellow-100 to-amber-200 rounded-2xl flex items-center justify-center text-xl shadow-sm border-2 border-amber-300 group-hover:scale-110 transition-transform">
+                  {badge.icon}
+                </div>
+                <span className="text-[10px] font-bold mt-2 text-center leading-tight line-clamp-2">{badge.name}</span>
+              </div>
+            ))}
+
+            {/* Espacios Bloqueados (si hay pocos logros) */}
+            {(!user.badges || user.badges.length < 4) && (
+              <div className="flex flex-col items-center opacity-30 grayscale">
+                <div className="w-12 h-12 md:w-14 md:h-14 bg-slate-100 rounded-2xl flex items-center justify-center text-xl border-2 border-dashed border-slate-300">
+                  🔒
+                </div>
+                <span className="text-[10px] font-bold mt-2">Próximamente</span>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
       {/* Switch de Privacidad - Ajustado para móvil */}
       <div className="bg-white rounded-[2rem] p-6 md:p-8 shadow-sm border border-border flex items-center justify-between transition-all hover:shadow-md">
         <div className="flex items-center gap-4 md:gap-5">
@@ -175,6 +251,7 @@ export const MyProfileView = () => {
           </div>
         </div>
         <button
+          aria-label="Cambiar visibilidad del perfil"
           onClick={async () => {
             const newStatus = !formData.isPublic;
             setFormData(prev => ({ ...prev, isPublic: newStatus }));
@@ -184,9 +261,9 @@ export const MyProfileView = () => {
                 const { data } = await api.patch('/users/profile', {
                   fullName: formData.name,
                   bio: formData.bio,
-                  isPublic: newStatus 
+                  isPublic: newStatus
                 });
-                updateUser(data); 
+                updateUser(data);
                 console.log("✅ Privacidad actualizada");
               } catch (error) {
                 console.error("❌ Error al cambiar privacidad", error);

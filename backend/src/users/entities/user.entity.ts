@@ -5,10 +5,15 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   OneToMany,
+  OneToOne,
+  ManyToMany,
+  JoinTable,
 } from 'typeorm';
 import { Exclude, Expose } from 'class-transformer';
 import { Book } from '../../books/entities/book.entity';
 import { Follow, FollowStatus } from './follow.entity';
+import { UserStats } from './user-stats.entity';
+import { Badge } from '../badge.entity';
 
 @Entity('users')
 export class User {
@@ -51,6 +56,13 @@ export class User {
 
   @OneToMany(() => Follow, (follow) => follow.follower)
   followingRelations: Follow[];
+
+  @OneToOne(() => UserStats, (stats) => stats.user, { cascade: true })
+  stats!: UserStats;
+
+  @ManyToMany(() => Badge, (badge) => badge.users)
+  @JoinTable()
+  badges: Badge[];
 
   @Expose()
   get followers() {
