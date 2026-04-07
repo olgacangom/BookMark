@@ -1,4 +1,10 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  CreateDateColumn,
+} from 'typeorm';
 import { BookStatus } from '../enum/book-status.enum';
 import { User } from '../../users/entities/user.entity';
 
@@ -37,4 +43,7 @@ export class Book {
 
   @Column()
   userId: string;
+
+  @CreateDateColumn()
+  createdAt: Date;
 }

@@ -16,6 +16,11 @@ import { ActivityType } from './entities/activity.entity';
 import { UserStats } from './entities/user-stats.entity';
 import { Badge } from './badge.entity';
 
+interface GrowthData {
+  month: string;
+  count: string | number;
+}
+
 @Injectable()
 export class UsersService {
   constructor(
@@ -289,7 +294,7 @@ export class UsersService {
   async assignBadge(userId: string, badgeId: string) {
     const user = await this.usersRepository.findOne({
       where: { id: userId },
-      relations: ['badges'], // Cargamos las que ya tiene
+      relations: ['badges'],
     });
 
     const badge = await this.badgeRepository.findOneBy({ id: badgeId });
@@ -324,5 +329,20 @@ export class UsersService {
       ]);
       console.log('✅ Medallas de BookMark inicializadas');
     }
+  }
+
+  async getBooksGrowth(userId: string): Promise<GrowthData[]> {
+    const queryBuilder = this.usersRepository.createQueryBuilder('user');
+
+    const result = await queryBuilder
+      .leftJoin('user.books', 'book')
+      .select('TO_CHAR(book."createdAt", \'YYYY-MM\')', 'month')
+      .addSelect('COUNT(book.id)', 'count')
+      .where('user.id = :userId', { userId })
+      .groupBy('month')
+      .orderBy('month', 'ASC')
+      .getRawMany();
+
+    return result as GrowthData[];
   }
 }
