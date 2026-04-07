@@ -14,11 +14,9 @@ import {
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { jest, describe, it, expect, beforeEach } from '@jest/globals';
-/* IMPORTAMOS LOS DTOS REALES */
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 
-// Tipado para mocks que evita el error 'never' y 'any'
 type MockRepository<T extends ObjectLiteral = object> = {
   [P in keyof Repository<T>]?: jest.Mock<any>;
 };
@@ -52,7 +50,6 @@ describe('UsersService', () => {
     password: 'hashed_password',
   } as unknown as User;
 
-  // DTOs base para evitar 'any' en los tests
   const validCreateDto: CreateUserDto = {
     email: 'test@test.com',
     password: '123',
@@ -67,6 +64,7 @@ describe('UsersService', () => {
           provide: getRepositoryToken(User),
           useValue: {
             find: jest.fn(),
+            createQueryBuilder: jest.fn(),
             findOne: jest.fn(),
             findOneBy: jest.fn(),
             create: jest.fn(),
@@ -384,7 +382,7 @@ describe('UsersService', () => {
     });
   });
 
-  it('searchUsers: debe ejecutar la búsqueda con ILike (Línea 180)', async () => {
+  it('searchUsers: debe ejecutar la búsqueda con ILike', async () => {
     usersRepo.find?.mockResolvedValue([mockUser]);
     const result = await service.searchUsers('test');
     expect(result).toEqual([mockUser]);
@@ -392,8 +390,7 @@ describe('UsersService', () => {
   });
 
   describe('findOneProfile - Lógica interna', () => {
-    it('debe detectar correctamente isFollowing y hasPendingRequest y eliminar password (Líneas 204, 208, 216-217)', async () => {
-      /* CORRECCIÓN 369: Eliminado 'as any' usando casteo unknown -> User */
+    it('debe detectar correctamente isFollowing y hasPendingRequest y eliminar password', async () => {
       const userWithRelations = {
         ...mockUser,
         followerRelations: [
@@ -416,7 +413,7 @@ describe('UsersService', () => {
     });
   });
 
-  it('addExperience: debe crear nuevas stats si el usuario no tiene (Línea 237)', async () => {
+  it('addExperience: debe crear nuevas stats si el usuario no tiene', async () => {
     statsRepo.findOne?.mockResolvedValue(null);
     statsRepo.create?.mockReturnValue({ xp: 0, level: 1 });
     statsRepo.save?.mockResolvedValue({ xp: 10, level: 1 });
@@ -431,7 +428,7 @@ describe('UsersService', () => {
     );
   });
 
-  it('updateStreak: debe inicializar racha si lastActivityDate es null (Líneas 268-269)', async () => {
+  it('updateStreak: debe inicializar racha si lastActivityDate es null', async () => {
     const stats = {
       currentStreak: 0,
       lastActivityDate: null,
@@ -445,7 +442,7 @@ describe('UsersService', () => {
     expect(stats.lastActivityDate).toBeInstanceOf(Date);
   });
 
-  it('assignBadge: debe añadir la medalla al array y guardar (Líneas 299-301)', async () => {
+  it('assignBadge: debe añadir la medalla al array y guardar', async () => {
     const user = { ...mockUser, badges: [] } as unknown as User;
     const badge = { id: 'badge-1', name: 'Lector Pro' };
 
@@ -456,5 +453,57 @@ describe('UsersService', () => {
 
     expect(user.badges).toContain(badge);
     expect(usersRepo.save).toHaveBeenCalledWith(user);
+  });
+
+  describe('getBooksGrowth', () => {
+    const mockUserId = 'user-1';
+
+    it('debe llamar al QueryBuilder con los parámetros correctos y devolver los datos agregados', async () => {
+      const mockRawResults = [{ month: '2026-04', count: '12' }];
+      const queryBuilderMock: any = {
+        leftJoin: jest.fn().mockReturnThis(),
+        select: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        groupBy: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        getRawMany: jest.fn<any>().mockResolvedValue(mockRawResults),
+      };
+
+      (usersRepo.createQueryBuilder as jest.Mock).mockReturnValue(
+        queryBuilderMock,
+      );
+
+      const result = await service.getBooksGrowth(mockUserId);
+
+      expect(usersRepo.createQueryBuilder).toHaveBeenCalledWith('user');
+      expect(result).toEqual(mockRawResults);
+    });
+
+    it('debe manejar errores si el QueryBuilder falla', async () => {
+      const queryBuilderMock: any = {
+        leftJoin: jest.fn().mockReturnThis(),
+        select: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        groupBy: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        getRawMany: jest
+          .fn()
+          .mockImplementation(() =>
+            Promise.reject(new Error('Database Error')),
+          ),
+      };
+
+      (usersRepo.createQueryBuilder as jest.Mock).mockReturnValue(
+        queryBuilderMock,
+      );
+
+      await expect(service.getBooksGrowth(mockUserId)).rejects.toThrow(
+        'Database Error',
+      );
+
+      expect(usersRepo.createQueryBuilder).toHaveBeenCalledWith('user');
+    });
   });
 });

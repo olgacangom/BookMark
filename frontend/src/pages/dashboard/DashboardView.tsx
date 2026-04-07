@@ -8,12 +8,15 @@ import {
     Trophy,
     Flame,
     Target,
-    Sparkles
+    Sparkles,
+    BarChart3
 } from "lucide-react";
+import { BooksGrowthChart } from '../../components/stats/BooksGrowthChart';
 
 export const DashboardView = () => {
     const { user } = useAuth();
     const [books, setBooks] = useState<Book[]>([]);
+    const [growthData, setGrowthData] = useState([]);
     const [loading, setLoading] = useState(true);
 
     const challenges = [
@@ -23,10 +26,19 @@ export const DashboardView = () => {
     useEffect(() => {
         const loadData = async () => {
             try {
-                const data = await bookService.getMyBooks();
-                setBooks(data);
+                // 3. Cargamos ambos datos en paralelo
+                const [booksData, statsResponse] = await Promise.all([
+                    bookService.getMyBooks(),
+                    // Ajusta esta URL a tu API. Usamos fetch directo o tu axios instance
+                    fetch(`${import.meta.env.VITE_API_URL}/users/stats/growth`, {
+                        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+                    }).then(res => res.json())
+                ]);
+
+                setBooks(booksData);
+                setGrowthData(statsResponse);
             } catch (e) {
-                console.error("Error cargando biblioteca:", e);
+                console.error("Error cargando Dashboard:", e);
             } finally {
                 setLoading(false);
             }
@@ -56,7 +68,7 @@ export const DashboardView = () => {
                         <Sparkles className="w-8 h-8 text-amber-200/60 animate-pulse" />
                     </div>
                     <p className="text-white/90 text-lg mb-8">Tu espacio literario te espera</p>
-                    
+
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <StatBannerCard icon={<Flame className="text-orange-100" />} value="5" label="días seguidos" bg="bg-orange-400/30" />
                         <StatBannerCard icon={<BookOpen className="text-blue-100" />} value={booksRead.toString()} label="libros leídos" bg="bg-blue-400/30" />
@@ -69,6 +81,16 @@ export const DashboardView = () => {
                 <QuickActionLink to="/library" icon={<BookOpen />} title="Explorar Libros" desc="Encuentra tu lectura" color="from-[#9b8b7e] to-[#c5b5aa]" />
                 <QuickActionLink to="/library" icon={<Users />} title="Clubes de Lectura" desc="Únete a la comunidad" color="from-[#c5b5aa] to-[#d0bfb3]" />
                 <QuickActionLink to="/library" icon={<Target />} title="Retos" desc="Alcanza tus metas" color="from-[#a4a99f] to-[#b8bdb3]" />
+            </div>
+
+            <div className="mb-10 animate-in slide-in-from-bottom-4 duration-1000">
+                <div className="bg-white/80 backdrop-blur-sm rounded-[2.5rem] p-8 shadow-sm border border-neutral-100/50">
+                    <div className="flex items-center gap-2 mb-6">
+                        <BarChart3 className="w-6 h-6 text-[#9b8b7e]" />
+                        <h2 className="text-2xl font-bold text-slate-800">Tu Actividad</h2>
+                    </div>
+                    <BooksGrowthChart data={growthData} />
+                </div>
             </div>
 
             <div className="grid md:grid-cols-2 gap-8">
@@ -112,10 +134,10 @@ export const DashboardView = () => {
                             <div className="relative z-10">
                                 <div className="flex justify-between mb-2">
                                     <span className="font-bold text-slate-700">{c.name}</span>
-                                    <span className="text-[#a4a99f] font-black">{Math.round((c.current/c.target)*100)}%</span>
+                                    <span className="text-[#a4a99f] font-black">{Math.round((c.current / c.target) * 100)}%</span>
                                 </div>
                                 <div className="w-full bg-neutral-200 h-3 rounded-full overflow-hidden">
-                                    <div className="bg-[#a4a99f] h-3 rounded-full" style={{ width: `${(c.current/c.target)*100}%` }}></div>
+                                    <div className="bg-[#a4a99f] h-3 rounded-full" style={{ width: `${(c.current / c.target) * 100}%` }}></div>
                                 </div>
                                 <p className="text-xs text-slate-400 mt-3">{c.description}</p>
                             </div>

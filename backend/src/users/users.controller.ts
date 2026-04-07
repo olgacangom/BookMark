@@ -9,6 +9,7 @@ import {
   UseGuards,
   Request,
   Query,
+  Req,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -20,6 +21,11 @@ interface RequestWithUser {
     id: string;
     email: string;
   };
+}
+
+interface GrowthData {
+  month: string;
+  count: number | string;
 }
 
 @Controller('users')
@@ -106,5 +112,11 @@ export class UsersController {
   @Post()
   create(@Body() createUserDto: CreateUserDto) {
     return this.usersService.create(createUserDto);
+  }
+
+  @Get('stats/growth')
+  @UseGuards(JwtAuthGuard)
+  async getGrowth(@Req() req: RequestWithUser): Promise<GrowthData[]> {
+    return this.usersService.getBooksGrowth(req.user.id);
   }
 }
