@@ -2,17 +2,10 @@ import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { bookService, Book } from '../../books/services/book.service';
 import { AddBookModal } from '../../books/components/AddBookModal';
-import { BookCard } from '../../books/components/BookCard';
 import {
-    Search,
-    BookOpen,
-    CheckCircle,
-    Heart,
-    Sparkles,
-    Clock,
-    ChevronDown,
-    Filter,
-    AlertTriangle
+    Search, Clock, CheckCircle, Plus,
+    BookMarked, Edit2, Trash2, AlertTriangle, Sparkles, Star,
+    BookOpen, MessageSquare, SortAsc // <--- Usaremos SortAsc
 } from 'lucide-react';
 import { BookFormData } from '../../books/schemas/books.shema';
 
@@ -21,7 +14,7 @@ export const LibraryView = () => {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterStatus, setFilterStatus] = useState<string>('todos');
-    const [sortBy, setSortBy] = useState<'title' | 'author' | 'recent'>('recent');
+    const [sortBy, setSortBy] = useState<'title' | 'author' | 'recent'>('recent'); 
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -34,332 +27,261 @@ export const LibraryView = () => {
         try {
             const data = await bookService.getMyBooks();
             setBooks(data);
-        } catch (e) {
-            console.error("Error al cargar biblioteca:", e);
-        } finally {
-            setLoading(false);
-        }
+        } catch (e) { console.error(e); } finally { setLoading(false); }
     }, []);
 
-    useEffect(() => {
-        loadData();
-    }, [loadData]);
-
-    const handleEditClick = (book: Book) => {
-        setSelectedBook(book);
-        setIsModalOpen(true);
-    };
-
-    const handleAddNewClick = () => {
-        setSelectedBook(null);
-        setIsModalOpen(true);
-    };
-
-    const openDeleteConfirm = (e: React.MouseEvent, book: Book) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setSelectedBook(book);
-        setIsDeleteModalOpen(true);
-    };
-
-    const confirmDelete = async () => {
-        if (!selectedBook) return;
-        try {
-            await bookService.remove(selectedBook.id);
-            setIsDeleteModalOpen(false);
-            setSelectedBook(null);
-            loadData();
-        } catch (error) {
-            console.error("Error al eliminar:", error);
-        }
-    };
-
-    // Lógica de guardado extraída para mejorar la mantenibilidad
-    const handleCreateOrUpdateBook = async (data: BookFormData) => {
-        if (selectedBook) {
-            return await bookService.update(selectedBook.id, data as any);
-        }
-        return await bookService.create(data as any);
-    };
+    useEffect(() => { loadData(); }, [loadData]);
 
     const filteredBooks = books
-        .filter(book => {
-            const matchesSearch =
-                book.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                book.author.toLowerCase().includes(searchTerm.toLowerCase());
-            const matchesStatus = filterStatus === 'todos' || book.status === filterStatus;
-            return matchesSearch && matchesStatus;
-        })
-        .sort((a, b) => {
-            if (sortBy === 'title') return a.title.localeCompare(b.title);
-            if (sortBy === 'author') return a.author.localeCompare(b.author);
-            return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
-        });
+    .filter(book => {
+        const matchesSearch = book.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            book.author.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesStatus = filterStatus === 'todos' || book.status === filterStatus;
+        return matchesSearch && matchesStatus;
+    })
+    .sort((a, b) => {
+        if (sortBy === 'title') return a.title.localeCompare(b.title);
+        if (sortBy === 'author') return a.author.localeCompare(b.author);
 
-    const stats = {
-        reading: books.filter(b => b.status === 'Reading').length,
-        read: books.filter(b => b.status === 'Read').length,
-        want: books.filter(b => b.status === 'Want to Read').length,
-    };
+        const dateA = new Date(a.updatedAt || a.createdAt || 0).getTime();
+        const dateB = new Date(b.updatedAt || b.createdAt || 0).getTime();
+        
+        return dateB - dateA; 
+    });
 
-    const getStatusInfo = (status: string) => {
-        switch (status) {
-            case 'Reading':
-                return { label: 'Leyendo', icon: <Clock aria-hidden="true" className="w-3.5 h-3.5" />, color: 'bg-blue-50 text-blue-600 border-blue-100' };
-            case 'Read':
-                return { label: 'Leído', icon: <CheckCircle aria-hidden="true" className="w-3.5 h-3.5" />, color: 'bg-emerald-50 text-emerald-600 border-emerald-100' };
-            case 'Want to Read':
-                return { label: 'Pendiente', icon: <Heart aria-hidden="true" className="w-3.5 h-3.5" />, color: 'bg-rose-50 text-rose-600 border-rose-100' };
-            default:
-                return { label: 'Sin estado', icon: <BookOpen aria-hidden="true" className="w-3.5 h-3.5" />, color: 'bg-slate-50 text-slate-600 border-slate-100' };
-        }
-    };
-
-    const CustomDropdown = ({ value, onChange, options, icon: Icon, align = 'left' }: any) => {
-        const [isOpen, setIsOpen] = useState(false);
-        const selectedOption = options.find((o: any) => o.value === value);
-
-        return (
-            <div className="relative">
-                <button
-                    type="button"
-                    onClick={() => setIsOpen(!isOpen)}
-                    className="w-full flex items-center justify-between px-6 py-4 bg-[#f8f6f4] border-2 border-transparent hover:border-primary/10 rounded-[1.5rem] transition-all shadow-sm active:scale-95"
-                >
-                    <div className="flex items-center gap-3">
-                        {Icon && <Icon aria-hidden="true" className="w-4 h-4 text-primary/50" />}
-                        <span className="font-black text-[10px] uppercase tracking-widest text-[#564e4e]">
-                            {selectedOption?.label}
-                        </span>
-                    </div>
-                    <ChevronDown aria-hidden="true" className={`w-4 h-4 text-primary/30 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
-                </button>
-
-                {isOpen && (
-                    <>
-                        <button
-                            type="button"
-                            data-testid="dropdown-backdrop"
-                            className="fixed inset-0 z-[90] bg-transparent cursor-default border-none w-full h-full"
-                            onClick={() => setIsOpen(false)}
-                            aria-label="Cerrar menú"
-                        />
-                        <div className={`absolute z-[100] mt-2 w-full min-w-[200px] bg-white rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.15)] border border-primary/5 p-2 animate-in fade-in zoom-in-95 duration-200 ${align === 'right' ? 'right-0' : 'left-0'}`}>
-                            {options.map((opt: any) => (
-                                <button
-                                    key={opt.value}
-                                    type="button"
-                                    onClick={() => {
-                                        onChange(opt.value);
-                                        setIsOpen(false);
-                                    }}
-                                    className={`w-full text-left px-5 py-3 rounded-[1.2rem] font-bold text-[10px] uppercase tracking-widest transition-colors ${value === opt.value
-                                        ? 'bg-primary text-white shadow-lg shadow-primary/20'
-                                        : 'text-[#564e4e] hover:bg-primary/5'
-                                        }`}
-                                >
-                                    {opt.label}
-                                </button>
-                            ))}
-                        </div>
-                    </>
-                )}
-            </div>
-        );
-    };
-
-    if (loading) {
-        return (
-            <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4">
-                <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-                <p className="text-primary font-black uppercase tracking-widest text-xs animate-pulse">Organizando estanterías...</p>
-            </div>
-        );
-    }
+    if (loading) return (
+        <div className="min-h-screen bg-[#F0F9F9] flex items-center justify-center">
+            <div className="w-10 h-10 border-4 border-teal-100 border-t-teal-600 rounded-full animate-spin" />
+        </div>
+    );
 
     return (
-        <div className="max-w-7xl mx-auto px-4 py-8 pb-32 animate-in fade-in duration-700">
-            <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
-                <div>
-                    <div className="flex items-center gap-3 mb-3">
-                        <img src="favicon.png" alt="" role="presentation" className="w-10 h-10" />
-                        <h1 className="text-4xl font-black text-[#564e4e] tracking-tight">Mi Biblioteca</h1>
-                    </div>
-                    <p className="text-muted-foreground text-lg font-medium">
-                        Hola <span className="text-primary font-bold">{user?.fullName?.split(' ')[0] || 'Lector'}</span>, tienes {books.length} libros en tu colección.
-                    </p>
+        <div className="min-h-screen bg-[#F0F9F9] font-sans text-slate-900 pb-20">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+                <div className="mb-8">
+                    <h1 className="text-3xl font-bold text-slate-900 mb-2">Mi Biblioteca</h1>
+                    <p className="text-slate-500 font-medium italic">Hola {user?.fullName?.split(' ')[0]}, consulta tu catálogo personal.</p>
                 </div>
-                <button
-                    type="button"
-                    onClick={handleAddNewClick}
-                    className="bg-primary text-white px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl shadow-primary/20 hover:scale-[1.05] active:scale-95 transition-all flex items-center justify-center gap-3"
-                >
-                    <Sparkles aria-hidden="true" className="w-4 h-4" />
-                    Añadir Nuevo Libro
-                </button>
-            </header>
 
-            <section className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-10" aria-label="Estadísticas de lectura">
-                <StatCard icon={<Clock aria-hidden="true" />} label="Leyendo" value={stats.reading} color="blue" />
-                <StatCard icon={<CheckCircle aria-hidden="true" />} label="Finalizados" value={stats.read} color="emerald" />
-                <StatCard icon={<Heart aria-hidden="true" />} label="Por leer" value={stats.want} color="rose" />
-            </section>
-
-            <section className="relative z-50 bg-white/80 backdrop-blur-md rounded-[2.5rem] p-4 mb-10 border border-white shadow-xl shadow-neutral-200/40" aria-label="Búsqueda y filtros">
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-                    <div className="md:col-span-5 relative group">
-                        <Search aria-hidden="true" className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-primary group-focus-within:scale-110 transition-transform" />
-                        <input
-                            type="text"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            placeholder="Buscar por título o autor..."
-                            className="w-full pl-14 pr-6 py-4 bg-neutral-50 border-2 border-transparent focus:border-primary/20 focus:bg-white rounded-[1.5rem] transition-all outline-none font-medium"
-                            aria-label="Buscar libros por título o autor"
-                        />
-                    </div>
-                    <div className="md:col-span-3">
-                        <CustomDropdown
-                            value={filterStatus}
-                            onChange={setFilterStatus}
-                            icon={Filter}
-                            options={[
-                                { value: 'todos', label: 'Todos los estados' },
-                                { value: 'Reading', label: 'En progreso' },
-                                { value: 'Read', label: 'Leídos' },
-                                { value: 'Want to Read', label: 'Pendientes' }
-                            ]}
-                        />
-                    </div>
-                    <div className="md:col-span-4">
-                        <CustomDropdown
-                            value={sortBy}
-                            onChange={setSortBy}
-                            align="right"
-                            options={[
-                                { value: 'recent', label: 'Añadidos recientemente' },
-                                { value: 'title', label: 'Orden alfabético (Título)' },
-                                { value: 'author', label: 'Orden alfabético (Autor)' }
-                            ]}
-                        />
-                    </div>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                    <StatCard label="Total" value={books.length} color="from-slate-600 to-slate-700" />
+                    <StatCard label="Leyendo" value={books.filter(b => b.status === 'Reading').length} color="from-sky-600 to-cyan-600" />
+                    <StatCard label="Completados" value={books.filter(b => b.status === 'Read').length} color="from-emerald-600 to-teal-600" />
+                    <StatCard label="Pendientes" value={books.filter(b => b.status === 'Want to Read').length} color="from-amber-500 to-orange-500" />
                 </div>
-            </section>
 
-            <main>
-                {filteredBooks.length === 0 ? (
-                    <EmptyState hasSearch={!!searchTerm} onAddClick={handleAddNewClick} />
-                ) : (
-                    <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-8">
-                        {filteredBooks.map(book => (
+                <div className="flex items-center gap-3 mb-8 overflow-x-auto pb-2 no-scrollbar">
+                    {[
+                        { id: "todos", label: "Todos" },
+                        { id: "Reading", label: "Leyendo" },
+                        { id: "Read", label: "Completados" },
+                        { id: "Want to Read", label: "Pendientes" },
+                    ].map((tab) => (
+                        <button
+                            key={tab.id}
+                            onClick={() => setFilterStatus(tab.id)}
+                            className={`px-6 py-3 rounded-xl font-bold uppercase text-[10px] tracking-widest transition-all ${filterStatus === tab.id
+                                ? "bg-gradient-to-r from-slate-700 via-teal-600 to-emerald-600 text-white shadow-lg shadow-teal-500/30"
+                                : "bg-white/80 backdrop-blur-xl text-slate-400 border border-slate-200/50 hover:text-teal-600"
+                                }`}
+                        >
+                            {tab.label}
+                        </button>
+                    ))}
+                </div>
+
+                <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-8">
+                    <div className="flex flex-1 w-full gap-3">
+                        <div className="relative flex-1 md:max-w-md group">
+                            <Search className="absolute z-10 left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-teal-600 pointer-events-none transition-colors" />
+                            <input
+                                type="text"
+                                placeholder="Buscar ejemplar..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="relative z-0 w-full pl-11 pr-4 py-3 bg-white/80 backdrop-blur-xl border border-slate-200/50 rounded-2xl text-sm focus:ring-4 focus:ring-teal-500/10 transition-all outline-none"
+                            />
+                        </div>
+
+                        <div className="relative group">
+                            <SortAsc className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                            <select 
+                                value={sortBy}
+                                onChange={(e) => setSortBy(e.target.value as 'title' | 'author' | 'recent')}
+                                className="pl-11 pr-8 py-3 bg-white/80 backdrop-blur-xl border border-slate-200/50 rounded-2xl text-xs font-bold uppercase tracking-tighter outline-none appearance-none cursor-pointer hover:border-teal-500 transition-colors"
+                            >
+                                <option value="recent">Recientes</option>
+                                <option value="title">Título</option>
+                                <option value="author">Autor</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button
+                        onClick={() => { setSelectedBook(null); setIsModalOpen(true); }}
+                        className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-slate-700 via-teal-600 to-emerald-600 text-white rounded-xl font-bold hover:shadow-lg hover:shadow-teal-500/50 transition-all active:scale-95"
+                    >
+                        <Plus size={20} />
+                        <span>Añadir Libro</span>
+                    </button>
+                </div>
+
+                {filteredBooks.length > 0 ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+                        {filteredBooks.map((book) => (
                             <BookCard
                                 key={book.id}
                                 book={book}
-                                onEdit={handleEditClick}
-                                onDelete={openDeleteConfirm}
-                                statusInfo={getStatusInfo(book.status)}
+                                onEdit={() => { setSelectedBook(book); setIsModalOpen(true); }}
+                                onDelete={(e) => {
+                                    e.preventDefault();
+                                    setSelectedBook(book);
+                                    setIsDeleteModalOpen(true);
+                                }}
                             />
                         ))}
                     </div>
+                ) : (
+                    <div className="text-center py-24 bg-white/50 backdrop-blur-sm rounded-[2rem] border-2 border-dashed border-slate-200">
+                        <BookMarked className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+                        <p className="text-slate-500 font-medium uppercase tracking-widest text-xs">El estante está vacío</p>
+                    </div>
                 )}
-            </main>
+            </div>
 
             <AddBookModal
                 isOpen={isModalOpen}
                 book={selectedBook}
-                onClose={() => {
-                    setIsModalOpen(false);
-                    setSelectedBook(null);
-                }}
+                onClose={() => { setIsModalOpen(false); setSelectedBook(null); }}
                 onSuccess={loadData}
-                createBook={handleCreateOrUpdateBook}
+                createBook={async (data: BookFormData) => {
+                    if (selectedBook) return await bookService.update(selectedBook.id, data as any);
+                    return await bookService.create(data as any);
+                }}
             />
 
             <ConfirmDeleteModal
                 isOpen={isDeleteModalOpen}
-                onClose={() => {
-                    setIsDeleteModalOpen(false);
-                    setSelectedBook(null);
+                title={selectedBook?.title || ''}
+                onClose={() => { setIsDeleteModalOpen(false); setSelectedBook(null); }}
+                onConfirm={async () => {
+                    if (selectedBook) {
+                        await bookService.remove(selectedBook.id);
+                        setIsDeleteModalOpen(false);
+                        loadData();
+                    }
                 }}
-                onConfirm={confirmDelete}
-                title={selectedBook?.title}
             />
         </div>
     );
 };
 
-const ConfirmDeleteModal = ({ isOpen, onClose, onConfirm, title }: any) => {
+const StatCard = ({ label, value, color }: { label: string, value: number, color: string }) => (
+    <div className="bg-white/80 backdrop-blur-xl rounded-2xl p-6 border border-slate-200/50 hover:shadow-lg transition-all">
+        <div className={`w-12 h-12 bg-gradient-to-br ${color} rounded-xl mb-4 flex items-center justify-center shadow-sm`}>
+            <BookOpen className="w-6 h-6 text-white" />
+        </div>
+        <div className="text-3xl font-bold text-slate-900 mb-1">{value}</div>
+        <div className="text-xs text-slate-400 font-bold uppercase tracking-widest">{label}</div>
+    </div>
+);
+
+const BookCard = ({ book, onEdit, onDelete }: { book: Book, onEdit: () => void, onDelete: (e: any) => void }) => {
+    const ratingValue = (book as any).rating || 0;
+    const hasReview = !!(book as any).review; // Comprobamos si tiene review
+
+    return (
+        <div className="group flex flex-col h-full animate-in fade-in duration-500">
+            <div className="relative mb-3 aspect-[2/3] rounded-2xl overflow-hidden shadow-lg group-hover:shadow-2xl transition-all bg-slate-100">
+                {book.urlPortada ? (
+                    <img src={book.urlPortada} alt={book.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                ) : (
+                    <div className="w-full h-full flex items-center justify-center p-4 text-center bg-slate-200 text-slate-400 font-bold">
+                        {book.title.charAt(0)}
+                    </div>
+                )}
+
+                <div className="absolute top-2 right-2">
+                    {book.status === "Reading" && (
+                        <div className="w-8 h-8 bg-sky-500/90 backdrop-blur-md rounded-full flex items-center justify-center shadow-lg">
+                            <Clock className="w-4 h-4 text-white" />
+                        </div>
+                    )}
+                    {book.status === "Read" && (
+                        <div className="w-8 h-8 bg-emerald-500/90 backdrop-blur-md rounded-full flex items-center justify-center shadow-lg">
+                            <CheckCircle className="w-4 h-4 text-white" />
+                        </div>
+                    )}
+                    {book.status === "Want to Read" && (
+                        <div className="w-8 h-8 bg-amber-500/90 backdrop-blur-md rounded-full flex items-center justify-center shadow-lg">
+                            <Sparkles className="w-4 h-4 text-white" />
+                        </div>
+                    )}
+                </div>
+
+                {hasReview && (
+                    <div className="absolute top-2 left-2 w-8 h-8 bg-white/90 backdrop-blur-md rounded-full flex items-center justify-center text-teal-600 shadow-sm border border-teal-100">
+                        <MessageSquare size={14} />
+                    </div>
+                )}
+
+                <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col justify-center p-4 gap-2">
+                    <button onClick={onEdit} className="w-full bg-white text-slate-900 py-2.5 rounded-xl text-xs font-bold hover:bg-teal-50 transition-all flex items-center justify-center gap-2">
+                        <Edit2 size={14} /> Editar
+                    </button>
+                    <button onClick={onDelete} className="w-full bg-rose-500 text-white py-2.5 rounded-xl text-xs font-bold hover:bg-rose-600 transition-all flex items-center justify-center gap-2">
+                        <Trash2 size={14} /> Eliminar
+                    </button>
+                </div>
+            </div>
+
+            <div className="flex-1 flex flex-col">
+                <h3 className="font-bold text-slate-900 text-sm mb-1 line-clamp-1 uppercase tracking-tight group-hover:text-teal-600 transition-colors">
+                    {book.title}
+                </h3>
+                <p className="text-[10px] text-slate-500 mb-2 font-semibold">{book.author}</p>
+
+                {book.status === "Read" && (
+                    <div className="flex gap-0.5">
+                        {[1, 2, 3, 4, 5].map((s) => (
+                            <Star 
+                                key={s} 
+                                size={12} 
+                                className={`${s <= ratingValue ? "fill-amber-400 text-amber-400" : "text-slate-200"}`} 
+                            />
+                        ))}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
+interface DeleteModalProps {
+    isOpen: boolean;
+    title: string;
+    onClose: () => void;
+    onConfirm: () => void;
+}
+
+const ConfirmDeleteModal = ({ isOpen, title, onClose, onConfirm }: DeleteModalProps) => {
     if (!isOpen) return null;
     return (
-        <div role="dialog" aria-modal="true" className="fixed inset-0 z-[100] flex items-center justify-center bg-primary/10 backdrop-blur-xl p-4 animate-in fade-in duration-300">
-            <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-sm overflow-hidden border border-white animate-in zoom-in-95 duration-200">
-                <div className="p-8 text-center">
-                    <div className="w-20 h-20 bg-rose-50 rounded-[2rem] flex items-center justify-center text-rose-500 mx-auto mb-6">
-                        <AlertTriangle aria-hidden="true" className="w-10 h-10" />
-                    </div>
-                    <h3 className="text-2xl font-black text-slate-800 mb-3 tracking-tight">¿Eliminar libro?</h3>
-                    <p className="text-slate-500 font-medium leading-relaxed mb-8">
-                        Vas a quitar <span className="text-slate-800 font-bold italic">"{title}"</span> de tu biblioteca. Esta acción no se puede deshacer.
-                    </p>
-                    <div className="flex gap-4">
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="flex-1 py-4 font-bold text-slate-400 hover:text-slate-600 transition-colors"
-                        >
-                            Cancelar
-                        </button>
-                        <button
-                            type="button"
-                            onClick={onConfirm}
-                            className="flex-[2] py-4 bg-rose-500 text-white rounded-2xl font-bold shadow-lg shadow-rose-200 hover:bg-rose-600 hover:scale-[1.02] active:scale-95 transition-all"
-                        >
-                            Sí, eliminar
-                        </button>
-                    </div>
+        <div className="fixed inset-0 z-[150] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-in fade-in duration-300">
+            <div className="bg-white rounded-[2.5rem] p-8 max-w-sm w-full shadow-2xl border border-slate-100 text-center">
+                <div className="w-14 h-14 bg-rose-50 rounded-full flex items-center justify-center mx-auto mb-4 text-rose-500">
+                    <AlertTriangle size={24} />
+                </div>
+                <h3 className="text-xl font-bold text-slate-900 mb-2 tracking-tight">¿Eliminar lectura?</h3>
+                <p className="text-slate-500 text-sm mb-8 leading-relaxed px-2">
+                    Estás a punto de borrar <span className="font-bold text-slate-800 italic">"{title}"</span>. Esta acción no se puede deshacer.
+                </p>
+                <div className="flex gap-3">
+                    <button onClick={onClose} className="flex-1 py-3 font-bold text-slate-400 hover:text-slate-600 transition-colors uppercase text-xs tracking-widest">Cancelar</button>
+                    <button onClick={onConfirm} className="flex-1 py-3 bg-slate-900 text-white rounded-xl font-bold shadow-lg hover:bg-rose-600 transition-all uppercase text-xs tracking-widest">Eliminar</button>
                 </div>
             </div>
         </div>
     );
 };
-
-const StatCard = ({ icon, label, value, color }: any) => {
-    const colors: any = {
-        blue: "bg-blue-50/50 text-blue-600 border-blue-100",
-        emerald: "bg-emerald-50/50 text-emerald-600 border-emerald-100",
-        rose: "bg-rose-50/50 text-rose-600 border-rose-100"
-    };
-
-    return (
-        <div className={`${colors[color]} p-7 rounded-[2.5rem] border shadow-sm flex items-center gap-6 hover:translate-y-[-4px] transition-all duration-300`}>
-            <div className="p-4 bg-white rounded-2xl shadow-sm scale-110">{icon}</div>
-            <div>
-                <p className="text-4xl font-black text-slate-800 leading-none mb-1 tracking-tighter">{value}</p>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60">{label}</p>
-            </div>
-        </div>
-    );
-};
-
-const EmptyState = ({ hasSearch, onAddClick }: { hasSearch: boolean; onAddClick: () => void }) => (
-    <div className="bg-white/50 backdrop-blur-sm rounded-[4rem] p-20 text-center border-4 border-dashed border-neutral-200 flex flex-col items-center animate-in zoom-in-95">
-        <div className="w-24 h-24 bg-white rounded-[2.5rem] flex items-center justify-center text-5xl mb-8 shadow-xl shadow-neutral-200" role="img" aria-label={hasSearch ? "Sin resultados" : "Biblioteca vacía"}>
-            {hasSearch ? '🕵️‍♂️' : '📚'}
-        </div>
-        <h3 className="text-3xl font-black text-foreground mb-4 tracking-tight italic">
-            {hasSearch ? 'Búsqueda sin éxito' : 'Tu estantería te espera'}
-        </h3>
-        <p className="text-muted-foreground mb-10 font-medium max-w-sm mx-auto leading-relaxed">
-            {hasSearch
-                ? 'No hemos encontrado ningún libro con esos criterios. Prueba a buscar por el nombre del autor.'
-                : 'Parece que aún no has registrado ninguna lectura. ¡Es un buen momento para empezar!'}
-        </p>
-        <button
-            type="button"
-            onClick={onAddClick}
-            className="bg-foreground text-white px-10 py-5 rounded-[2rem] font-black uppercase tracking-[0.15em] text-[10px] shadow-2xl hover:bg-primary transition-all active:scale-95"
-        >
-            Añadir mi primer libro
-        </button>
-    </div>
-);

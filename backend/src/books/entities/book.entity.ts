@@ -1,4 +1,10 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  CreateDateColumn,
+} from 'typeorm';
 import { BookStatus } from '../enum/book-status.enum';
 import { User } from '../../users/entities/user.entity';
 
@@ -32,9 +38,18 @@ export class Book {
   @Column({ nullable: true })
   urlPortada: string;
 
+  @Column({ type: 'int', default: 0, nullable: true })
+  rating: number;
+
+  @Column({ type: 'text', nullable: true })
+  review: string;
+
   @ManyToOne(() => User, (user) => user.books)
   user: User;
 
   @Column()
   userId: string;
+
+  @CreateDateColumn()
+  createdAt: Date;
 }

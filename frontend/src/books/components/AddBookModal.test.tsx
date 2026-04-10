@@ -174,7 +174,7 @@ describe('AddBookModal Coverage 100%', () => {
     expect(screen.getByDisplayValue('Título')).toBeInTheDocument();
   });
 
-  it('debe capturar y loguear error en handleOnSubmit (Líneas 133-134)', async () => {
+  it('debe capturar y loguear error en handleOnSubmit', async () => {
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
     mockCreateBook.mockRejectedValueOnce(new Error('Fallo Crítico'));
 
@@ -191,7 +191,7 @@ describe('AddBookModal Coverage 100%', () => {
     consoleSpy.mockRestore();
   });
 
-  it('debe manejar el éxito del escaneo de la cámara (Líneas 43-48)', async () => {
+  it('debe manejar el éxito del escaneo de la cámara', async () => {
   vi.mocked(axios.get).mockResolvedValueOnce({
     data: { 
       title: 'Libro Escaneado', 

@@ -4,6 +4,8 @@ import {
   IsNotEmpty,
   IsOptional,
   IsNumber,
+  Min,
+  Max,
 } from 'class-validator';
 import { BookStatus } from '../enum/book-status.enum';
 
@@ -35,4 +37,18 @@ export class CreateBookDto {
   @IsString()
   @IsOptional()
   urlPortada: string;
+
+  @IsString()
+  @IsOptional()
+  isbn: string;
+
+  @IsNumber()
+  @Min(0)
+  @Max(5)
+  @IsOptional()
+  rating?: number;
+
+  @IsString()
+  @IsOptional()
+  review?: string;
 }

@@ -3,6 +3,7 @@ import { BooksController, RequestWithUser } from './books.controller';
 import { BooksService } from './books.service';
 import { BookStatus } from './enum/book-status.enum';
 import { CreateBookDto } from './dto/create-book.dto';
+import { jest, describe, it, expect, beforeEach } from '@jest/globals';
 
 describe('BooksController', () => {
   let controller: BooksController;
@@ -49,6 +50,7 @@ describe('BooksController', () => {
       description: '',
       pageCount: 0,
       urlPortada: '',
+      isbn: '',
     };
     await controller.create(dto, mockReq);
     expect(mockBooksService.create).toHaveBeenCalledWith(dto, 'user-1');

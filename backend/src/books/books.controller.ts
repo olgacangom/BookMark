@@ -61,4 +61,20 @@ export class BooksController {
   remove(@Param('id') id: string, @Request() req: RequestWithUser) {
     return this.booksService.remove(+id, req.user.id);
   }
+
+  @Get('featured/trending')
+  getFeatured() {
+    return {
+      id: 999,
+      title: 'El Nombre del Viento',
+      author: 'Patrick Rothfuss',
+      urlPortada:
+        'https://images.unsplash.com/photo-1762970783061-1b8b2248d9e5?q=80&w=800',
+      rating: 4.9,
+      description:
+        'Una crónica magistral sobre la vida de Kvothe. Una historia de magia y música que redefine la épica.',
+      genre: 'Fantasía',
+      pageCount: 800,
+    };
+  }
 }
