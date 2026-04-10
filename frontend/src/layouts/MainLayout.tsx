@@ -1,130 +1,120 @@
-import { useState } from 'react';
-import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { LogOut, BookOpen, Menu, X, User as UserIcon } from 'lucide-react';
+import { Outlet, Link, useLocation } from "react-router-dom";
+import { Compass, Sparkles, User, LogOut, Bell, BarChart3, Bookmark, Library } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
 
-export const MainLayout = () => {
-  const { logout, user } = useAuth();
-  const navigate = useNavigate();
+export function MainLayout() {
   const location = useLocation();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { user, logout } = useAuth();
+  
 
-  const closeMenu = () => setIsMenuOpen(false);
+  const isActive = (path: string) => location.pathname === path;
+
+  const navItems = [
+    { path: "/explore", icon: Compass, label: "Descubrir" },
+    { path: "/feed", icon: Sparkles, label: "Feed" },
+    { path: "/library", icon: Bookmark, label: " Mi Biblioteca" }, 
+    { path: "/dashboard", icon: BarChart3, label: "Estadísticas" },      
+    { path: "/requests", icon: Bell, label: "Solicitudes" },        
+    { path: "/myprofile", icon: User, label: "Perfil" },
+  ];
 
   return (
-    <div className="min-h-screen bg-background">
-      <nav className="bg-[#e5ded3] border-b border-[#9b8b7e]/10 px-4 md:px-8 py-3 flex justify-between items-center sticky top-0 z-50 shadow-sm">
-
-        <div className="flex-1 flex items-center">
-          <Link to="/dashboard" onClick={closeMenu} className="flex items-center gap-2 md:gap-3 group">
-            <div className="bg-primary p-2 rounded-xl shadow-lg shadow-primary/10 transition-transform group-hover:scale-105">
-              <BookOpen className="text-white w-5 h-5 md:w-6 md:h-6" />
+    <div className="min-h-screen bg-[#F0F9F9] flex flex-col lg:flex-row">
+      
+      <aside className="hidden lg:flex fixed left-0 top-0 bottom-0 w-64 bg-white border-r border-slate-100 flex-col z-50 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
+        <div className="p-8">
+          <Link to="/dashboard" className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-teal-600 rounded-xl flex items-center justify-center shadow-lg shadow-teal-600/20">
+              <Library className="w-6 h-6 text-white" />
             </div>
-            <div className="block">
-              <h1 className="text-[16px] md:text-[19px] font-black text-[#564e4e] tracking-tight leading-none">
-                BookMark
+            <div>
+              <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight leading-none mb-1">
+                Book<span className="text-teal-600 font-serif italic font-normal">Mark</span>
               </h1>
+              <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">Tu espacio literario</p>
             </div>
           </Link>
         </div>
 
-        {/* Centro: Navegación Desktop */}
-        <div className="hidden lg:flex items-center justify-center gap-8">
-          <NavLink to="/dashboard" label="Inicio" active={location.pathname === '/dashboard'} />
-          <NavLink to="/library" label="Biblioteca" active={location.pathname === '/library'} />
-          <NavLink to="/explore" label="Explorar" active={location.pathname === '/explore'} />
-          <NavLink to="/feed" label="Feed" active={location.pathname === '/feed'} />
-          <NavLink to="/requests" label="Solicitudes" active={location.pathname === '/requests'} />
+        <nav className="flex-1 px-4 space-y-1">
+          {navItems.map((item) => {
+            const active = isActive(item.path);
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-200 group ${active
+                  ? "bg-teal-600 text-white shadow-lg shadow-teal-600/30"
+                  : "text-slate-500 hover:bg-slate-50 hover:text-teal-600"
+                  }`}
+              >
+                <item.icon className={`w-5 h-5 ${active ? "text-white" : "group-hover:text-teal-600"}`} />
+                <span className="font-semibold text-sm">{item.label}</span>
+              </Link>
+            );
+          })}
+        </nav>
 
-        </div>
-
-        {/* Lado Derecho: Perfil y Logout */}
-        <div className="flex-1 flex items-center justify-end gap-2 md:gap-4">
-
-          {/* BOTÓN DE PERFIL */}
-          <Link
-            to="/myprofile"
-            onClick={closeMenu}
-            className={`flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2 rounded-2xl border transition-all group
-              ${location.pathname === '/myprofile'
-                ? 'bg-primary/10 border-primary/20'
-                : 'bg-[#e8e4e0] border-[#9b8b7e]/10 hover:bg-[#dedad5]'}`}
-          >
-            <span className="text-xs md:text-sm font-bold text-[#564e4e] hidden sm:block">
-              {user?.fullName?.split(' ')[0] || 'Perfil'}
-            </span>
-            <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-primary text-white flex items-center justify-center text-xs font-black shadow-md shrink-0">
-              {user?.fullName?.charAt(0) || <UserIcon className="w-4 h-4" />}
+        <div className="p-6 border-t border-slate-50">
+          <Link to="/myprofile" className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-50 transition-colors">
+            <div className="w-10 h-10 rounded-full bg-teal-100 flex items-center justify-center text-teal-700 font-bold border-2 border-white shadow-sm overflow-hidden">
+              {user?.avatarUrl ? <img src={user.avatarUrl} className="w-full h-full object-cover" alt="Avatar" /> : "O"}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-bold text-slate-800 text-sm truncate">{user?.fullName || "Olga"}</p>
+              <p className="text-xs text-slate-400">Ver perfil</p>
             </div>
           </Link>
-
-          {/* Botón Menú Móvil (Solo visible en pantallas pequeñas) */}
-          <button
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="lg:hidden p-2 text-[#564e4e] hover:bg-[#dedad5] rounded-xl transition-all"
-            aria-label="Menu"
-          >
-            {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          <button onClick={logout} className="mt-4 flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-rose-500 px-2 transition-colors">
+            <LogOut size={14} /> Cerrar sesión
           </button>
+        </div>
+      </aside>
 
-          {/* Logout Directo (Solo Desktop) */}
-          <button
-            onClick={() => { logout(); navigate('/login'); }}
-            className="hidden md:flex p-2.5 text-[#9b8b7e] hover:text-destructive hover:bg-destructive/5 rounded-xl transition-all"
-            title="Cerrar Sesión"
-          >
-            <LogOut className="w-5 h-5" />
-          </button>
+      <main className="flex-1 lg:ml-64 min-h-screen relative pb-24 lg:pb-12"> 
+        <header className="sticky top-0 z-40 bg-[#F0F9F9]/80 backdrop-blur-md px-6 lg:px-8 py-4 lg:py-6 flex justify-between lg:justify-end items-center gap-4">
+            <div className="lg:hidden flex items-center gap-2">
+                <div className="w-8 h-8 bg-teal-600 rounded-lg flex items-center justify-center shadow-lg">
+                    <Library size={18} className="text-white" />
+                </div>
+                <span className="font-bold text-slate-900 tracking-tight">BookMark</span>
+            </div>
+            
+            <button onClick={logout} className="lg:hidden p-2 text-slate-400">
+                <LogOut size={20} />
+            </button>
+        </header>
+
+        <div className="px-6 lg:px-8">
+          <Outlet />
+        </div>
+      </main>
+
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-[100] bg-white/80 backdrop-blur-xl border-t border-slate-100 px-2 pb-safe-area-inset-bottom shadow-[0_-10px_25px_rgba(0,0,0,0.03)]">
+        <div className="flex justify-around items-center h-16 max-w-md mx-auto">
+          {navItems.map((item) => {
+            const active = isActive(item.path);
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`flex flex-col items-center justify-center flex-1 gap-1 transition-all duration-300 ${
+                  active ? "text-teal-600" : "text-slate-400"
+                }`}
+              >
+                <div className={`p-1 rounded-xl transition-all ${active ? "bg-teal-50" : ""}`}>
+                    <item.icon size={20} strokeWidth={active ? 2.5 : 2} />
+                </div>
+                <span className={`text-[9px] font-bold uppercase tracking-tighter transition-opacity ${
+                    active ? "opacity-100" : "opacity-60"
+                }`}>
+                  {item.label}
+                </span>
+              </Link>
+            );
+          })}
         </div>
       </nav>
-
-      {/* MENÚ DESPLEGABLE MÓVIL */}
-      {isMenuOpen && (
-        <div className="lg:hidden fixed inset-0 top-[64px] bg-[#e5ded3] z-[100] p-8 flex flex-col gap-8 animate-in slide-in-from-top duration-300">
-          <MobileNavLink to="/dashboard" label="Inicio" onClick={closeMenu} active={location.pathname === '/dashboard'} />
-          <MobileNavLink to="/library" label="Biblioteca" onClick={closeMenu} active={location.pathname === '/library'} />
-          <MobileNavLink to="/explore" label="Explorar" onClick={closeMenu} active={location.pathname === '/explore'} />
-          <MobileNavLink to="/feed" label="Feed" onClick={closeMenu} active={location.pathname === '/feed'} />
-          <MobileNavLink to="/requests" label="Solicitudes" onClick={closeMenu} active={location.pathname === '/requests'}  />
-
-          <hr className="border-[#9b8b7e]/20" />
-          <button
-            onClick={() => { logout(); navigate('/login'); closeMenu(); }}
-            className="flex items-center gap-4 text-destructive font-black uppercase text-sm tracking-widest mt-auto pb-10"
-          >
-            <LogOut className="w-5 h-5" /> Cerrar Sesión
-          </button>
-        </div>
-      )}
-
-      {/* CONTENIDO PRINCIPAL */}
-      <main className="animate-in fade-in duration-500 min-h-[calc(100vh-64px)]">
-        <Outlet />
-      </main>
     </div>
   );
-};
-
-const NavLink = ({ to, label, active }: { to: string, label: string, active?: boolean }) => (
-  <Link
-    to={to}
-    className={`text-[12px] font-black uppercase tracking-[0.2em] transition-all relative group py-2 
-      ${active ? 'text-primary' : 'text-[#9b8b7e] hover:text-primary'}`}
-  >
-    {label}
-    <span className={`absolute bottom-0 left-0 h-0.5 bg-primary transition-all duration-300 rounded-full
-      ${active ? 'w-full' : 'w-0 group-hover:w-full'}`}
-    />
-  </Link>
-);
-
-const MobileNavLink = ({ to, label, onClick, active }: { to: string, label: string, onClick: () => void, active?: boolean }) => (
-  <Link
-    to={to}
-    onClick={onClick}
-    className={`text-2xl font-black uppercase tracking-[0.1em] transition-colors
-      ${active ? 'text-primary' : 'text-[#564e4e]'}`}
-  >
-    {label}
-  </Link>
-);
+}

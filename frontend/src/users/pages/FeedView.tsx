@@ -1,105 +1,109 @@
 import { useState, useEffect } from 'react';
-import { activityService, Activity } from '../services/activity.service';
-import { Loader2, Coffee, RefreshCw, BluetoothConnected } from 'lucide-react';
+import { activityService, Activity, Comment } from '../services/activity.service';
+import { Loader2, RefreshCw, CheckCircle2 } from 'lucide-react';
 import { ActivityCard } from '../components/ActivityCard';
 
 export const FeedView = () => {
     const [activities, setActivities] = useState<Activity[]>([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(false);
 
     const fetchFeed = async () => {
         try {
             setLoading(true);
-            setError(false);
             const data = await activityService.getFeed();
             setActivities(data);
         } catch (err) {
             console.error("Error al cargar el feed:", err);
-            setError(true);
         } finally {
             setLoading(false);
         }
     };
 
-    useEffect(() => {
-        fetchFeed();
-    }, []);
+    useEffect(() => { fetchFeed(); }, []);
 
+    const handleToggleLike = async (activityId: string) => {
+        setActivities(current => current.map(act => {
+            if (act.id === activityId) {
+                const isAdding = !act.isLiked;
+                const currentLikes = Number(act.likesCount) || 0;
+                return {
+                    ...act,
+                    isLiked: isAdding,
+                    likesCount: isAdding ? currentLikes + 1 : Math.max(0, currentLikes - 1)
+                };
+            }
+            return act;
+        }));
+        try { await activityService.toggleLike(activityId); } catch (e) { console.log(e); }
+    };
+
+    const handleIgnoreActivity = async (activityId: string) => {
+        setActivities(current => current.filter(act => act.id !== activityId));
+        try { await activityService.ignoreActivity(activityId); } catch (e) { console.log(e); }
+    };
+
+    const handleCommentAdded = (activityId: string, newComment: Comment) => {
+        setActivities(current => current.map(act => {
+            if (act.id === activityId) {
+                return {
+                    ...act,
+                    commentsCount: (Number(act.commentsCount) || 0) + 1,
+                    comments: [...(act.comments || []), newComment]
+                };
+            }
+            return act;
+        }));
+    };
+
+    if (loading && activities.length === 0) return (
+        <div className="flex h-[80vh] flex-col items-center justify-center bg-[#F0F9F9]">
+            <Loader2 className="w-10 h-10 animate-spin text-teal-600" />
+            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mt-6 text-center">Sincronizando cronología...</p>
+        </div>
+    );
 
     return (
-        <div className="max-w-2xl mx-auto px-4 py-8 pb-24 animate-in fade-in duration-500">
-
-            <div className="flex items-center gap-4 mb-10">
-                <div className="p-3 bg-primary/10 rounded-2xl">
-                    <BluetoothConnected className="w-6 h-6 text-primary" />
-                </div>
-                <div>
-                    <h1 className="text-4xl font-black text-[#564e4e] tracking-tight">Comunidad</h1>
-                    <p className="text-sm text-muted-foreground font-medium">Actividad reciente de tus seguidos</p>
-                </div>
-            
-
-                <button
-                    onClick={fetchFeed}
-                    disabled={loading}
-                    aria-label="Actualizar feed"
-                    className="p-2.5 bg-white border border-[#9b8b7e]/20 rounded-xl text-[#9b8b7e] hover:text-primary transition-all active:scale-95 disabled:opacity-50"
-                >
-                    <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
-                </button>
-            </div>
-
-
-            {loading && activities.length === 0 && (
-                <div className="flex flex-col items-center justify-center py-20">
-                    <Loader2 className="w-10 h-10 animate-spin text-primary/40" />
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#9b8b7e]/60 mt-4">
-                        Buscando novedades...
-                    </p>
-                </div>
-            )}
-
-            {!loading && error && (
-                <div className="text-center py-12 bg-red-50 rounded-[2.5rem] border border-red-100">
-                    <p className="text-red-600 font-black text-sm uppercase tracking-widest">Error al conectar</p>
-                    <button
-                        onClick={fetchFeed}
-                        className="mt-4 px-6 py-2 bg-red-600 text-white rounded-xl font-bold text-xs shadow-lg shadow-red-200"
-                    >
-                        Reintentar
+        <div className="min-h-screen bg-[#F0F9F9] font-sans text-slate-900 pb-24">
+            <header className="max-w-2xl mx-auto pt-12 pb-10 px-6">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-4xl md:text-5xl font-black tracking-tighter text-slate-900">
+                            The <span className="text-teal-600 italic font-serif">Feed.</span>
+                        </h1>
+                        <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-2">Actividad de tus contactos</p>
+                    </div>
+                    <button onClick={fetchFeed} disabled={loading} className="p-3 bg-white border border-slate-200 rounded-2xl text-slate-400 hover:text-teal-600 transition-all shadow-sm active:scale-90 disabled:opacity-50">
+                        <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
                     </button>
                 </div>
-            )}
+            </header>
 
-            {/* 3. Feed Vacío */}
-            {!loading && !error && activities.length === 0 && (
-                <div className="text-center py-20 bg-[#e8e4e0]/50 rounded-[3rem] border-2 border-dashed border-[#9b8b7e]/20">
-                    <div className="bg-white w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
-                        <Coffee className="w-8 h-8 text-[#9b8b7e]/40" />
+            <main className="max-w-2xl mx-auto px-4 space-y-8">
+                {activities.length > 0 ? (
+                    activities.map((activity) => (
+                        <ActivityCard 
+                            key={activity.id} 
+                            activity={activity} 
+                            onLike={handleToggleLike}
+                            onIgnore={handleIgnoreActivity}
+                            onComment={handleCommentAdded} 
+                        />
+                    ))
+                ) : (
+                    <div className="text-center py-20 bg-white/50 border-2 border-dashed border-slate-200 rounded-[3rem]">
+                        <p className="text-slate-400 font-bold uppercase text-xs tracking-widest">No hay actividad reciente</p>
                     </div>
-                    <h3 className="font-black text-[#564e4e] uppercase text-sm tracking-widest">Silencio absoluto</h3>
-                    <p className="text-xs text-[#9b8b7e] max-w-[220px] mx-auto mt-2 font-bold leading-relaxed">
-                        Parece que nadie ha leído nada últimamente. ¡Sigue a más gente para animar esto!
-                    </p>
-                </div>
-            )}
+                )}
 
-            {!error && activities.length > 0 && (
-                <div className="flex flex-col gap-2">
-                    {activities.map((activity) => (
-                        <ActivityCard key={activity.id} activity={activity} />
-                    ))}
-
-                    <div className="text-center pt-10">
-                        <div className="inline-block px-4 py-1 bg-[#9b8b7e]/10 rounded-full">
-                            <p className="text-[9px] font-black uppercase tracking-[0.3em] text-[#9b8b7e]">
-                                Estás al día
-                            </p>
+                {activities.length > 0 && (
+                    <div className="text-center py-10 animate-in fade-in duration-1000">
+                        <div className="inline-flex items-center gap-3 px-6 py-3 bg-white border border-slate-200 rounded-full shadow-sm text-slate-400">
+                            <CheckCircle2 size={18} className="text-teal-500" />
+                            <span className="text-[10px] font-black uppercase tracking-widest">Estás al día</span>
                         </div>
                     </div>
-                </div>
-            )}
+                )}
+            </main>
         </div>
     );
 };
