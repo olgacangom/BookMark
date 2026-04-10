@@ -1,284 +1,257 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Lock, Unlock, Camera, Save, Edit, Loader2 } from 'lucide-react';
+import { 
+    Lock, Unlock, Camera, Save, Loader2, 
+    Share2, Trash2, AlertCircle, Edit2
+} from 'lucide-react';
 import api from '../../services/api';
-import { LevelProgress } from '../../users/components/LevelProgress';
-
-interface Badge {
-  id: string;
-  name: string;
-  description: string;
-  icon: string;
-}
 
 export const MyProfileView = () => {
-  const { user, updateUser, logout } = useAuth();
-  const navigate = useNavigate();
+    const { user, updateUser } = useAuth();
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [isEditing, setIsEditing] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [formData, setFormData] = useState({
-    name: '',
-    bio: '',
-    isPublic: true
-  });
+    const [isEditing, setIsEditing] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+    const [showShareMenu, setShowShareMenu] = useState(false);
+    const [showDeleteModal, setShowDeleteModal] = useState(false); 
+    const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
 
-  useEffect(() => {
-    const refreshData = async () => {
-      if (!user?.id) return; 
+    const [formData, setFormData] = useState({
+        name: '',
+        bio: '',
+        isPublic: true
+    });
 
-      try {
-        const { data } = await api.get(`/users/${user.id}`);
-        updateUser(data);
-      } catch (error) {
-        console.error("Error al refrescar datos:", error);
-      }
+    useEffect(() => {
+        if (user) {
+            setFormData({
+                name: user.fullName || '',
+                bio: user.bio || '',
+                isPublic: user.isPublic ?? true
+            });
+        }
+    }, [user, isEditing]);
+
+    if (!user) return null;
+
+    const handleAvatarClick = () => fileInputRef.current?.click();
+
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const formDataImage = new FormData();
+        formDataImage.append('file', file);
+        setIsUploadingAvatar(true);
+        try {
+            const { data } = await api.post('/users/avatar', formDataImage, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+            updateUser(data);
+        } catch { 
+            console.error("Error al subir el avatar");
+        } finally { setIsUploadingAvatar(false); }
     };
-    refreshData();
-  }, [user?.id, updateUser]);
 
-  useEffect(() => {
-    if (user) {
-      setFormData({
-        name: user.fullName || '',
-        bio: user.bio || '',
-        isPublic: user.isPublic ?? true
-      });
-    }
-  }, [user]);
+    const confirmDeleteAvatar = async () => {
+        setIsUploadingAvatar(true);
+        setShowDeleteModal(false);
+        try {
+            const { data } = await api.patch('/users/profile', { avatarUrl: null });
+            updateUser(data);
+        } catch { 
+            console.error("Error al eliminar el avatar");
+        } finally { setIsUploadingAvatar(false); }
+    };
 
-  if (!user) return null;
-  console.log("DEBUG - Datos del usuario:", user);
-  console.log("DEBUG - ¿Tiene stats?:", !!user.stats);
+    const handleSave = async () => {
+        setIsSaving(true);
+        try {
+            const { data } = await api.patch('/users/profile', {
+                fullName: formData.name,
+                bio: formData.bio,
+                isPublic: formData.isPublic
+            });
+            updateUser(data);
+            setIsEditing(false);
+        } catch { 
+            console.error("Error al guardar el perfil");
+        } finally { setIsSaving(false); }
+    };
 
-  const handleSave = async () => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      alert("Tu sesión ha expirado. Por favor, inicia sesión de nuevo.");
-      logout();
-      navigate('/login');
-      return;
-    }
+    const togglePrivacy = async () => {
+        const newStatus = !formData.isPublic;
+        setFormData(prev => ({ ...prev, isPublic: newStatus }));
+        try {
+            const { data } = await api.patch('/users/profile', { isPublic: newStatus });
+            updateUser(data);
+        } catch { 
+            setFormData(prev => ({ ...prev, isPublic: !newStatus })); 
+        }
+    };
 
-    setIsSaving(true);
-    try {
-      const { data } = await api.patch('/users/profile', {
-        fullName: formData.name,
-        bio: formData.bio,
-        isPublic: formData.isPublic
-      });
+    return (
+        <div className="min-h-screen bg-[#F0F9F9] font-sans text-slate-900 pb-24">
+            <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
 
-      updateUser(data);
-      setIsEditing(false);
-      console.log("✅ Perfil actualizado correctamente");
-    } catch (error: any) {
-      console.error("❌ Error al guardar perfil:", error);
-
-      if (error.response?.status === 401) {
-        alert("Sesión no válida. Por favor, vuelve a entrar.");
-        logout();
-        navigate('/login');
-      } else {
-        alert("Error al conectar con el servidor. Revisa tu conexión.");
-      }
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  console.log("PROGRESO ACTUAL:", user.stats?.xp);
-  return (
-    <div className="max-w-5xl mx-auto px-4 py-6 md:py-8 pb-24 animate-in slide-in-from-bottom-4 duration-700">
-
-      {/* Profile Header */}
-      <div className="bg-white rounded-[2.5rem] md:rounded-[3rem] shadow-sm overflow-hidden mb-8 border border-border">
-        <div className="h-28 md:h-32 bg-gradient-to-br from-[#9b8b7e] to-[#c5b5aa] relative">
-          <button className="absolute bottom-4 right-4 md:right-8 bg-white/20 backdrop-blur-md text-white p-2 rounded-xl border border-white/30 hover:bg-white/40 transition-all">
-            <Camera className="w-5 h-5" />
-          </button>
-        </div>
-
-        <div className="px-6 md:px-10 pb-8 md:pb-10">
-          <div className="flex flex-col md:flex-row items-center md:items-start gap-4 md:gap-6 -mt-12 md:mt-[-4rem]">
-
-            {/* Avatar  */}
-            <div className="relative group shrink-0">
-              <img
-                src={user.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}`}
-                className="w-32 h-32 md:w-40 md:h-40 rounded-[2.5rem] md:rounded-[3rem] border-4 md:border-8 border-white shadow-2xl bg-white object-cover"
-                alt="Avatar"
-              />
-
-              {/* INSIGNIA DE NIVEL */}
-              {user.stats && (
-                <div className="absolute -bottom-1 -right-1 bg-gradient-to-br from-amber-400 to-orange-600 text-white w-12 h-12 md:w-14 md:h-14 rounded-2xl border-[6px] border-white flex items-center justify-center font-black text-xl shadow-xl transform rotate-12">
-                  {user.stats.level}
+            <div className="relative mb-12">
+                <div className="h-48 md:h-64 bg-gradient-to-br from-slate-700 via-teal-600 to-emerald-600 relative overflow-hidden">
+                    <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]"></div>
                 </div>
-              )}
+
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="relative -mt-32 md:-mt-44 flex flex-col md:flex-row items-center md:items-end gap-8 z-10">
+                        
+                        <div className="relative group">
+                            <div className="w-44 h-44 md:w-56 md:h-56 rounded-[2.5rem] border-[10px] border-white bg-white shadow-2xl overflow-hidden relative transition-transform duration-500 hover:scale-[1.02]">
+                                {isUploadingAvatar && (
+                                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center z-10 backdrop-blur-sm">
+                                        <Loader2 className="text-white animate-spin" />
+                                    </div>
+                                )}
+                                <img
+                                    src={user.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}`}
+                                    className="w-full h-full object-cover"
+                                    alt="Avatar"
+                                />
+                            </div>
+                            
+                            <div className="absolute -bottom-2 right-4 flex bg-white p-1.5 rounded-2xl shadow-xl border border-slate-100 gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                {user.avatarUrl && (
+                                    <button 
+                                        onClick={() => setShowDeleteModal(true)}
+                                        className="p-2 text-rose-500 hover:bg-rose-50 rounded-xl transition-colors"
+                                    >
+                                        <Trash2 size={18} />
+                                    </button>
+                                )}
+                                <button 
+                                    onClick={handleAvatarClick}
+                                    className="p-2 text-teal-600 hover:bg-teal-50 rounded-xl transition-colors"
+                                >
+                                    <Camera size={18} />
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="flex-1 w-full">
+                            <div className="bg-white/90 backdrop-blur-xl rounded-[3rem] p-6 md:p-10 border border-white shadow-xl">
+                                <div className="flex flex-col md:flex-row justify-between items-start gap-6 mb-8">
+                                    <div className="text-left">
+                                        {isEditing ? (
+                                            <input
+                                                className="text-xl md:text-2xl font-black text-slate-900 bg-slate-50 border-b-2 border-teal-500 px-3 py-1 outline-none w-full rounded-lg"
+                                                value={formData.name}
+                                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                                autoFocus
+                                            />
+                                        ) : (
+                                            <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight leading-tight uppercase">
+                                                {user.fullName || 'Lector Pro'}
+                                            </h1>
+                                        )}
+                                        
+                                        <div className="flex items-center gap-6 mt-4">
+                                            <div className="flex items-baseline gap-1.5">
+                                                <span className="text-xl font-black text-slate-900">{user.followers?.length || 0}</span>
+                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Seguidores</span>
+                                            </div>
+                                            <div className="w-1.5 h-1.5 bg-teal-500/20 rounded-full"></div>
+                                            <div className="flex items-baseline gap-1.5">
+                                                <span className="text-xl font-black text-slate-900">{user.following?.length || 0}</span>
+                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Siguiendo</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center gap-3 mt-4">
+                                            <p className="text-teal-600 font-bold text-xs tracking-widest uppercase opacity-80">@{user.email.split('@')[0]}</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex gap-3 w-full md:w-auto">
+                                        <button
+                                            onClick={() => isEditing ? handleSave() : setIsEditing(true)}
+                                            disabled={isSaving}
+                                            className="flex-1 md:flex-none px-8 py-3 bg-slate-900 text-white rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-teal-600 transition-all active:scale-95 flex items-center justify-center gap-2 shadow-lg"
+                                        >
+                                            {isSaving ? <Loader2 size={16} className="animate-spin" /> : isEditing ? <><Save size={16}/> Guardar</> : <><Edit2 size={16}/> Editar Perfil</>}
+                                        </button>
+                                        <button onClick={() => setShowShareMenu(!showShareMenu)} className="p-3 bg-white text-slate-500 rounded-2xl border border-slate-100 shadow-md hover:bg-teal-600 hover:text-white transition-all">
+                                            <Share2 size={20} />
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div className="relative">
+                                    <div className="bg-slate-50/80 border border-slate-100 rounded-[2rem] p-5 md:p-8 shadow-inner relative overflow-hidden group/bio">
+                                        <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-teal-500 to-emerald-500 rounded-full opacity-40 group-hover/bio:opacity-100 transition-opacity"></div>
+                                        <div className="pl-4">
+                                            {isEditing ? (
+                                                <textarea
+                                                    className="w-full bg-transparent border-none focus:ring-0 text-sm text-slate-600 italic leading-relaxed resize-none font-medium"
+                                                    rows={3}
+                                                    value={formData.bio}
+                                                    onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
+                                                />
+                                            ) : (
+                                                <p className="text-slate-600 text-sm md:text-base italic leading-relaxed font-semibold">
+                                                    "{user.bio || 'Este lector prefiere mantener su historia en privado de momento...'}"
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            {/* Info Container - Centrado en móvil */}
-            <div className="flex-1 pt-2 md:pt-20 text-center md:text-left w-full">
-              {isEditing ? (
-                <input
-                  className="text-2xl md:text-3xl font-black bg-muted border-none rounded-xl px-4 py-1 focus:ring-2 focus:ring-primary outline-none w-full text-center md:text-left"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  autoFocus
-                />
-              ) : (
-                <h1 className="text-2xl md:text-4xl font-black text-foreground leading-tight break-words">
-                  {user.fullName || 'Usuario de BookMark'}
-                </h1>
-              )}
-              <p className="text-primary font-bold mt-1 text-sm md:text-base">@{user.email.split('@')[0]}</p>
-
-              {/* Seguidores */}
-              <div className="flex justify-center md:justify-start gap-6 mt-4">
-                <div className="flex items-center gap-2">
-                  <span className="text-base md:text-lg font-black text-foreground">{user.followers?.length || 0}</span>
-                  <span className="text-[10px] md:text-[11px] font-black uppercase tracking-widest text-muted-foreground/70">Seguidores</span>
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12">
+                <div className="bg-white/80 backdrop-blur-xl rounded-[2.5rem] p-6 border border-white flex flex-col md:flex-row items-center justify-between shadow-2xl transition-all hover:shadow-teal-500/5">
+                    <div className="flex items-center gap-5 mb-4 md:mb-0">
+                        <div className={`p-4 rounded-[1.5rem] transition-all shadow-inner ${formData.isPublic ? 'bg-teal-50 text-teal-600' : 'bg-slate-100 text-slate-400'}`}>
+                            {formData.isPublic ? <Unlock size={28} /> : <Lock size={28} />}
+                        </div>
+                        <div>
+                            <h3 className="font-black text-slate-900 text-lg tracking-tight uppercase">Visibilidad del Perfil</h3>
+                            <p className="text-xs text-slate-500 font-medium">{formData.isPublic ? 'Tu estante literario es visible para otros lectores' : 'Solo tú puedes ver tu biblioteca y progreso'}</p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={togglePrivacy}
+                        className={`w-16 h-9 rounded-full relative transition-all duration-500 shadow-inner ${formData.isPublic ? 'bg-teal-500' : 'bg-slate-300'}`}
+                    >
+                        <div className={`absolute top-1 w-7 h-7 bg-white rounded-full shadow-lg transition-all duration-300 ${formData.isPublic ? 'left-8' : 'left-1'}`} />
+                    </button>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-base md:text-lg font-black text-foreground">{user.following?.length || 0}</span>
-                  <span className="text-[10px] md:text-[11px] font-black uppercase tracking-widest text-muted-foreground/70">Siguiendo</span>
-                </div>
-                {/* RACHA (STREAK) */}
-                {user.stats?.currentStreak > 0 && (
-                  <div className="flex items-center gap-2 bg-orange-50 px-3 py-1.5 rounded-2xl border border-orange-100 animate-pulse hover:scale-105 transition-transform cursor-help" title="Días seguidos de actividad">
-                    <span className="text-lg">🔥</span>
-                    <span className="text-base md:text-lg font-black text-orange-600">{user.stats.currentStreak}</span>
-                    <span className="text-[10px] md:text-[11px] font-black uppercase tracking-widest text-orange-400">Días</span>
-                  </div>
-                )}
-              </div>
             </div>
 
-            {/* Botones de Acción - Ancho completo en móvil */}
-            <div className="flex gap-3 w-full md:w-auto md:pt-20 shrink-0">
-              <button
-                onClick={() => isEditing ? handleSave() : setIsEditing(true)}
-                disabled={isSaving}
-                className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-primary text-white px-6 md:px-8 py-3 rounded-2xl font-bold shadow-lg shadow-primary/20 hover:-translate-y-1 transition-all disabled:opacity-70"
-              >
-                {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : (
-                  isEditing ? <><Save className="w-5 h-5" /> Guardar</> : <><Edit className="w-5 h-5" /> Editar</>
-                )}
-              </button>
-            </div>
-          </div>
-
-          {/* Biografía */}
-          <div className="mt-8 md:mt-12">
-            {isEditing ? (
-              <textarea
-                className="w-full bg-muted rounded-2xl p-4 md:p-5 border-none focus:ring-2 focus:ring-primary outline-none text-foreground font-medium text-sm md:text-base"
-                rows={3}
-                value={formData.bio}
-                onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-              />
-            ) : (
-              <p className="text-base md:text-lg text-foreground leading-relaxed font-medium">
-                {user.bio || 'Escribe algo sobre ti para que la comunidad te conozca...'}
-              </p>
+            {showDeleteModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-300" onClick={() => setShowDeleteModal(false)}></div>
+                    <div className="bg-white rounded-[2.5rem] p-8 max-w-sm w-full shadow-2xl relative animate-in zoom-in-95 duration-300 border border-white">
+                        <div className="w-16 h-16 bg-rose-50 rounded-2xl flex items-center justify-center text-rose-500 mb-6 mx-auto">
+                            <AlertCircle size={32} />
+                        </div>
+                        <h3 className="text-xl font-black text-slate-900 text-center mb-2 uppercase">¿Eliminar foto?</h3>
+                        <p className="text-sm text-slate-500 text-center mb-8 font-medium">Esta acción no se puede deshacer. Volverás a tener tu avatar predeterminado.</p>
+                        <div className="flex flex-col gap-3">
+                            <button 
+                                onClick={confirmDeleteAvatar}
+                                className="w-full py-4 bg-rose-500 text-white rounded-2xl font-bold text-sm hover:bg-rose-600 transition-colors shadow-lg shadow-rose-500/20"
+                            >
+                                Sí, eliminar foto
+                            </button>
+                            <button 
+                                onClick={() => setShowDeleteModal(false)}
+                                className="w-full py-4 bg-slate-100 text-slate-500 rounded-2xl font-bold text-sm hover:bg-slate-200 transition-colors"
+                            >
+                                Cancelar
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
-          </div>
         </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10 items-stretch">
-
-        {/* PROGRESO DE NIVEL */}
-        <div className="bg-white rounded-[2.5rem] p-6 md:p-8 shadow-sm border border-border flex flex-col justify-center">
-          <div className="mb-4">
-            <h3 className="font-black text-foreground text-lg md:text-xl">Progreso de Nivel</h3>
-            <p className="text-xs md:text-sm text-muted-foreground font-medium">Sigue leyendo para subir de rango</p>
-          </div>
-
-          {/* Componente de la barra */}
-          <div className="flex-1 flex items-center">
-            <LevelProgress xp={user.stats?.xp || 0} />
-          </div>
-        </div>
-
-        {/* VITRINA DE MEDALLAS */}
-        <div className="bg-white rounded-[2.5rem] p-6 md:p-8 shadow-sm border border-border flex flex-col">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h3 className="font-black text-foreground text-lg md:text-xl">Mis Logros</h3>
-              <p className="text-xs md:text-sm text-muted-foreground font-medium">Medallas desbloqueadas</p>
-            </div>
-            <span className="bg-primary/10 text-primary text-xs font-black px-3 py-1 rounded-full whitespace-nowrap">
-              {user.badges?.length || 0} obtenidos
-            </span>
-          </div>
-
-          <div className="grid grid-cols-4 sm:grid-cols-5 gap-4">
-            {/* Medallas Desbloqueadas */}
-            {user.badges?.map((badge: Badge) => (
-              <div key={badge.id} className="flex flex-col items-center group cursor-help" title={badge.description}>
-                <div className="w-12 h-12 md:w-14 md:h-14 bg-gradient-to-br from-yellow-100 to-amber-200 rounded-2xl flex items-center justify-center text-xl shadow-sm border-2 border-amber-300 group-hover:scale-110 transition-transform">
-                  {badge.icon}
-                </div>
-                <span className="text-[10px] font-bold mt-2 text-center leading-tight line-clamp-2">{badge.name}</span>
-              </div>
-            ))}
-
-            {/* Espacios Bloqueados (si hay pocos logros) */}
-            {(!user.badges || user.badges.length < 4) && (
-              <div className="flex flex-col items-center opacity-30 grayscale">
-                <div className="w-12 h-12 md:w-14 md:h-14 bg-slate-100 rounded-2xl flex items-center justify-center text-xl border-2 border-dashed border-slate-300">
-                  🔒
-                </div>
-                <span className="text-[10px] font-bold mt-2">Próximamente</span>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-      {/* Switch de Privacidad - Ajustado para móvil */}
-      <div className="bg-white rounded-[2rem] p-6 md:p-8 shadow-sm border border-border flex items-center justify-between transition-all hover:shadow-md">
-        <div className="flex items-center gap-4 md:gap-5">
-          <div className={`p-3 md:p-4 rounded-2xl transition-colors ${formData.isPublic ? 'bg-green-50 text-green-600' : 'bg-slate-100 text-slate-500'}`}>
-            {formData.isPublic ? <Unlock className="w-5 h-5 md:w-6 md:h-6" /> : <Lock className="w-5 h-5 md:w-6 md:h-6" />}
-          </div>
-          <div>
-            <h3 className="font-bold text-foreground text-sm md:text-base">Visibilidad del perfil</h3>
-            <p className="text-[11px] md:text-sm text-muted-foreground font-medium">
-              {formData.isPublic ? 'Perfil visible para todos' : 'Perfil privado'}
-            </p>
-          </div>
-        </div>
-        <button
-          aria-label="Cambiar visibilidad del perfil"
-          onClick={async () => {
-            const newStatus = !formData.isPublic;
-            setFormData(prev => ({ ...prev, isPublic: newStatus }));
-            if (!isEditing) {
-              try {
-                setIsSaving(true);
-                const { data } = await api.patch('/users/profile', {
-                  fullName: formData.name,
-                  bio: formData.bio,
-                  isPublic: newStatus
-                });
-                updateUser(data);
-                console.log("✅ Privacidad actualizada");
-              } catch (error) {
-                console.error("❌ Error al cambiar privacidad", error);
-                setFormData(prev => ({ ...prev, isPublic: !newStatus }));
-              } finally {
-                setIsSaving(false);
-              }
-            }
-          }}
-          disabled={isSaving}
-          className={`w-12 h-7 md:w-14 md:h-8 rounded-full transition-colors relative ${formData.isPublic ? 'bg-primary' : 'bg-slate-300'}`}
-        >
-          <div className={`absolute top-1 w-5 h-5 md:w-6 md:h-6 bg-white rounded-full shadow-sm transition-all ${formData.isPublic ? 'left-6 md:left-7' : 'left-1'}`} />
-        </button>
-      </div>
-    </div>
-  );
+    );
 };

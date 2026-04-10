@@ -4,9 +4,12 @@ import {
   Column,
   CreateDateColumn,
   ManyToOne,
+  OneToMany, // Añadir esto
 } from 'typeorm';
 import { User } from './user.entity';
 import { Book } from '../../books/entities/book.entity';
+import { ActivityLike } from './activity-like.entity';
+import { ActivityComment } from './activity-comment';
 
 export enum ActivityType {
   FOLLOW = 'FOLLOW',
@@ -36,4 +39,16 @@ export class Activity {
 
   @CreateDateColumn({ type: 'timestamp with time zone' })
   createdAt: Date;
+
+  @Column({ default: 0 })
+  likesCount: number;
+
+  @OneToMany(() => ActivityLike, (like) => like.activity)
+  likes: ActivityLike[];
+
+  @Column({ default: 0 })
+  commentsCount: number;
+
+  @OneToMany(() => ActivityComment, (comment) => comment.activity)
+  comments: ActivityComment[];
 }

@@ -345,4 +345,10 @@ export class UsersService {
 
     return result as GrowthData[];
   }
+
+  async updateAvatar(userId: string, url: string) {
+    const user = await this.findOne(userId);
+    user.avatarUrl = url;
+    return this.usersRepository.save(user);
+  }
 }

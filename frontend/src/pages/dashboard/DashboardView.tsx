@@ -1,15 +1,11 @@
 import { useEffect, useState } from 'react';
-import { useAuth } from '../../context/AuthContext';
 import { bookService, Book } from '../../books/services/book.service';
+import { useAuth } from '../../context/AuthContext';
 import { Link } from 'react-router-dom';
 import {
-    BookOpen,
-    Users,
-    Trophy,
-    Flame,
-    Target,
-    Sparkles,
-    BarChart3
+    BookOpen, Trophy, Flame, Target, Sparkles,
+    BarChart3, Award, History,
+    TrendingUp, BookCheck, Bookmark
 } from "lucide-react";
 import { BooksGrowthChart } from '../../components/stats/BooksGrowthChart';
 
@@ -19,156 +15,199 @@ export const DashboardView = () => {
     const [growthData, setGrowthData] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    const challenges = [
-        { id: 1, name: 'Reto 2026', description: 'Lee 12 libros este año', current: 3, target: 12, icon: '🎯' },
-    ];
-
     useEffect(() => {
         const loadData = async () => {
             try {
-                // 3. Cargamos ambos datos en paralelo
                 const [booksData, statsResponse] = await Promise.all([
                     bookService.getMyBooks(),
-                    // Ajusta esta URL a tu API. Usamos fetch directo o tu axios instance
                     fetch(`${import.meta.env.VITE_API_URL}/users/stats/growth`, {
                         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
                     }).then(res => res.json())
                 ]);
-
                 setBooks(booksData);
                 setGrowthData(statsResponse);
-            } catch (e) {
-                console.error("Error cargando Dashboard:", e);
-            } finally {
-                setLoading(false);
-            }
+            } catch (e) { console.error(e); } finally { setLoading(false); }
         };
         loadData();
     }, []);
 
-    const currentlyReading = books.filter((b) => b.status === "Reading");
-    const booksRead = books.filter((b) => b.status === "Read").length;
+    
+    const currentlyReading = books.filter(b => b.status === "Reading");
+    const booksRead = books.filter(b => b.status === "Read");
+    const wantToRead = books.filter(b => b.status === "Want to Read");
 
-    if (loading) {
-        return (
-            <div className="min-h-screen flex flex-col items-center justify-center gap-4">
-                <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-                <p className="text-primary font-black uppercase tracking-widest text-xs animate-pulse">Organizando estanterías...</p>
-            </div>
-        );
-    }
+    const totalPages = booksRead.reduce((acc, b) => acc + (Number(b.pageCount) || 0), 0);
+    const formattedPages = totalPages >= 1000 ? `${(totalPages / 1000).toFixed(1)}k` : totalPages;
+
+    const currentYear = new Date().getFullYear();
+    const countForGoal = booksRead.length; 
+    const yearlyTarget = 50; 
+    const challengePercent = Math.min(Math.round((countForGoal / yearlyTarget) * 100), 100);
+
+    const isStreakActive = books.some(b => {
+        const lastUpdate = new Date(b.updatedAt).getTime();
+        const fortyEightHoursAgo = Date.now() - (48 * 60 * 60 * 1000);
+        return lastUpdate > fortyEightHoursAgo;
+    });
+
+    if (loading) return (
+        <div className="min-h-screen bg-[#F0F9F9] flex items-center justify-center">
+            <div className="w-10 h-10 border-4 border-teal-100 border-t-teal-600 rounded-full animate-spin" />
+        </div>
+    );
 
     return (
-        <div className="max-w-7xl mx-auto px-4 py-8 pb-24 md:pb-8 animate-in fade-in duration-700">
-            <div className="bg-gradient-to-br from-[#a4a99f] via-[#9b8b7e] to-[#b5a99a] rounded-[2.5rem] p-8 md:p-10 text-white mb-8 shadow-2xl shadow-neutral-300/30 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
-                <div className="relative z-10">
-                    <div className="flex items-center gap-2 mb-2">
-                        <h1 className="text-4xl md:text-5xl font-bold">¡Hola, {user?.fullName?.split(' ')[0]}!</h1>
-                        <Sparkles className="w-8 h-8 text-amber-200/60 animate-pulse" />
+        <div className="min-h-screen bg-[#F0F9F9] font-sans text-slate-900 pb-20">
+            <header className="max-w-7xl mx-auto px-6 pt-10 pb-8">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <h1 className="text-3xl font-black tracking-tight text-slate-900">
+                            Tu Progreso, <span className="text-teal-600 font-serif italic">{user?.fullName?.split(' ')[0]}.</span>
+                        </h1>
+                        <p className="text-slate-500 font-medium mt-1">
+                            {countForGoal > 0 
+                                ? `Llevas ${countForGoal} libros completados. ¡Sigue así!` 
+                                : "Es un buen momento para empezar una nueva historia."}
+                        </p>
                     </div>
-                    <p className="text-white/90 text-lg mb-8">Tu espacio literario te espera</p>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <StatBannerCard icon={<Flame className="text-orange-100" />} value="5" label="días seguidos" bg="bg-orange-400/30" />
-                        <StatBannerCard icon={<BookOpen className="text-blue-100" />} value={booksRead.toString()} label="libros leídos" bg="bg-blue-400/30" />
-                        <StatBannerCard icon={<Trophy className="text-yellow-100" />} value="1" label="logros" bg="bg-yellow-400/30" />
-                    </div>
-                </div>
-            </div>
-
-            <div className="grid md:grid-cols-3 gap-5 mb-10">
-                <QuickActionLink to="/library" icon={<BookOpen />} title="Explorar Libros" desc="Encuentra tu lectura" color="from-[#9b8b7e] to-[#c5b5aa]" />
-                <QuickActionLink to="/library" icon={<Users />} title="Clubes de Lectura" desc="Únete a la comunidad" color="from-[#c5b5aa] to-[#d0bfb3]" />
-                <QuickActionLink to="/library" icon={<Target />} title="Retos" desc="Alcanza tus metas" color="from-[#a4a99f] to-[#b8bdb3]" />
-            </div>
-
-            <div className="mb-10 animate-in slide-in-from-bottom-4 duration-1000">
-                <div className="bg-white/80 backdrop-blur-sm rounded-[2.5rem] p-8 shadow-sm border border-neutral-100/50">
-                    <div className="flex items-center gap-2 mb-6">
-                        <BarChart3 className="w-6 h-6 text-[#9b8b7e]" />
-                        <h2 className="text-2xl font-bold text-slate-800">Tu Actividad</h2>
-                    </div>
-                    <BooksGrowthChart data={growthData} />
-                </div>
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-8">
-                <div className="bg-white/80 backdrop-blur-sm rounded-[2.5rem] p-8 shadow-sm border border-neutral-100/50">
-                    <div className="flex justify-between items-center mb-6">
-                        <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-                            <BookOpen className="w-6 h-6 text-[#9b8b7e]" /> Leyendo Ahora
-                        </h2>
-                        <Link to="/library" className="text-[#9b8b7e] text-sm font-bold hover:underline">Ver todos →</Link>
-                    </div>
-
-                    {currentlyReading.length === 0 ? (
-                        <div className="text-center py-12 bg-neutral-50 rounded-3xl border-2 border-dashed border-neutral-100">
-                            <p className="text-slate-400 font-medium">No hay lecturas activas</p>
-                            <Link to="/library" className="text-indigo-500 text-sm font-bold mt-2 inline-block">Añadir libro</Link>
+                    <div className="flex gap-2">
+                        <div className="bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm flex items-center gap-2">
+                            <Flame className={`w-4 h-4 ${isStreakActive ? 'text-orange-500 fill-orange-500' : 'text-slate-300'}`} />
+                            <span className="text-sm font-bold text-slate-700">
+                                {isStreakActive ? 'Racha Activa' : 'Sin actividad'}
+                            </span>
                         </div>
-                    ) : (
-                        <div className="space-y-4">
-                            {currentlyReading.map(book => (
-                                <div key={book.id} className="flex gap-4 p-4 rounded-3xl hover:bg-neutral-50 transition-all border border-transparent hover:border-neutral-100">
-                                    <div className="w-16 h-24 bg-neutral-200 rounded-xl shadow-md flex items-center justify-center text-neutral-400">📖</div>
-                                    <div className="flex-1">
-                                        <h3 className="font-bold text-slate-800">{book.title}</h3>
-                                        <p className="text-sm text-slate-500 mb-3">{book.author}</p>
-                                        <div className="w-full bg-neutral-100 h-2 rounded-full">
-                                            <div className="bg-[#9b8b7e] h-2 rounded-full" style={{ width: '45%' }}></div>
-                                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <main className="max-w-7xl mx-auto px-6">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+                    <StatCard label="Libros Leídos" value={booksRead.length} icon={<BookCheck className="w-5 h-5 text-white" />} color="from-slate-700 to-slate-800" />
+                    <StatCard label="Páginas Totales" value={formattedPages} icon={<Trophy className="w-5 h-5 text-white" />} color="from-sky-600 to-cyan-600" />
+                    <StatCard label="Leyendo" value={currentlyReading.length} icon={<BookOpen className="w-5 h-5 text-white" />} color="from-teal-600 to-emerald-600" />
+                    <StatCard label="Pendientes" value={wantToRead.length} icon={<Bookmark className="w-5 h-5 text-white" />} color="from-amber-500 to-orange-500" />
+                </div>
+
+                <div className="grid lg:grid-cols-12 gap-8">
+                    <div className="lg:col-span-8 space-y-8">
+                        <section className="bg-white/80 backdrop-blur-xl rounded-[2.5rem] p-8 border border-white shadow-xl shadow-slate-200/50">
+                            <h2 className="text-xl font-black text-slate-900 flex items-center gap-2 mb-8">
+                                <BarChart3 className="text-teal-600 w-5 h-5" /> Análisis de Ritmo
+                            </h2>
+                            <div className="h-[300px]">
+                                <BooksGrowthChart data={growthData} color="#0D9488" />
+                            </div>
+                        </section>
+
+                        <section className="space-y-4">
+                            <div className="flex justify-between items-center px-2">
+                                <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                                    <History className="w-5 h-5 text-teal-600" /> Continuar Leyendo
+                                </h2>
+                                <Link to="/library" className="text-teal-600 text-xs font-bold uppercase tracking-widest">Ver todo</Link>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                {currentlyReading.length > 0 ? (
+                                    currentlyReading.slice(0, 2).map(book => (
+                                        <ReadingCard key={book.id} book={book} />
+                                    ))
+                                ) : (
+                                    <div className="col-span-2 py-10 bg-white/40 rounded-3xl border border-dashed border-slate-300 text-center text-slate-400 text-sm font-medium italic">
+                                        No tienes lecturas en curso.
+                                    </div>
+                                )}
+                            </div>
+                        </section>
+                    </div>
+
+                    <div className="lg:col-span-4 space-y-8">
+                        <section className="bg-white/80 backdrop-blur-xl rounded-[2.5rem] p-8 border border-white shadow-xl shadow-slate-200/50">
+                            <h3 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2">
+                                <Target className="w-5 h-5 text-emerald-600" /> Meta {currentYear}
+                            </h3>
+                            <div className="space-y-4">
+                                <div className="flex justify-between items-end">
+                                    <span className="text-sm font-bold text-slate-700">Objetivo Anual</span>
+                                    <span className="text-sm font-extrabold text-teal-600">{countForGoal}/{yearlyTarget}</span>
+                                </div>
+                                <div className="h-4 w-full bg-slate-100 rounded-full overflow-hidden p-1 shadow-inner">
+                                    <div 
+                                        className="h-full bg-gradient-to-r from-teal-500 to-emerald-500 rounded-full transition-all duration-1000 shadow-lg"
+                                        style={{ width: `${challengePercent}%` }}
+                                    />
+                                </div>
+                                <p className="text-[11px] text-slate-400 font-medium italic text-center leading-relaxed">
+                                    {challengePercent === 0 
+                                        ? "¡Termina un libro para activar tu progreso!" 
+                                        : `Has completado el ${challengePercent}% de tu meta para ${currentYear}.`}
+                                </p>
+                            </div>
+                        </section>
+
+                        <section className="bg-slate-900 rounded-[2.5rem] p-8 text-white relative overflow-hidden shadow-2xl">
+                            <div className="relative z-10">
+                                <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                                    <Award className="w-5 h-5 text-teal-400" /> Rango de Lector
+                                </h3>
+                                <div className="flex items-center gap-4 mb-6">
+                                    <div className="w-14 h-14 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center text-3xl shadow-inner border border-white/10">
+                                        {totalPages > 5000 ? '🏅' : totalPages > 1000 ? '📖' : '👶'}
+                                    </div>
+                                    <div>
+                                        <h4 className="font-bold text-sm">
+                                            {totalPages > 5000 ? 'Erudito' : totalPages > 1000 ? 'Lector Voraz' : 'Iniciado'}
+                                        </h4>
+                                        <p className="text-[10px] text-slate-400 uppercase font-bold tracking-widest">
+                                            {totalPages} páginas devoradas
+                                        </p>
                                     </div>
                                 </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
-
-                <div className="bg-white/80 backdrop-blur-sm rounded-[2.5rem] p-8 shadow-sm border border-neutral-100/50">
-                    <h2 className="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-2">
-                        <Target className="w-6 h-6 text-[#a4a99f]" /> Retos Activos
-                    </h2>
-                    {challenges.map(c => (
-                        <div key={c.id} className="p-6 bg-gradient-to-br from-neutral-50 to-white rounded-3xl border border-neutral-100 relative overflow-hidden">
-                            <div className="relative z-10">
-                                <div className="flex justify-between mb-2">
-                                    <span className="font-bold text-slate-700">{c.name}</span>
-                                    <span className="text-[#a4a99f] font-black">{Math.round((c.current / c.target) * 100)}%</span>
-                                </div>
-                                <div className="w-full bg-neutral-200 h-3 rounded-full overflow-hidden">
-                                    <div className="bg-[#a4a99f] h-3 rounded-full" style={{ width: `${(c.current / c.target) * 100}%` }}></div>
-                                </div>
-                                <p className="text-xs text-slate-400 mt-3">{c.description}</p>
+                                <Link to="/library">
+                                    <button className="w-full py-3 bg-teal-600 text-white font-bold rounded-xl text-[10px] uppercase tracking-widest hover:bg-teal-500 transition-all">
+                                        Añadir más lecturas
+                                    </button>
+                                </Link>
                             </div>
-                        </div>
-                    ))}
+                            <Sparkles className="absolute -right-4 -top-4 w-24 h-24 text-teal-500/10 rotate-12" />
+                        </section>
+                    </div>
                 </div>
+            </main>
+        </div>
+    );
+};
+
+const ReadingCard = ({ book }: { book: Book }) => {
+
+    return (
+        <div className="bg-white/60 backdrop-blur-sm p-4 rounded-[2rem] border border-white flex gap-4 hover:shadow-md transition-all group">
+            <div className="w-16 h-24 bg-slate-200 rounded-2xl overflow-hidden shadow-md shrink-0 border border-white transform group-hover:scale-105 transition-transform">
+                {book.urlPortada ? (
+                    <img src={book.urlPortada} className="w-full h-full object-cover" alt={book.title} />
+                ) : (
+                    <div className="w-full h-full flex items-center justify-center text-slate-400 font-black">{book.title[0]}</div>
+                )}
+            </div>
+            <div className="flex-1 min-w-0 flex flex-col justify-center">
+                <div className="flex justify-between items-start">
+                    <div className="flex-1 min-w-0">
+                        <h4 className="text-sm font-black text-slate-900 truncate tracking-tight uppercase leading-tight">{book.title}</h4>
+                        <p className="text-[10px] font-bold text-teal-600 uppercase mb-3 truncate">{book.author}</p>
+                    </div>
+                    <TrendingUp size={14} className="text-teal-500 shrink-0 ml-2" />
+                </div>              
             </div>
         </div>
     );
 };
 
-const StatBannerCard = ({ icon, value, label, bg }: any) => (
-    <div className="flex items-center gap-4 bg-white/20 backdrop-blur-md rounded-3xl px-6 py-4 border border-white/10">
-        <div className={`${bg} p-3 rounded-2xl`}>{icon}</div>
-        <div>
-            <p className="text-3xl font-black">{value}</p>
-            <p className="text-white/70 text-xs font-bold uppercase tracking-wider">{label}</p>
+const StatCard = ({ label, value, icon, color }: any) => (
+    <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-6 border border-white hover:shadow-lg transition-all shadow-sm">
+        <div className={`w-10 h-10 bg-gradient-to-br ${color} rounded-xl mb-4 flex items-center justify-center shadow-lg`}>
+            {icon}
         </div>
+        <div className="text-2xl font-black text-slate-900 mb-0.5">{value}</div>
+        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{label}</div>
     </div>
-);
-
-const QuickActionLink = ({ to, icon, title, desc, color }: any) => (
-    <Link to={to} className="group bg-white p-6 rounded-[2rem] shadow-sm border border-neutral-50 hover:shadow-xl transition-all hover:-translate-y-1">
-        <div className="flex items-center gap-4">
-            <div className={`bg-gradient-to-br ${color} p-4 rounded-2xl text-white shadow-lg group-hover:scale-110 transition-transform`}>
-                {icon}
-            </div>
-            <div>
-                <h3 className="font-bold text-slate-800">{title}</h3>
-                <p className="text-xs text-slate-400 font-medium">{desc}</p>
-            </div>
-        </div>
-    </Link>
 );

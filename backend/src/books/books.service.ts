@@ -73,6 +73,8 @@ export class BooksService {
       'description',
       'pageCount',
       'urlPortada',
+      'rating',
+      'review',
     ];
     fields.forEach((field) => {
       const value = updateBookDto[field];

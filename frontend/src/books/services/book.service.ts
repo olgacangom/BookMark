@@ -12,7 +12,10 @@ export interface Book {
   urlPortada?: string;
   pageCount?: number;
   updatedAt: string | number | Date;
-  isbn: string
+  isbn: string;
+  rating?: number;
+  review?: string;
+  createdAt: string; 
 }
 
 export const bookService = {
@@ -34,7 +37,10 @@ export const bookService = {
       genre, 
       description, 
       pageCount, 
-      urlPortada 
+      urlPortada,
+      rating,
+      review,
+      isbn,
     } = updates;
 
     const cleanData = { 
@@ -44,7 +50,10 @@ export const bookService = {
       genre, 
       description, 
       pageCount, 
-      urlPortada 
+      urlPortada,
+      rating,
+      review,
+      isbn
     };
 
     const { data } = await api.patch<Book>(`/books/${id}`, cleanData);

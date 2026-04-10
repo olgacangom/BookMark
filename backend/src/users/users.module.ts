@@ -10,10 +10,22 @@ import { ActivitiesController } from './activities.controller';
 import { UserStats } from './entities/user-stats.entity';
 import { GamificationListener } from './gamification.listener';
 import { Badge } from './badge.entity';
+import { ActivityLike } from './entities/activity-like.entity';
+import { ActivityComment } from './entities/activity-comment';
+import { ActivityIgnore } from './entities/activity-ignore.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, Follow, Activity, UserStats, Badge]),
+    TypeOrmModule.forFeature([
+      User,
+      Follow,
+      Activity,
+      UserStats,
+      Badge,
+      ActivityLike,
+      ActivityComment,
+      ActivityIgnore,
+    ]),
   ],
   controllers: [UsersController, ActivitiesController],
   providers: [UsersService, ActivitiesService, GamificationListener],

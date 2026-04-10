@@ -18,7 +18,9 @@ export const bookSchema = z.object({
   description: z.string().optional().nullable(), 
   pageCount: z.number().optional().nullable(),
   urlPortada: z.string().optional().nullable(),  
-  isbn: z.string().optional() 
+  isbn: z.string().optional().nullable(),
+  rating: z.number().min(0).max(5).optional().nullable(),
+  review: z.string().optional().nullable(),
 });
 
 export type BookFormData = z.infer<typeof bookSchema>;

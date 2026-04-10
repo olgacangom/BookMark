@@ -1,6 +1,6 @@
-import { BookOpen, Trash2, Edit3 } from "lucide-react";
-import { Book } from "../services/book.service";
+import { BookOpen, Star, Trash2 } from "lucide-react";
 import { JSX } from "react";
+import { Book } from "../services/book.service";
 
 interface BookCardProps {
   book: Book;
@@ -10,26 +10,73 @@ interface BookCardProps {
 }
 
 export const BookCard = ({ book, onEdit, onDelete, statusInfo }: BookCardProps) => {
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'Reading': return 'bg-sky-500/90';
+      case 'Read': return 'bg-emerald-500/90';
+      case 'Want to Read': return 'bg-amber-500/90';
+      default: return 'bg-slate-500/90';
+    }
+  };
+
+  const currentRating = Number(book.rating) || 0;
+
   return (
-    <article
-      className="group bg-white rounded-[3rem] p-5 shadow-sm hover:shadow-2xl transition-all border border-transparent hover:border-primary/10 flex flex-col h-full relative overflow-hidden"
-    >
-      {/* Botón invisible de acción principal (Editar) 
-        Cubre toda la tarjeta. z-0 permite que otros botones (z-20) queden encima.
-      */}
+    <article className="group bg-white/80 backdrop-blur-xl rounded-2xl p-4 shadow-lg border border-slate-200/50 hover:shadow-xl transition-all flex flex-col h-full relative">
       <button
         type="button"
         onClick={() => onEdit(book)}
         className="absolute inset-0 w-full h-full cursor-pointer z-0 border-none bg-transparent"
-        aria-label={`Editar libro ${book.title}`}
       />
 
-      {/* Badge de Género - z-10 para estar sobre el botón base pero bajo el de borrar */}
-      <div className="absolute top-8 left-8 z-10 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-[0.15em] text-primary shadow-sm border border-primary/5 pointer-events-none">
-        {book.genre || 'Otros'}
+      <div className="relative aspect-[2/3] bg-slate-100 rounded-xl mb-4 overflow-hidden shadow-md group-hover:scale-[1.02] transition-transform duration-500 pointer-events-none">
+        {book.urlPortada ? (
+          <img src={book.urlPortada} alt={book.title} className="w-full h-full object-cover" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-slate-200 text-slate-400 font-bold text-2xl">
+            {book.title.charAt(0)}
+          </div>
+        )}
+        <div className="absolute top-2 right-2 z-10">
+          <div className={`w-9 h-9 rounded-full flex items-center justify-center shadow-lg backdrop-blur-md text-white ${getStatusColor(book.status)}`}>
+             {statusInfo.icon}
+          </div>
+        </div>
       </div>
 
-      {/* Botón Borrar - z-20 para asegurar clickabilidad sobre el botón base */}
+      <div className="flex-1 px-1 pointer-events-none">
+        <div className="mb-2">
+          <span className="bg-teal-50 text-teal-700 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase border border-teal-100">
+            {book.genre || 'General'}
+          </span>
+        </div>
+        <h2 className="font-bold text-sm text-slate-900 leading-tight mb-1 line-clamp-2 uppercase group-hover:text-teal-600 transition-colors">
+          {book.title}
+        </h2>
+        <p className="text-slate-500 text-xs font-medium mb-3">{book.author}</p>
+      </div>
+
+      <div className="mt-auto pt-3 border-t border-slate-100 flex items-center justify-between pointer-events-none">
+        {book.pageCount ? (
+          <div className="flex items-center gap-1.5 text-slate-400">
+            <BookOpen className="w-3.5 h-3.5" />
+            <span className="text-[10px] font-bold">{book.pageCount} PP.</span>
+          </div>
+        ) : <div />}
+        
+        {book.status === 'Read' && (
+           <div className="flex items-center gap-0.5">
+             {[1, 2, 3, 4, 5].map((star) => (
+               <Star 
+                 key={star} 
+                 size={10} 
+                 className={`${star <= currentRating ? 'fill-amber-400 text-amber-400' : 'text-slate-200'}`} 
+               />
+             ))}
+           </div>
+        )}
+      </div>
+
       <button
         type="button"
         onClick={(e) => {
@@ -37,54 +84,10 @@ export const BookCard = ({ book, onEdit, onDelete, statusInfo }: BookCardProps) 
           e.stopPropagation();
           onDelete(e, book);
         }}
-        aria-label={`Eliminar libro ${book.title}`}
-        className="absolute top-7 right-7 z-20 bg-rose-500 text-white p-2.5 rounded-2xl shadow-lg opacity-0 group-hover:opacity-100 hover:scale-110 active:scale-90 transition-all duration-300 border-none cursor-pointer"
+        className="absolute top-2 left-2 z-20 bg-white/90 text-slate-400 p-2 rounded-full shadow-md opacity-0 group-hover:opacity-100 hover:text-rose-500 hover:bg-rose-50 transition-all duration-200"
       >
-        <Trash2 className="w-4 h-4" />
+        <Trash2 className="w-3.5 h-3.5" />
       </button>
-
-      {/* Contenedor Visual (Imagen y Portada) - pointer-events-none para no interferir con el botón base */}
-      <div className="relative aspect-[3/4] bg-neutral-100 rounded-[2.5rem] mb-6 flex items-center justify-center group-hover:scale-[1.03] transition-transform duration-500 overflow-hidden shadow-inner pointer-events-none">
-        {book.urlPortada ? (
-          <img 
-            src={book.urlPortada} 
-            alt={`Portada de ${book.title}`} 
-            className="w-full h-full object-cover transition-all duration-500" 
-          />
-        ) : (
-          <span className="text-5xl opacity-30" role="img" aria-label="Libro sin portada">📖</span>
-        )}
-        
-        {/* Overlay de edición visual */}
-        <div className="absolute inset-0 bg-primary/20 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-          <div className="bg-white/90 p-3 rounded-2xl shadow-xl transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300 text-primary">
-            <Edit3 className="w-6 h-6" />
-          </div>
-        </div>
-      </div>
-
-      {/* Info Título y Autor */}
-      <div className="px-2 flex-grow pointer-events-none">
-        <h2 className="font-bold text-lg text-foreground leading-[1.2] mb-2 group-hover:text-primary transition-colors line-clamp-2 uppercase tracking-tight">
-          {book.title}
-        </h2>
-        <p className="text-muted-foreground text-sm font-bold uppercase tracking-widest mb-2 opacity-60">
-          {book.author}
-        </p>
-        
-        {book.pageCount !== undefined && book.pageCount > 0 && (
-          <div className="flex items-center gap-1.5 text-gray-400 mb-4">
-            <BookOpen className="w-3.5 h-3.5" />
-            <span className="text-[11px] font-bold tracking-tight">{book.pageCount} PÁGINAS</span>
-          </div>
-        )}
-      </div>
-
-      {/* Badge de Estado */}
-      <div className={`flex items-center gap-2.5 px-5 py-3 rounded-2xl border transition-colors pointer-events-none ${statusInfo.color}`}>
-        {statusInfo.icon}
-        <span className="text-[10px] font-black uppercase tracking-widest">{statusInfo.label}</span>
-      </div>
     </article>
   );
 };
