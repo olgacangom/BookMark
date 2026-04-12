@@ -14,6 +14,7 @@ import { ClubsListView } from './pages/club/ClubListView';
 import { ThreadView } from './pages/club/ThreadView';
 import { ClubDetailsView } from './pages/club/ClubDetailsView';
 import { BookstoresMapView } from './bookstore/BookstoreMapView.';
+import { ChatView } from './pages/chat/ChatView';
 
 function App() {
   return (
@@ -33,6 +34,7 @@ function App() {
               <Route path="explore" element={<ExploreView />} />
               <Route path="feed" element={<FeedView />} />
               <Route path="requests" element={<RequestsView />} />
+              <Route path="chat" element={<ChatView />} />
               <Route path="clubs" element={<ClubsListView />} />
               <Route path="clubs/:id" element={<ClubDetailsView />} />
               <Route path="clubs/thread/:threadId" element={<ThreadView />} />

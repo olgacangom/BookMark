@@ -9,6 +9,7 @@ import { AuthModule } from './auth/auth.module';
 import { BooksModule } from './books/books.module';
 import { ClubsModule } from './club/club.module';
 import { BookstoreModule } from './bookstore/bookstore.module';
+import { ChatModule } from './chat/chat.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { BookstoreModule } from './bookstore/bookstore.module';
     ConfigModule.forRoot({ isGlobal: true }),
     ClubsModule,
     BookstoreModule,
+    ChatModule,
 
     TypeOrmModule.forRoot({
       type: 'postgres',
