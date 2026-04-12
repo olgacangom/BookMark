@@ -9,7 +9,7 @@ import { Club } from './entities/club.entity';
 import { Thread } from './entities/thread.entity';
 import { ThreadPost } from './entities/thread-post.entity';
 import { User } from '../users/entities/user.entity';
-import { Book } from '../books/entities/book.entity'; 
+import { Book } from '../books/entities/book.entity';
 
 @Injectable()
 export class ClubsService {

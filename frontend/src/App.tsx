@@ -13,6 +13,7 @@ import { FeedView } from './users/pages/FeedView';
 import { ClubsListView } from './pages/club/ClubListView';
 import { ThreadView } from './pages/club/ThreadView';
 import { ClubDetailsView } from './pages/club/ClubDetailsView';
+import { BookstoresMapView } from './bookstore/BookstoreMapView.';
 
 function App() {
   return (
@@ -35,6 +36,7 @@ function App() {
               <Route path="clubs" element={<ClubsListView />} />
               <Route path="clubs/:id" element={<ClubDetailsView />} />
               <Route path="clubs/thread/:threadId" element={<ThreadView />} />
+              <Route path="bookstore" element={<BookstoresMapView />} />
               <Route path="myprofile" element={<MyProfileView />} />
             </Route>
           </Route>
