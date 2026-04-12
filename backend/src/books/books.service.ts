@@ -9,6 +9,7 @@ import { ActivitiesService } from 'src/users/activities.service';
 import { ActivityType } from 'src/users/entities/activity.entity';
 import { BookStatus } from './enum/book-status.enum';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { Note } from './entities/note.entity';
 
 @Injectable()
 export class BooksService {
@@ -18,6 +19,8 @@ export class BooksService {
     private readonly bookRepository: Repository<Book>,
     private readonly googleBooksService: GoogleBooksService,
     private readonly activitiesService: ActivitiesService,
+    @InjectRepository(Note)
+    private noteRepository: Repository<Note>,
   ) {}
 
   async searchByIsbn(isbn: string) {
@@ -97,6 +100,53 @@ export class BooksService {
   async remove(id: number, userId: string) {
     const book = await this.findOne(id, userId);
     await this.bookRepository.remove(book);
+    return { deleted: true };
+  }
+
+  async createNote(bookId: number, content: string, userId: string) {
+    const book = await this.findOne(bookId, userId);
+
+    const note = this.noteRepository.create({
+      content,
+      book,
+    });
+    return this.noteRepository.save(note);
+  }
+
+  async findNotesByBook(bookId: number, userId: string) {
+    await this.findOne(bookId, userId);
+
+    return this.noteRepository.find({
+      where: { book: { id: bookId } },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  async updateNote(noteId: string, content: string, userId: string) {
+    const note = await this.noteRepository.findOne({
+      where: { id: noteId },
+      relations: ['book'],
+    });
+
+    if (!note || note.book.userId !== userId) {
+      throw new NotFoundException('Nota no encontrada o no tienes permiso');
+    }
+
+    note.content = content;
+    return this.noteRepository.save(note);
+  }
+
+  async deleteNote(noteId: string, userId: string) {
+    const note = await this.noteRepository.findOne({
+      where: { id: noteId },
+      relations: ['book'],
+    });
+
+    if (!note || note.book.userId !== userId) {
+      throw new NotFoundException('Nota no encontrada o no tienes permiso');
+    }
+
+    await this.noteRepository.remove(note);
     return { deleted: true };
   }
 }

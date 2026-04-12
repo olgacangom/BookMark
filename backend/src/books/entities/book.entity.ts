@@ -4,9 +4,11 @@ import {
   Column,
   ManyToOne,
   CreateDateColumn,
+  OneToMany,
 } from 'typeorm';
 import { BookStatus } from '../enum/book-status.enum';
 import { User } from '../../users/entities/user.entity';
+import { Note } from './note.entity';
 
 @Entity()
 export class Book {
@@ -55,4 +57,7 @@ export class Book {
 
   @CreateDateColumn()
   createdAt: Date;
+
+  @OneToMany(() => Note, (note) => note.book)
+  notes: Note[];
 }
