@@ -10,6 +10,9 @@ import { MyProfileView } from './pages/profile/MyProfileView';
 import { ExploreView } from './users/pages/ExploreView';
 import { RequestsView } from './users/pages/RequestView';
 import { FeedView } from './users/pages/FeedView';
+import { ClubsListView } from './pages/club/ClubListView';
+import { ThreadView } from './pages/club/ThreadView';
+import { ClubDetailsView } from './pages/club/ClubDetailsView';
 
 function App() {
   return (
@@ -29,12 +32,15 @@ function App() {
               <Route path="explore" element={<ExploreView />} />
               <Route path="feed" element={<FeedView />} />
               <Route path="requests" element={<RequestsView />} />
+              <Route path="clubs" element={<ClubsListView />} />
+              <Route path="clubs/:id" element={<ClubDetailsView />} />
+              <Route path="clubs/thread/:threadId" element={<ThreadView />} />
               <Route path="myprofile" element={<MyProfileView />} />
             </Route>
           </Route>
 
           {/* Redirección por defecto */}
-          <Route path="*" element={<Navigate to="/dashboard" />} />
+          <Route path="*" element={<Navigate to="/explore" />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

@@ -13,6 +13,7 @@ import { Badge } from './badge.entity';
 import { ActivityLike } from './entities/activity-like.entity';
 import { ActivityComment } from './entities/activity-comment';
 import { ActivityIgnore } from './entities/activity-ignore.entity';
+import { Club } from 'src/club/entities/club.entity';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { ActivityIgnore } from './entities/activity-ignore.entity';
       ActivityLike,
       ActivityComment,
       ActivityIgnore,
+      Club,
     ]),
   ],
   controllers: [UsersController, ActivitiesController],
