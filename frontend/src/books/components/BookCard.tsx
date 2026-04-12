@@ -7,9 +7,10 @@ interface BookCardProps {
   onEdit: (book: Book) => void;
   onDelete: (e: React.MouseEvent, book: Book) => void;
   statusInfo: { label: string; icon: JSX.Element; color: string };
+  onOpenNotes: (book: Book) => void;
 }
 
-export const BookCard = ({ book, onEdit, onDelete, statusInfo }: BookCardProps) => {
+export const BookCard = ({ book, onEdit, onDelete, statusInfo, onOpenNotes }: BookCardProps) => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'Reading': return 'bg-sky-500/90';
@@ -83,6 +84,7 @@ export const BookCard = ({ book, onEdit, onDelete, statusInfo }: BookCardProps) 
           e.preventDefault();
           e.stopPropagation();
           onDelete(e, book);
+          onOpenNotes(book);
         }}
         className="absolute top-2 left-2 z-20 bg-white/90 text-slate-400 p-2 rounded-full shadow-md opacity-0 group-hover:opacity-100 hover:text-rose-500 hover:bg-rose-50 transition-all duration-200"
       >
