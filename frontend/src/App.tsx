@@ -15,17 +15,21 @@ import { ThreadView } from './pages/club/ThreadView';
 import { ClubDetailsView } from './pages/club/ClubDetailsView';
 import { BookstoresMapView } from './bookstore/BookstoreMapView.';
 import { ChatView } from './pages/chat/ChatView';
+import { ForgotPasswordView } from './pages/auth/ForgotPasswordView';
+import { ResetPasswordView } from './pages/auth/ResetPasswordView';
 
 function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          {/* Rutas Públicas */}
+          {/* --- RUTAS PÚBLICAS  --- */}
           <Route path="/login" element={<LoginView />} />
           <Route path="/register" element={<RegisterView />} />
+          <Route path="/forgot-password" element={<ForgotPasswordView />} />
+          <Route path="/reset-password/:token" element={<ResetPasswordView />} />
 
-          {/* Rutas protegidas */}
+          {/* --- RUTAS PROTEGIDAS  --- */}
           <Route element={<ProtectedRoute />}>
             <Route path="/" element={<MainLayout />}>
               <Route index element={<Navigate to="/explore" />} />
