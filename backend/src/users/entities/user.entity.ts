@@ -14,6 +14,7 @@ import { Book } from '../../books/entities/book.entity';
 import { Follow, FollowStatus } from './follow.entity';
 import { UserStats } from './user-stats.entity';
 import { Badge } from '../badge.entity';
+import { Club } from 'src/club/entities/club.entity';
 
 @Entity('users')
 export class User {
@@ -63,6 +64,15 @@ export class User {
   @ManyToMany(() => Badge, (badge) => badge.users)
   @JoinTable()
   badges: Badge[];
+
+  @ManyToMany(() => Club, (club) => club.members)
+  clubs: Club[];
+
+  @Column({ type: 'varchar', nullable: true })
+  resetPasswordToken: string | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  resetPasswordExpires: Date | null;
 
   @Expose()
   get followers() {

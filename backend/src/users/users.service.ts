@@ -197,6 +197,8 @@ export class UsersService {
       relations: [
         'followerRelations',
         'followerRelations.follower',
+        'followingRelations',
+        'followingRelations.following',
         'stats',
         'badges',
       ],
@@ -237,7 +239,6 @@ export class UsersService {
       where: { user: { id: userId } },
     });
 
-    // SI NO EXISTEN, LAS CREAMOS
     if (!stats) {
       stats = this.userStatsRepository.create({
         user: { id: userId },

@@ -15,6 +15,7 @@ export interface Book {
   isbn: string;
   rating?: number;
   review?: string;
+  currentPage: number;
   createdAt: string; 
 }
 
