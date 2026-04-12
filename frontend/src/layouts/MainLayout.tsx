@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
-import { Compass, Sparkles, User, LogOut, Bell, BarChart3, Bookmark, Library, Club } from "lucide-react";
+import { Compass, Sparkles, User, LogOut, Bell, BarChart3, Bookmark, Library, Club, Store } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
 export function MainLayout() {
@@ -15,7 +15,8 @@ export function MainLayout() {
     { path: "/library", icon: Bookmark, label: " Mi Biblioteca" }, 
     { path: "/dashboard", icon: BarChart3, label: "Estadísticas" },      
     { path: "/requests", icon: Bell, label: "Solicitudes" },    
-    { path: "/clubs", icon: Club, label: "Clubs" },            
+    { path: "/clubs", icon: Club, label: "Clubs" },     
+    { path: "/bookstore", icon: Store, label: "Bookstore" },                   
     { path: "/myprofile", icon: User, label: "Perfil" },
   ];
 
