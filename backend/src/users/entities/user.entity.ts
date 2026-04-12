@@ -68,6 +68,12 @@ export class User {
   @ManyToMany(() => Club, (club) => club.members)
   clubs: Club[];
 
+  @Column({ type: 'varchar', nullable: true })
+  resetPasswordToken: string | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  resetPasswordExpires: Date | null;
+
   @Expose()
   get followers() {
     return (
