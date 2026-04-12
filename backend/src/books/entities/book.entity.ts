@@ -44,6 +44,9 @@ export class Book {
   @Column({ type: 'text', nullable: true })
   review: string;
 
+  @Column({ default: 0 })
+  currentPage: number;
+
   @ManyToOne(() => User, (user) => user.books)
   user: User;
 
