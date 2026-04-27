@@ -8,10 +8,12 @@ import * as bcrypt from 'bcrypt';
 import * as nodemailer from 'nodemailer';
 import { v4 as uuidv4 } from 'uuid';
 import { UsersService } from '../users/users.service';
-import { User } from '../users/entities/user.entity';
+import { User, UserRole } from '../users/entities/user.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
+import { UserStats } from 'src/users/entities/user-stats.entity';
+import { RegisterDto } from './dto/register.dto';
 
 @Injectable()
 export class AuthService {
@@ -21,24 +23,75 @@ export class AuthService {
     private jwtService: JwtService,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(UserStats)
+    private readonly userStatsRepository: Repository<UserStats>,
   ) {}
 
   async validateUser(
     email: string,
     pass: string,
-  ): Promise<Partial<User> | null> {
+  ): Promise<Omit<User, 'password'> | null> {
     const user = await this.usersService.findOneByEmail(email);
 
     if (user && (await bcrypt.compare(pass, user.password))) {
-      const result: Partial<User> = { ...user };
-      delete result.password;
-      return result;
+      if (user.role === UserRole.LIBRERO_PENDIENTE) {
+        throw new BadRequestException(
+          'Tu cuenta de librería está pendiente de aprobación por el administrador.',
+        );
+      }
+
+      if (!user.isActive) {
+        throw new BadRequestException('Esta cuenta ha sido desactivada.');
+      }
+
+      const userInstance = user as Partial<User>;
+      delete userInstance.password;
+
+      return userInstance as Omit<User, 'password'>;
     }
     return null;
   }
 
-  login(user: Partial<User>) {
-    const payload = { email: user.email, sub: user.id };
+  async register(dto: RegisterDto): Promise<Omit<User, 'password'>> {
+    const { email, password, ...rest } = dto;
+
+    const existingUser = await this.usersService.findOneByEmail(email);
+    if (existingUser) {
+      throw new BadRequestException('El correo electrónico ya está registrado');
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const newUser = this.userRepository.create({
+      ...rest,
+      email,
+      password: hashedPassword,
+      isActive: dto.role === UserRole.USER,
+    });
+
+    const savedUser = await this.userRepository.save(newUser);
+
+    const initialStats = this.userStatsRepository.create({
+      user: savedUser,
+      xp: 0,
+      level: 1,
+      totalBooksFinished: 0,
+      currentStreak: 0,
+    });
+    await this.userStatsRepository.save(initialStats);
+
+    const userInstance = savedUser as Partial<User>;
+    delete userInstance.password;
+
+    return userInstance as Omit<User, 'password'>;
+  }
+
+  login(user: Omit<User, 'password'>) {
+    const payload = {
+      email: user.email,
+      sub: user.id,
+      role: user.role,
+    };
     return {
       access_token: this.jwtService.sign(payload),
       user,

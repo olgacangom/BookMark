@@ -1,9 +1,19 @@
-import { Controller, Post, Body, UnauthorizedException } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  UnauthorizedException,
+  UseInterceptors,
+  UploadedFile,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { CreateUserDto } from '../users/dto/create-user.dto';
 import { UsersService } from '../users/users.service';
 import { LoginDto } from './dto/login.dto';
 import { User } from 'src/users/entities/user.entity';
+import { RegisterDto } from './dto/register.dto';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
 
 @Controller('auth')
 export class AuthController {
@@ -13,21 +23,38 @@ export class AuthController {
   ) {}
 
   @Post('register')
+  @UseInterceptors(
+    FileInterceptor('document', {
+      storage: diskStorage({
+        destination: './uploads/licencias',
+        filename: (req, file, cb) => {
+          const uniqueSuffix =
+            Date.now() + '-' + Math.round(Math.random() * 1e9);
+          cb(null, `${uniqueSuffix}${extname(file.originalname)}`);
+        },
+      }),
+    }),
+  )
   async register(
-    @Body() createUserDto: CreateUserDto,
+    @Body() registerDto: RegisterDto,
+    @UploadedFile() file: Express.Multer.File,
   ): Promise<Omit<User, 'password'>> {
-    return this.usersService.create(createUserDto);
+    if (file) {
+      registerDto.document = file.path;
+    }
+
+    return this.usersService.create(registerDto);
   }
 
   @Post('login')
   async login(@Body() loginDto: LoginDto) {
-    const user = await this.authService.validateUser(
-      loginDto.email,
-      loginDto.password,
-    );
+    const user: Omit<User, 'password'> | null =
+      await this.authService.validateUser(loginDto.email, loginDto.password);
+
     if (!user) {
       throw new UnauthorizedException('Credenciales inválidas');
     }
+
     return this.authService.login(user);
   }
 

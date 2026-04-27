@@ -14,6 +14,9 @@ import { ActivityLike } from './entities/activity-like.entity';
 import { ActivityComment } from './entities/activity-comment';
 import { ActivityIgnore } from './entities/activity-ignore.entity';
 import { Club } from 'src/club/entities/club.entity';
+import { AdminController, LibreroController } from './roles/roles.controller';
+import { AdminService } from './roles/admin.service';
+import { Book } from 'src/books/entities/book.entity';
 
 @Module({
   imports: [
@@ -27,10 +30,21 @@ import { Club } from 'src/club/entities/club.entity';
       ActivityComment,
       ActivityIgnore,
       Club,
+      Book,
     ]),
   ],
-  controllers: [UsersController, ActivitiesController],
-  providers: [UsersService, ActivitiesService, GamificationListener],
+  controllers: [
+    UsersController,
+    ActivitiesController,
+    AdminController,
+    LibreroController,
+  ],
+  providers: [
+    UsersService,
+    ActivitiesService,
+    GamificationListener,
+    AdminService,
+  ],
   exports: [UsersService, ActivitiesService],
 })
 export class UsersModule {}

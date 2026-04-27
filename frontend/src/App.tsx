@@ -17,6 +17,8 @@ import { BookstoresMapView } from './bookstore/BookstoreMapView.';
 import { ChatView } from './pages/chat/ChatView';
 import { ForgotPasswordView } from './pages/auth/ForgotPasswordView';
 import { ResetPasswordView } from './pages/auth/ResetPasswordView';
+import { AdminUserListView } from './pages/admin/AdminUserListView';
+import { AdminStatsView } from './pages/admin/AdminStatsView';
 
 function App() {
   return (
@@ -43,6 +45,8 @@ function App() {
               <Route path="clubs/:id" element={<ClubDetailsView />} />
               <Route path="clubs/thread/:threadId" element={<ThreadView />} />
               <Route path="bookstore" element={<BookstoresMapView />} />
+              <Route path="admin/users" element={<AdminUserListView />} />
+              <Route path="admin/stats" element={<AdminStatsView />} />
               <Route path="myprofile" element={<MyProfileView />} />
             </Route>
           </Route>
