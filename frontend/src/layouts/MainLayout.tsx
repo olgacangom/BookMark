@@ -1,8 +1,8 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
-import { 
-    Compass, Sparkles, User, LogOut, Bell, 
-    BarChart3, Bookmark, Library, Club, 
-    Store, MessageCircle 
+import {
+    Compass, Sparkles, User, LogOut, Bell,
+    BarChart3, Bookmark, Library, Club,
+    Store, MessageCircle
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useEffect, useState } from "react";
@@ -46,7 +46,7 @@ export function MainLayout() {
         refreshAllBadges();
 
         const socket = io('http://localhost:3000');
-        
+
         socket.on('new_message', (msg) => {
             const senderId = msg.senderId || msg.sender?.id;
             if (senderId !== user?.id) {
@@ -68,15 +68,27 @@ export function MainLayout() {
     }, [location.pathname]);
 
     const navItems = [
-        { path: "/explore", icon: Compass, label: "Descubrir" },
-        { path: "/feed", icon: Sparkles, label: "Feed" },
-        { path: "/library", icon: Bookmark, label: "Biblioteca" },
-        { path: "/dashboard", icon: BarChart3, label: "Estadísticas" },
-        { path: "/requests", icon: Bell, label: "Solicitudes", badge: totalRequests },
-        { path: "/chat", icon: MessageCircle, label: "Chat", badge: totalUnread },
-        { path: "/clubs", icon: Club, label: "Clubs" },
-        { path: "/bookstore", icon: Store, label: "Bookstore" },
-        { path: "/myprofile", icon: User, label: "Perfil" },
+
+        //USERS
+        { path: "/explore", icon: Compass, label: "Descubrir", roles: ['user']},
+        { path: "/feed", icon: Sparkles, label: "Feed", roles: ['user'] },
+        { path: "/library", icon: Bookmark, label: "Biblioteca", roles: ['user'] },
+        { path: "/dashboard", icon: BarChart3, label: "Estadísticas", roles: ['user'] },
+        { path: "/requests", icon: Bell, label: "Solicitudes", badge: totalRequests, roles: ['user'] },
+        { path: "/chat", icon: MessageCircle, label: "Chat", badge: totalUnread, roles: ['user'] },
+        { path: "/clubs", icon: Club, label: "Clubs", roles: ['user'] },
+        { path: "/bookstore", icon: Store, label: "Bookstore", roles: ['user']},
+
+        //ADMIN
+        { path: "/admin/users", icon: User, label: "Gestión Usuarios", roles: ['admin'] },
+        { path: "/admin/stats", icon: BarChart3, label: "Estadísticas Globales", roles: ['admin'] },
+
+        //LIBREROS
+        { path: "/librero/catalog", icon: Library, label: "Mi Catálogo", roles: ['librero'] },
+        { path: "/librero/events", icon: Sparkles, label: "Mis Eventos", roles: ['librero'] },
+
+        // Comunes
+        { path: "/myprofile", icon: User, label: "Perfil", roles: ['user', 'admin', 'librero'] },
     ];
 
     return (
@@ -98,32 +110,33 @@ export function MainLayout() {
                 </div>
 
                 <nav className="flex-1 px-4 space-y-1 overflow-y-auto no-scrollbar">
-                    {navItems.map((item) => {
-                        const active = isActive(item.path);
-                        const hasBadge = item.badge !== undefined && item.badge > 0;
+                    {navItems
+                        .filter(item => item.roles.includes(user?.role || 'user'))
+                        .map((item) => {
+                            const active = isActive(item.path);
+                            const hasBadge = item.badge !== undefined && item.badge > 0;
 
-                        return (
-                            <Link
-                                key={item.path}
-                                to={item.path}
-                                className={`flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-200 group relative ${
-                                    active 
-                                    ? "bg-teal-600 text-white shadow-lg shadow-teal-600/30" 
-                                    : "text-slate-500 hover:bg-slate-50 hover:text-teal-600"
-                                }`}
-                            >
-                                <div className="relative">
-                                    <item.icon className={`w-5 h-5 ${active ? "text-white" : "group-hover:text-teal-600"}`} />
-                                    {hasBadge && (
-                                        <div className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-rose-500 text-white text-[8px] font-black rounded-full flex items-center justify-center border-2 border-white animate-pulse">
-                                            {item.badge}
-                                        </div>
-                                    )}
-                                </div>
-                                <span className="font-semibold text-sm">{item.label}</span>
-                            </Link>
-                        );
-                    })}
+                            return (
+                                <Link
+                                    key={item.path}
+                                    to={item.path}
+                                    className={`flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-200 group relative ${active
+                                        ? "bg-teal-600 text-white shadow-lg shadow-teal-600/30"
+                                        : "text-slate-500 hover:bg-slate-50 hover:text-teal-600"
+                                        }`}
+                                >
+                                    <div className="relative">
+                                        <item.icon className={`w-5 h-5 ${active ? "text-white" : "group-hover:text-teal-600"}`} />
+                                        {hasBadge && (
+                                            <div className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-rose-500 text-white text-[8px] font-black rounded-full flex items-center justify-center border-2 border-white animate-pulse">
+                                                {item.badge}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <span className="font-semibold text-sm">{item.label}</span>
+                                </Link>
+                            );
+                        })}
                 </nav>
 
                 <div className="p-6 border-t border-slate-50">
@@ -136,8 +149,8 @@ export function MainLayout() {
                             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">Mi Perfil</p>
                         </div>
                     </Link>
-                    <button 
-                        onClick={logout} 
+                    <button
+                        onClick={logout}
                         className="mt-4 w-full flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-rose-500 px-2 transition-colors"
                     >
                         <LogOut size={14} /> Cerrar sesión
@@ -166,32 +179,33 @@ export function MainLayout() {
 
             <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-[100] bg-white/90 backdrop-blur-xl border-t border-slate-100 px-2 pb-safe-area-inset-bottom shadow-[0_-10px_25px_rgba(0,0,0,0.03)]">
                 <div className="flex justify-around items-center h-16 max-w-md mx-auto">
-                    {navItems.map((item) => {
-                        const active = isActive(item.path);
-                        const hasBadge = item.badge !== undefined && item.badge > 0;
+                    {navItems
+                        .filter(item => item.roles.includes(user?.role || 'user'))
+                        .map((item) => {
+                            const active = isActive(item.path);
+                            const hasBadge = item.badge !== undefined && item.badge > 0;
 
-                        return (
-                            <Link
-                                key={item.path}
-                                to={item.path}
-                                className={`flex flex-col items-center justify-center flex-1 gap-1 transition-all duration-300 relative ${
-                                    active ? "text-teal-600" : "text-slate-400"
-                                }`}
-                            >
-                                <div className={`p-1 rounded-xl transition-all relative ${active ? "bg-teal-50" : ""}`}>
-                                    <item.icon size={20} strokeWidth={active ? 2.5 : 2} />
-                                    {hasBadge && (
-                                        <div className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 text-white text-[8px] font-black rounded-full flex items-center justify-center border border-white">
-                                            {item.badge}
-                                        </div>
-                                    )}
-                                </div>
-                                <span className={`text-[9px] font-bold uppercase tracking-tighter ${active ? "opacity-100" : "opacity-60"}`}>
-                                    {item.label}
-                                </span>
-                            </Link>
-                        );
-                    })}
+                            return (
+                                <Link
+                                    key={item.path}
+                                    to={item.path}
+                                    className={`flex flex-col items-center justify-center flex-1 gap-1 transition-all duration-300 relative ${active ? "text-teal-600" : "text-slate-400"
+                                        }`}
+                                >
+                                    <div className={`p-1 rounded-xl transition-all relative ${active ? "bg-teal-50" : ""}`}>
+                                        <item.icon size={20} strokeWidth={active ? 2.5 : 2} />
+                                        {hasBadge && (
+                                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 text-white text-[8px] font-black rounded-full flex items-center justify-center border border-white">
+                                                {item.badge}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <span className={`text-[9px] font-bold uppercase tracking-tighter ${active ? "opacity-100" : "opacity-60"}`}>
+                                        {item.label}
+                                    </span>
+                                </Link>
+                            );
+                        })}
                 </div>
             </nav>
         </div>

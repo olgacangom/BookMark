@@ -16,6 +16,13 @@ import { UserStats } from './user-stats.entity';
 import { Badge } from '../badge.entity';
 import { Club } from 'src/club/entities/club.entity';
 
+export enum UserRole {
+  USER = 'user',
+  LIBRERO = 'librero',
+  LIBRERO_PENDIENTE = 'librero_pendiente',
+  ADMIN = 'admin',
+}
+
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn('uuid')
@@ -31,13 +38,35 @@ export class User {
   @Column({ nullable: true })
   fullName: string;
 
+  @Column({
+    type: 'enum',
+    enum: UserRole,
+    default: UserRole.USER,
+  })
+  role: UserRole;
+
+  @Column({ nullable: true })
+  libraryName: string;
+
+  @Column({ nullable: true })
+  libraryAddress: string;
+
+  @Column({ nullable: true })
+  document: string;
+
+  @Column({ nullable: true })
+  libraryPhone: string;
+
+  @Column({ nullable: true })
+  librarySchedule: string;
+
   @Column({ nullable: true })
   bio: string;
 
   @Column({ nullable: true })
   avatarUrl: string;
 
-  @Column({ default: true }) // Por defecto el perfil es público
+  @Column({ default: true })
   isPublic: boolean;
 
   @Column({ default: true })

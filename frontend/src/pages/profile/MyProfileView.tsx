@@ -32,7 +32,6 @@ const FollowModal = ({
             <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-300" onClick={onClose}></div>
             
             <div className="bg-white rounded-[3rem] w-full max-w-md max-h-[70vh] flex flex-col shadow-2xl relative animate-in zoom-in-95 duration-300 overflow-hidden border-8 border-white">
-                
                 <div className="flex border-b border-slate-50">
                     <button 
                         onClick={() => setActiveTab('followers')}
@@ -65,11 +64,9 @@ const FollowModal = ({
                                         <p className="text-[10px] text-slate-400 font-medium">@{u.email.split('@')[0]}</p>
                                     </div>
                                 </div>
-                                
                                 <button 
                                     onClick={() => onStartChat(u.id)}
                                     className="p-2.5 bg-teal-50 text-teal-600 rounded-xl hover:bg-teal-600 hover:text-white transition-all shadow-sm"
-                                    title="Enviar mensaje"
                                 >
                                     <MessageCircle size={16} />
                                 </button>
@@ -96,7 +93,7 @@ const FollowModal = ({
 
 export const MyProfileView = () => {
     const { user, updateUser } = useAuth();
-    const navigate = useNavigate(); // Hook para navegar
+    const navigate = useNavigate();
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const [isEditing, setIsEditing] = useState(false);
@@ -153,6 +150,7 @@ export const MyProfileView = () => {
     }
 
     const handleAvatarClick = () => fileInputRef.current?.click();
+    
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -163,7 +161,11 @@ export const MyProfileView = () => {
             const { data } = await api.post('/users/avatar', fd, { headers: { 'Content-Type': 'multipart/form-data' }});
             updateUser(data);
             fetchFreshUserData();
-        } catch { console.error("Error avatar"); } finally { setIsUploadingAvatar(false); }
+        } catch { 
+            console.error("Error avatar"); 
+        } finally { 
+            setIsUploadingAvatar(false); 
+        }
     };
 
     const handleSave = async () => {
@@ -177,7 +179,11 @@ export const MyProfileView = () => {
             updateUser(data);
             setIsEditing(false);
             fetchFreshUserData();
-        } catch { console.error("Error save"); } finally { setIsSaving(false); }
+        } catch { 
+            console.error("Error save"); 
+        } finally { 
+            setIsSaving(false); 
+        }
     };
 
     const togglePrivacy = async () => {
@@ -186,7 +192,9 @@ export const MyProfileView = () => {
         try {
             const { data } = await api.patch('/users/profile', { isPublic: newStatus });
             updateUser(data);
-        } catch { setFormData(prev => ({ ...prev, isPublic: !newStatus })); }
+        } catch { 
+            setFormData(prev => ({ ...prev, isPublic: !newStatus })); 
+        }
     };
 
     return (
@@ -200,7 +208,6 @@ export const MyProfileView = () => {
 
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="relative -mt-32 md:-mt-44 flex flex-col md:flex-row items-center md:items-end gap-8 z-10">
-                        
                         <div className="relative group">
                             <div className="w-44 h-44 md:w-56 md:h-56 rounded-[2.5rem] border-[10px] border-white bg-white shadow-2xl overflow-hidden relative">
                                 {isUploadingAvatar && (
@@ -220,7 +227,7 @@ export const MyProfileView = () => {
                         <div className="flex-1 w-full">
                             <div className="bg-white/90 backdrop-blur-xl rounded-[3rem] p-6 md:p-10 border border-white shadow-xl">
                                 <div className="flex flex-col md:flex-row justify-between items-start gap-6 mb-8 text-left">
-                                    <div>
+                                    <div className="min-w-0 flex-1">
                                         {isEditing ? (
                                             <input
                                                 className="text-xl md:text-2xl font-black text-slate-900 bg-slate-50 border-b-2 border-teal-500 px-3 py-1 outline-none w-full rounded-lg"
@@ -228,7 +235,7 @@ export const MyProfileView = () => {
                                                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                             />
                                         ) : (
-                                            <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight leading-tight uppercase">
+                                            <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight leading-tight uppercase truncate">
                                                 {profileData?.fullName || 'Lector'}
                                             </h1>
                                         )}
@@ -241,9 +248,7 @@ export const MyProfileView = () => {
                                                 <span className="text-xl font-black text-slate-900">{profileData?.followerRelations?.length || 0}</span>
                                                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Seguidores</span>
                                             </button>
-
                                             <div className="w-1.5 h-1.5 bg-teal-500/20 rounded-full"></div>
-
                                             <button 
                                                 onClick={() => { setActiveTab('following'); setIsFollowModalOpen(true); }}
                                                 className="flex items-baseline gap-1.5 hover:opacity-60 transition-all"
@@ -287,23 +292,25 @@ export const MyProfileView = () => {
                 </div>
             </div>
 
-            {/* Privacidad */}
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12">
-                <div className="bg-white/80 backdrop-blur-xl rounded-[2.5rem] p-6 border border-white flex justify-between items-center shadow-xl">
-                    <div className="flex items-center gap-5">
-                        <div className={`p-4 rounded-[1.5rem] ${formData.isPublic ? 'bg-teal-50 text-teal-600' : 'bg-slate-100 text-slate-400'}`}>
-                            {formData.isPublic ? <Unlock size={28} /> : <Lock size={28} />}
+            {/* --- BLOQUE DE PRIVACIDAD (SOLO PARA ROL 'user') --- */}
+            {user.role === 'user' && (
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12 animate-in slide-in-from-bottom-4 duration-500">
+                    <div className="bg-white/80 backdrop-blur-xl rounded-[2.5rem] p-6 border border-white flex justify-between items-center shadow-xl">
+                        <div className="flex items-center gap-5">
+                            <div className={`p-4 rounded-[1.5rem] ${formData.isPublic ? 'bg-teal-50 text-teal-600' : 'bg-slate-100 text-slate-400'}`}>
+                                {formData.isPublic ? <Unlock size={28} /> : <Lock size={28} />}
+                            </div>
+                            <div className="text-left">
+                                <h3 className="font-black text-slate-900 text-lg uppercase">Visibilidad</h3>
+                                <p className="text-xs text-slate-500 font-medium">{formData.isPublic ? 'Perfil público' : 'Perfil privado'}</p>
+                            </div>
                         </div>
-                        <div className="text-left">
-                            <h3 className="font-black text-slate-900 text-lg uppercase">Visibilidad</h3>
-                            <p className="text-xs text-slate-500 font-medium">{formData.isPublic ? 'Perfil público' : 'Perfil privado'}</p>
-                        </div>
+                        <button onClick={togglePrivacy} className={`w-16 h-9 rounded-full relative transition-all ${formData.isPublic ? 'bg-teal-500' : 'bg-slate-300'}`}>
+                            <div className={`absolute top-1 w-7 h-7 bg-white rounded-full transition-all ${formData.isPublic ? 'left-8' : 'left-1'}`} />
+                        </button>
                     </div>
-                    <button onClick={togglePrivacy} className={`w-16 h-9 rounded-full relative transition-all ${formData.isPublic ? 'bg-teal-500' : 'bg-slate-300'}`}>
-                        <div className={`absolute top-1 w-7 h-7 bg-white rounded-full transition-all ${formData.isPublic ? 'left-8' : 'left-1'}`} />
-                    </button>
                 </div>
-            </div>
+            )}
 
             <FollowModal 
                 isOpen={isFollowModalOpen} 

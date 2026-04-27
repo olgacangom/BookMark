@@ -3,18 +3,21 @@ import {
   NotFoundException,
   ForbiddenException,
   BadRequestException,
+  OnModuleInit,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ILike, Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
-import { CreateUserDto } from './dto/create-user.dto';
+import { ConfigService } from '@nestjs/config';
+
 import { UpdateUserDto } from './dto/update-user.dto';
-import { User } from './entities/user.entity';
+import { User, UserRole } from './entities/user.entity';
 import { Follow, FollowStatus } from './entities/follow.entity';
 import { ActivitiesService } from './activities.service';
 import { ActivityType } from './entities/activity.entity';
 import { UserStats } from './entities/user-stats.entity';
 import { Badge } from './badge.entity';
+import { RegisterDto } from 'src/auth/dto/register.dto';
 
 interface GrowthData {
   month: string;
@@ -22,7 +25,7 @@ interface GrowthData {
 }
 
 @Injectable()
-export class UsersService {
+export class UsersService implements OnModuleInit {
   constructor(
     @InjectRepository(User)
     private readonly usersRepository: Repository<User>,
@@ -30,19 +33,85 @@ export class UsersService {
     private readonly followRepository: Repository<Follow>,
     @InjectRepository(UserStats)
     private readonly userStatsRepository: Repository<UserStats>,
-    private readonly activitiesService: ActivitiesService,
     @InjectRepository(Badge)
     private readonly badgeRepository: Repository<Badge>,
+    private readonly activitiesService: ActivitiesService,
+    private readonly configService: ConfigService,
   ) {}
 
-  async create(createUserDto: CreateUserDto) {
-    const existingUser = await this.findOneByEmail(createUserDto.email);
+  async onModuleInit() {
+    console.log('📦 Inicializando sistema de usuarios...');
+    await this.setupAdmin();
+    await this.setupInitialBadges();
+  }
+
+  // --- SECCIÓN SEEDERS  ---
+
+  private async setupAdmin() {
+    const adminEmail = this.configService.get<string>('ADMIN_EMAIL');
+    const adminPass = this.configService.get<string>('ADMIN_PASSWORD');
+
+    if (!adminEmail || !adminPass) {
+      console.warn(
+        '⚠️ No se han configurado las credenciales de ADMIN en el .env',
+      );
+      return;
+    }
+
+    const adminExists = await this.usersRepository.findOne({
+      where: { role: UserRole.ADMIN },
+    });
+
+    if (!adminExists) {
+      console.log('🚀 Creando usuario administrador inicial...');
+      const hashedPassword = await bcrypt.hash(adminPass, 10);
+
+      const admin = this.usersRepository.create({
+        email: adminEmail,
+        password: hashedPassword,
+        fullName: 'Administrador de BookMark',
+        role: UserRole.ADMIN,
+        isPublic: true,
+      });
+
+      await this.usersRepository.save(admin);
+      console.log('✅ Admin creado con éxito');
+    }
+  }
+
+  private async setupInitialBadges() {
+    const count = await this.badgeRepository.count();
+    if (count === 0) {
+      await this.badgeRepository.save([
+        {
+          name: 'Primeras Páginas',
+          description: '¡Has terminado tu primer libro!',
+          icon: '📚',
+          requirementType: 'BOOKS_READ',
+          requirementValue: 1,
+        },
+        {
+          name: 'Erudito',
+          description: 'Has leído 5 libros. ¡Increíble!',
+          icon: '🎓',
+          requirementType: 'BOOKS_READ',
+          requirementValue: 5,
+        },
+      ]);
+      console.log('✅ Medallas inicializadas');
+    }
+  }
+
+  // --- MÉTODOS DE USUARIO ---
+
+  async create(registerDto: RegisterDto) {
+    const existingUser = await this.findOneByEmail(registerDto.email);
     if (existingUser) {
       throw new BadRequestException('El email ya está registrado');
     }
-    const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
+    const hashedPassword = await bcrypt.hash(registerDto.password, 10);
     const newUser = this.usersRepository.create({
-      ...createUserDto,
+      ...registerDto,
       password: hashedPassword,
     });
     const savedUser = await this.usersRepository.save(newUser);
@@ -59,7 +128,7 @@ export class UsersService {
     return savedUser;
   }
 
-  async findOneByEmail(email: string) {
+  async findOneByEmail(email: string): Promise<User | null> {
     return await this.usersRepository.findOneBy({ email });
   }
 
@@ -73,11 +142,12 @@ export class UsersService {
         avatarUrl: true,
         bio: true,
         isPublic: true,
+        role: true,
       },
     });
   }
 
-  async findOne(id: string) {
+  async findOne(id: string): Promise<User> {
     const user = await this.usersRepository.findOne({
       where: { id },
       relations: [
@@ -103,6 +173,8 @@ export class UsersService {
     await this.usersRepository.save(user);
     return this.findOne(id);
   }
+
+  // --- SISTEMA SOCIAL  ---
 
   async followUser(followerId: string, targetUserId: string) {
     if (followerId === targetUserId) {
@@ -136,9 +208,7 @@ export class UsersService {
       where: { follower: { id: followerId }, following: { id: targetUserId } },
     });
 
-    if (!follow) {
-      return { message: 'No había relación previa' };
-    }
+    if (!follow) return { message: 'No había relación previa' };
 
     await this.followRepository.remove(follow);
     return { message: 'Relación eliminada' };
@@ -177,7 +247,6 @@ export class UsersService {
   async declineFollowRequest(requestId: string) {
     const request = await this.followRepository.findOneBy({ id: requestId });
     if (!request) throw new NotFoundException('Solicitud no encontrada');
-
     return await this.followRepository.remove(request);
   }
 
@@ -192,19 +261,7 @@ export class UsersService {
   }
 
   async findOneProfile(id: string, requesterId: string) {
-    const user = await this.usersRepository.findOne({
-      where: { id },
-      relations: [
-        'followerRelations',
-        'followerRelations.follower',
-        'followingRelations',
-        'followingRelations.following',
-        'stats',
-        'badges',
-      ],
-    });
-
-    if (!user) throw new NotFoundException('Usuario no encontrado');
+    const user = await this.findOne(id);
 
     const isFollowing = user.followerRelations.some(
       (f) =>
@@ -219,10 +276,11 @@ export class UsersService {
       throw new ForbiddenException('Este perfil es privado');
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password: _password, ...result } = user;
+    const userInstance = user as Partial<User>;
+    delete userInstance.password;
+
     return {
-      ...result,
+      ...userInstance,
       isFollowing,
       hasPendingRequest,
     };
@@ -233,6 +291,8 @@ export class UsersService {
     if (!user) throw new NotFoundException('Usuario no encontrado');
     return this.usersRepository.remove(user);
   }
+
+  // --- GAMIFICACIÓN ---
 
   async addExperience(userId: string, xpAmount: number) {
     let stats = await this.userStatsRepository.findOne({
@@ -263,10 +323,6 @@ export class UsersService {
     if (!stats) return;
 
     stats.totalBooksFinished += 1;
-    console.log(
-      `📈 Sumando libro terminado. Total ahora: ${stats.totalBooksFinished}`,
-    );
-
     const now = new Date();
     const lastActivity = stats.lastActivityDate;
 
@@ -274,21 +330,16 @@ export class UsersService {
       stats.currentStreak = 1;
       stats.lastActivityDate = now;
     } else {
-      const diffInMs = now.getTime() - lastActivity.getTime();
-      const diffInHours = diffInMs / (1000 * 60 * 60);
-
+      const diffInHours =
+        (now.getTime() - lastActivity.getTime()) / (1000 * 60 * 60);
       if (diffInHours >= 24 && diffInHours < 48) {
-        // Ha pasado un día: aumenta racha
         stats.currentStreak += 1;
         stats.lastActivityDate = now;
       } else if (diffInHours >= 48) {
-        // Ha pasado demasiado tiempo: reset racha
         stats.currentStreak = 1;
         stats.lastActivityDate = now;
       }
-      // Si diffInHours < 24, simplemente NO tocamos la racha ni la fecha,
     }
-
     await this.userStatsRepository.save(stats);
   }
 
@@ -304,47 +355,20 @@ export class UsersService {
       if (!user.badges.find((b) => b.id === badge.id)) {
         user.badges.push(badge);
         await this.usersRepository.save(user);
-        console.log(`🏅 Medalla '${badge.name}' asignada a ${user.fullName}`);
       }
-    }
-  }
-
-  async onModuleInit() {
-    const count = await this.badgeRepository.count();
-    if (count === 0) {
-      await this.badgeRepository.save([
-        {
-          name: 'Primeras Páginas',
-          description: '¡Has terminado tu primer libro!',
-          icon: '📚',
-          requirementType: 'BOOKS_READ',
-          requirementValue: 1,
-        },
-        {
-          name: 'Erudito',
-          description: 'Has leído 5 libros. ¡Increíble!',
-          icon: '🎓',
-          requirementType: 'BOOKS_READ',
-          requirementValue: 5,
-        },
-      ]);
-      console.log('✅ Medallas de BookMark inicializadas');
     }
   }
 
   async getBooksGrowth(userId: string): Promise<GrowthData[]> {
     const queryBuilder = this.usersRepository.createQueryBuilder('user');
-
-    const result = await queryBuilder
+    return await queryBuilder
       .leftJoin('user.books', 'book')
-      .select('TO_CHAR(book."createdAt", \'YYYY-MM\')', 'month')
+      .select("TO_CHAR(book.createdAt, 'YYYY-MM')", 'month')
       .addSelect('COUNT(book.id)', 'count')
       .where('user.id = :userId', { userId })
       .groupBy('month')
       .orderBy('month', 'ASC')
       .getRawMany();
-
-    return result as GrowthData[];
   }
 
   async updateAvatar(userId: string, url: string) {
