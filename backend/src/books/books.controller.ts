@@ -8,6 +8,7 @@ import {
   Delete,
   UseGuards,
   Request,
+  Query,
 } from '@nestjs/common';
 import { BooksService } from './books.service';
 import { CreateBookDto } from './dto/create-book.dto';
@@ -38,10 +39,34 @@ export class BooksController {
     return this.booksService.findAll(req.user.id);
   }
 
+  // --- RUTAS ESTÁTICAS/ESPECÍFICAS  ---
+
+  @Get('search')
+  async search(@Query('query') query: string) {
+    return this.booksService.search(query);
+  }
+
+  @Get('featured/trending')
+  getFeatured() {
+    return {
+      id: 999,
+      title: 'El Nombre del Viento',
+      author: 'Patrick Rothfuss',
+      urlPortada:
+        'https://images.unsplash.com/photo-1762970783061-1b8b2248d9e5?q=80&w=800',
+      rating: 4.9,
+      description: 'Una crónica magistral sobre la vida de Kvothe...',
+      genre: 'Fantasía',
+      pageCount: 800,
+    };
+  }
+
   @Get('search/:isbn')
-  async search(@Param('isbn') isbn: string) {
+  async searchByIsbn(@Param('isbn') isbn: string) {
     return this.booksService.searchByIsbn(isbn);
   }
+
+  // --- RUTAS DINÁMICAS ---
 
   @Get(':id')
   findOne(@Param('id') id: string, @Request() req: RequestWithUser) {
@@ -60,21 +85,5 @@ export class BooksController {
   @Delete(':id')
   remove(@Param('id') id: string, @Request() req: RequestWithUser) {
     return this.booksService.remove(+id, req.user.id);
-  }
-
-  @Get('featured/trending')
-  getFeatured() {
-    return {
-      id: 999,
-      title: 'El Nombre del Viento',
-      author: 'Patrick Rothfuss',
-      urlPortada:
-        'https://images.unsplash.com/photo-1762970783061-1b8b2248d9e5?q=80&w=800',
-      rating: 4.9,
-      description:
-        'Una crónica magistral sobre la vida de Kvothe. Una historia de magia y música que redefine la épica.',
-      genre: 'Fantasía',
-      pageCount: 800,
-    };
   }
 }

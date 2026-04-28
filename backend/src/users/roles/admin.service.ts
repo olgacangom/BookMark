@@ -13,7 +13,7 @@ export class AdminService {
     private readonly bookRepository: Repository<Book>,
   ) {}
 
-  // Cambair el estado de un usuario registrado
+  // Cambiar el estado de un usuario registrado
   async toggleUserStatus(id: string) {
     const user = await this.userRepository.findOne({ where: { id } });
     if (!user) throw new NotFoundException('Usuario no encontrado');
@@ -58,7 +58,7 @@ export class AdminService {
         .select('book.genre', 'genre')
         .addSelect('COUNT(*)', 'count')
         .groupBy('book.genre')
-        .orderBy('count', 'DESC') // Simplificamos el alias
+        .orderBy('count', 'DESC')
         .limit(5)
         .getRawMany();
 
@@ -69,7 +69,7 @@ export class AdminService {
         .addSelect('COUNT(*)', 'totalSaves')
         .groupBy('book.title')
         .addGroupBy('book.author')
-        .orderBy('COUNT(*)', 'DESC') 
+        .orderBy('COUNT(*)', 'DESC')
         .limit(5)
         .getRawMany();
 
@@ -115,7 +115,7 @@ export class AdminService {
     const user = await this.userRepository.findOne({ where: { id } });
     if (!user) throw new NotFoundException('Usuario no encontrado');
 
-    // Si lo rechazamos, borramos la cuenta 
+    // Si lo rechazamos, borramos la cuenta
     await this.userRepository.remove(user);
     return {
       message: `Solicitud de '${user.fullName}' rechazada y eliminada.`,

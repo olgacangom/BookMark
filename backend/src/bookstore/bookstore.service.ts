@@ -47,7 +47,12 @@ export class BookstoreService {
     const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`;
 
     try {
-      const response = await axios.get<OverpassResponse>(url);
+      const response = await axios.get<OverpassResponse>(url, {
+        headers: {
+          'User-Agent': 'BookMark_TFG_Application/1.0',
+          Accept: 'application/json',
+        },
+      });
 
       return response.data.elements.map(
         (el: OverpassElement): NearbyBookstore => {
