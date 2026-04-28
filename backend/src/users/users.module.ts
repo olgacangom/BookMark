@@ -17,6 +17,9 @@ import { Club } from 'src/club/entities/club.entity';
 import { AdminController, LibreroController } from './roles/roles.controller';
 import { AdminService } from './roles/admin.service';
 import { Book } from 'src/books/entities/book.entity';
+import { StoreInventory } from './entities/store-inventory.entity';
+import { LibraryEvent } from './entities/library-event.entity';
+import { LibrerosService } from './roles/libreros.service';
 
 @Module({
   imports: [
@@ -25,6 +28,8 @@ import { Book } from 'src/books/entities/book.entity';
       Follow,
       Activity,
       UserStats,
+      StoreInventory,
+      LibraryEvent,
       Badge,
       ActivityLike,
       ActivityComment,
@@ -44,6 +49,7 @@ import { Book } from 'src/books/entities/book.entity';
     ActivitiesService,
     GamificationListener,
     AdminService,
+    LibrerosService,
   ],
   exports: [UsersService, ActivitiesService],
 })

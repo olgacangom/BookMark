@@ -21,6 +21,9 @@ export class Book {
   @Column()
   author: string;
 
+  @Column({ nullable: true })
+  isbn: string;
+
   @Column({
     type: 'enum',
     enum: BookStatus,

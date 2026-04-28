@@ -19,6 +19,8 @@ import { ForgotPasswordView } from './pages/auth/ForgotPasswordView';
 import { ResetPasswordView } from './pages/auth/ResetPasswordView';
 import { AdminUserListView } from './pages/admin/AdminUserListView';
 import { AdminStatsView } from './pages/admin/AdminStatsView';
+import { LibreroCatalogView } from './pages/librero/LibreroCatalogoView';
+import { LibreroDashboardView } from './pages/librero/LibreroDashboardView';
 
 function App() {
   return (
@@ -47,6 +49,8 @@ function App() {
               <Route path="bookstore" element={<BookstoresMapView />} />
               <Route path="admin/users" element={<AdminUserListView />} />
               <Route path="admin/stats" element={<AdminStatsView />} />
+              <Route path="librero/dashboard" element={<LibreroDashboardView />} />
+              <Route path="librero/catalog" element={<LibreroCatalogView />} />
               <Route path="myprofile" element={<MyProfileView />} />
             </Route>
           </Route>

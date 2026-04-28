@@ -1,6 +1,10 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { ILike, Repository } from 'typeorm';
 import { Book } from './entities/book.entity';
 import { CreateBookDto } from './dto/create-book.dto';
 import { UpdateBookDto } from './dto/update-book.dto';
@@ -25,6 +29,15 @@ export class BooksService {
 
   async searchByIsbn(isbn: string) {
     return this.googleBooksService.findByIsbn(isbn);
+  }
+
+  async search(query: string) {
+    if (!query || query.length < 2) return [];
+
+    return await this.bookRepository.find({
+      where: [{ title: ILike(`%${query}%`) }, { author: ILike(`%${query}%`) }],
+      take: 10,
+    });
   }
 
   async create(createBookDto: CreateBookDto, userId: string) {
@@ -57,10 +70,20 @@ export class BooksService {
   }
 
   async findOne(id: number, userId: string) {
+    if (isNaN(id)) {
+      throw new BadRequestException(
+        'El ID del libro debe ser un número válido',
+      );
+    }
+
     const book = await this.bookRepository.findOne({
       where: { id, userId },
     });
-    if (!book) throw new NotFoundException(`Libro con ID ${id} no encontrado`);
+
+    if (!book) {
+      throw new NotFoundException(`Libro con ID ${id} no encontrado`);
+    }
+
     return book;
   }
 
