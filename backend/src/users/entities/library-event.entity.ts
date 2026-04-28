@@ -4,8 +4,10 @@ import {
   Column,
   ManyToOne,
   CreateDateColumn,
+  OneToMany,
 } from 'typeorm';
 import { User } from './user.entity';
+import { EventRegistration } from 'src/bookstore/entities/event-registration.entity';
 
 @Entity('library_events')
 export class LibraryEvent {
@@ -27,6 +29,10 @@ export class LibraryEvent {
   @ManyToOne(() => User, (user) => user.id)
   organizer: User;
 
+  @OneToMany(() => EventRegistration, (reg) => reg.event)
+  registrations: EventRegistration[];
+
+  @Column({ type: 'int', default: 0 })
   @CreateDateColumn()
   createdAt: Date;
 }

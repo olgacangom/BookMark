@@ -4,10 +4,12 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DeepPartial, MoreThan, Repository } from 'typeorm';
 import { StoreInventory } from '../entities/store-inventory.entity';
 import { Book } from '../../books/entities/book.entity';
 import { User } from '../entities/user.entity';
+import { LibraryEvent } from '../entities/library-event.entity';
+import { EventRegistration } from 'src/bookstore/entities/event-registration.entity';
 
 @Injectable()
 export class LibrerosService {
@@ -18,8 +20,13 @@ export class LibrerosService {
     private readonly bookRepository: Repository<Book>,
     @InjectRepository(User)
     private readonly usersRepository: Repository<User>,
+    @InjectRepository(LibraryEvent)
+    private readonly eventRepository: Repository<LibraryEvent>,
+    @InjectRepository(EventRegistration)
+    private readonly registrationRepository: Repository<EventRegistration>,
   ) {}
 
+  // Catálogo/Inventario
   async addToInventory(
     libreroId: string,
     bookId: string,
@@ -112,10 +119,13 @@ export class LibrerosService {
     const totalBooks = await this.inventoryRepository.count({
       where: { librero: { id: libreroId } },
     });
+    const activeEvents = await this.eventRepository.count({
+      where: { organizer: { id: libreroId } },
+    });
 
     return {
       totalBooks,
-      activeEvents: 0,
+      activeEvents,
       recentViews: Math.floor(Math.random() * 100),
     };
   }
@@ -143,7 +153,7 @@ export class LibrerosService {
         },
         inStock: true,
       },
-      relations: ['librero', 'book'], 
+      relations: ['librero', 'book'],
     });
 
     return inventoryItems.map((item) => ({
@@ -151,5 +161,113 @@ export class LibrerosService {
       price: item.price,
       store: item.librero,
     }));
+  }
+
+  // Eventos/Quedadas físicas
+  async createEvent(
+    libreroId: string,
+    data: Partial<LibraryEvent>,
+  ): Promise<LibraryEvent> {
+    const eventData: DeepPartial<LibraryEvent> = {
+      ...data,
+      organizer: { id: libreroId } as User,
+    };
+
+    const newEvent = this.eventRepository.create(eventData);
+
+    return this.eventRepository.save(newEvent);
+  }
+
+  async getMyEvents(libreroId: string): Promise<any[]> {
+    const events = await this.eventRepository.find({
+      where: { organizer: { id: libreroId } },
+      // Se cargan las inscripciones para poder contarlas
+      relations: ['registrations'],
+      order: { eventDate: 'ASC' },
+    });
+
+    return events.map((event) => ({
+      ...event,
+      attendeesCount: event.registrations?.length || 0,
+    }));
+  }
+
+  async updateEvent(
+    libreroId: string,
+    eventId: string,
+    data: Partial<LibraryEvent>,
+  ): Promise<LibraryEvent> {
+    const event = await this.eventRepository.findOne({
+      where: { id: eventId, organizer: { id: libreroId } },
+    });
+    if (!event) throw new NotFoundException('Evento no encontrado');
+
+    Object.assign(event, data);
+    return this.eventRepository.save(event);
+  }
+
+  async deleteEvent(libreroId: string, eventId: string): Promise<void> {
+    const event = await this.eventRepository.findOne({
+      where: { id: eventId, organizer: { id: libreroId } },
+    });
+    if (!event) throw new NotFoundException('Evento no encontrado');
+    await this.eventRepository.remove(event);
+  }
+
+  async getAllFutureEvents(): Promise<any[]> {
+    const events = await this.eventRepository.find({
+      where: { eventDate: MoreThan(new Date()) },
+      relations: ['organizer', 'registrations', 'registrations.user'], // Cargamos las inscripciones
+      order: { eventDate: 'ASC' },
+    });
+
+    return events.map((event) => ({
+      ...event,
+      attendeesCount: event.registrations?.length || 0,
+    }));
+  }
+
+  async joinEvent(userId: string, eventId: string) {
+    const event = await this.eventRepository.findOne({
+      where: { id: eventId },
+      relations: ['registrations'],
+    });
+
+    if (!event) throw new NotFoundException('Evento no encontrado');
+
+    // Validar si ya está apuntado
+    const isAlreadyJoined = event.registrations.some(
+      (reg) => reg.user?.id === userId,
+    );
+    if (isAlreadyJoined)
+      throw new BadRequestException('Ya estás apuntado a este evento');
+
+    // Validar aforo
+    if (event.maxCapacity && event.registrations.length >= event.maxCapacity) {
+      throw new BadRequestException('Evento lleno');
+    }
+
+    const registration = this.registrationRepository.create({
+      user: { id: userId } as User,
+      event: { id: eventId } as LibraryEvent,
+    });
+
+    return this.registrationRepository.save(registration);
+  }
+
+  async getEventAttendees(libreroId: string, eventId: string) {
+    const event = await this.eventRepository.findOne({
+      where: {
+        id: eventId,
+        organizer: { id: libreroId }, // El evento pertenece a este librero
+      },
+      relations: ['registrations', 'registrations.user'],
+    });
+
+    if (!event) {
+      throw new NotFoundException('Evento no encontrado o no tienes permiso');
+    }
+
+    return event.registrations.map((reg) => reg.user);
   }
 }

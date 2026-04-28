@@ -1,10 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
-import {
-    MapPin, Phone, Clock, Plus,
-    ChevronRight, Package, Loader2, X
-} from 'lucide-react';
+import { MapPin, Phone, Clock, Plus, Package, Loader2, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export const LibreroDashboardView = () => {
@@ -152,8 +149,8 @@ export const LibreroDashboardView = () => {
                             <h3 className="text-2xl font-black mb-2 uppercase tracking-tighter">Gestionar Catálogo</h3>
                             <p className="opacity-80 text-sm">Tienes {stats.totalBooks} libros publicados actualmente.</p>
                         </div>
-                        <Link to="/librero/catalog" className="px-8 py-4 bg-white text-teal-700 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] hover:scale-105 transition-transform flex items-center gap-2">
-                            Ir al Catálogo <ChevronRight size={16} />
+                        <Link to="/librero/events" className="px-8 py-4 bg-white text-teal-700 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] hover:scale-105 transition-transform flex items-center gap-2">
+                             <Plus size={18} /> Nuevo Evento
                         </Link>
                     </div>
                 </div>

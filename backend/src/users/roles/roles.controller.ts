@@ -15,6 +15,7 @@ import { Roles } from './roles.decorator';
 import { RolesGuard } from './roles.guard';
 import { AdminService } from './admin.service';
 import { LibrerosService } from './libreros.service';
+import { LibraryEvent } from '../entities/library-event.entity';
 
 @Controller('admin')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -124,5 +125,48 @@ export class LibreroController {
   @Roles(UserRole.USER, UserRole.LIBRERO, UserRole.ADMIN)
   findStores(@Param('bookId') bookId: string) {
     return this.librerosService.findStoresByBook(bookId);
+  }
+
+  // Eventos/Quedadas físicas
+  @Get('events')
+  getMyEvents(@Req() req: { user: User }) {
+    return this.librerosService.getMyEvents(req.user.id);
+  }
+
+  @Post('events')
+  createEvent(@Req() req: { user: User }, @Body() data: Partial<LibraryEvent>) {
+    return this.librerosService.createEvent(req.user.id, data);
+  }
+
+  @Patch('events/:id')
+  updateEvent(
+    @Req() req: { user: User },
+    @Param('id') id: string,
+    @Body() data: Partial<LibraryEvent>,
+  ) {
+    return this.librerosService.updateEvent(req.user.id, id, data);
+  }
+
+  @Delete('events/:id')
+  deleteEvent(@Req() req: { user: User }, @Param('id') id: string) {
+    return this.librerosService.deleteEvent(req.user.id, id);
+  }
+
+  @Get('events/all')
+  @Roles(UserRole.USER, UserRole.LIBRERO, UserRole.ADMIN)
+  async getAllEvents() {
+    return this.librerosService.getAllFutureEvents();
+  }
+
+  @Post('events/:id/join')
+  @Roles(UserRole.USER, UserRole.LIBRERO, UserRole.ADMIN)
+  async joinEvent(@Param('id') eventId: string, @Req() req: { user: User }) {
+    return this.librerosService.joinEvent(req.user.id, eventId);
+  }
+
+  @Get('events/:id/attendees')
+  @Roles(UserRole.LIBRERO)
+  async getAttendees(@Param('id') eventId: string, @Req() req: { user: User }) {
+    return this.librerosService.getEventAttendees(req.user.id, eventId);
   }
 }

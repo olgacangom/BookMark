@@ -21,6 +21,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
 import { RegisterDto } from 'src/auth/dto/register.dto';
+import { User } from './entities/user.entity';
 
 interface RequestWithUser {
   user: {
@@ -91,6 +92,12 @@ export class UsersController {
     const url = `http://localhost:3000/uploads/avatars/${file.filename}`;
 
     return this.usersService.updateAvatar(userId, url);
+  }
+
+  @Delete('avatar')
+  @UseGuards(JwtAuthGuard)
+  async deleteAvatar(@Req() req: { user: User }) {
+    return this.usersService.deleteAvatar(req.user.id);
   }
 
   // RUTAS DE ACCIÓN SOCIAL
