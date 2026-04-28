@@ -20,6 +20,7 @@ import { Book } from 'src/books/entities/book.entity';
 import { StoreInventory } from './entities/store-inventory.entity';
 import { LibraryEvent } from './entities/library-event.entity';
 import { LibrerosService } from './roles/libreros.service';
+import { EventRegistration } from 'src/bookstore/entities/event-registration.entity';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { LibrerosService } from './roles/libreros.service';
       UserStats,
       StoreInventory,
       LibraryEvent,
+      EventRegistration,
       Badge,
       ActivityLike,
       ActivityComment,

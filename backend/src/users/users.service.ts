@@ -376,4 +376,11 @@ export class UsersService implements OnModuleInit {
     user.avatarUrl = url;
     return this.usersRepository.save(user);
   }
+
+  async deleteAvatar(userId: string) {
+    const user = await this.usersRepository.findOne({ where: { id: userId } });
+    if (!user) throw new NotFoundException('Usuario no encontrado');
+    user.avatarUrl = null;
+    return this.usersRepository.save(user);
+  }
 }

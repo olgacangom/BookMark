@@ -5,9 +5,10 @@ import { UserCard } from '../components/UserCard';
 import {
     Search, Loader2, TrendingUp, Bookmark, 
     MapPin, Store, X, ShoppingBag, Book as BookIcon,
-    UserIcon, CheckCircle2
+    UserIcon, CheckCircle2, Clock, ChevronRight
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { JoinEventModal } from './JoinEventModal'; 
 
 const AvailabilityModal = ({ isOpen, onClose, stores, bookTitle }: any) => {
     if (!isOpen) return null;
@@ -61,13 +62,15 @@ export const ExploreView = () => {
     const [users, setUsers] = useState<any[]>([]);
     const [bookResults, setBookResults] = useState<any[]>([]);
     const [featuredBook, setFeaturedBook] = useState<any | null>(null);
+    const [events, setEvents] = useState<any[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(true);
     const [isSearching, setIsSearching] = useState(false);
     const [isAdding, setIsAdding] = useState(false);
 
-    const [myBookKeys, setMyBookKeys] = useState<string[]>([]);
+    const [selectedEvent, setSelectedEvent] = useState<any | null>(null); 
 
+    const [myBookKeys, setMyBookKeys] = useState<string[]>([]);
     const [isAvailabilityOpen, setIsAvailabilityOpen] = useState(false);
     const [availableStores, setAvailableStores] = useState([]);
     const [selectedBookForStores, setSelectedBookForStores] = useState<string>('');
@@ -76,10 +79,11 @@ export const ExploreView = () => {
         if (!currentUser) return;
         setLoading(true);
         try {
-            const [usersRes, booksRes, myBooksRes] = await Promise.allSettled([
+            const [usersRes, booksRes, myBooksRes, eventsRes] = await Promise.allSettled([
                 api.get('/users'),
                 api.get('/books'),
-                bookService.getMyBooks()
+                bookService.getMyBooks(),
+                api.get('/librero/events/all')
             ]);
 
             if (usersRes.status === 'fulfilled') {
@@ -99,6 +103,10 @@ export const ExploreView = () => {
 
             if (myBooksRes.status === 'fulfilled') {
                 setMyBookKeys(myBooksRes.value.map(b => `${b.title}-${b.author}`.toLowerCase()));
+            }
+
+            if (eventsRes.status === 'fulfilled') {
+                setEvents(eventsRes.value.data);
             }
         } finally {
             setLoading(false);
@@ -131,9 +139,7 @@ export const ExploreView = () => {
             setAvailableStores(res.data);
             setSelectedBookForStores(book.title);
             setIsAvailabilityOpen(true);
-        } catch { 
-            alert("Error al consultar stock"); 
-        }
+        } catch { alert("Error al consultar stock"); }
     };
 
     const isAlreadyInLibrary = (book: any) => {
@@ -146,20 +152,11 @@ export const ExploreView = () => {
         setIsAdding(true);
         try {
             await bookService.create({
-                title: book.title,
-                author: book.author,
-                status: 'Want to Read',
-                urlPortada: book.urlPortada,
-                genre: book.genre,
-                description: book.description,
-                pageCount: book.pageCount
+                title: book.title, author: book.author, status: 'Want to Read',
+                urlPortada: book.urlPortada, genre: book.genre, description: book.description, pageCount: book.pageCount
             });
             setMyBookKeys(prev => [...prev, `${book.title}-${book.author}`.toLowerCase()]);
-        } catch (error) {
-            console.error("Error al añadir", error);
-        } finally {
-            setIsAdding(false);
-        }
+        } catch (error) { console.error("Error al añadir", error); } finally { setIsAdding(false); }
     };
 
     if (loading) return <div className="flex h-[80vh] items-center justify-center"><Loader2 className="w-10 h-10 animate-spin text-teal-600" /></div>;
@@ -207,8 +204,55 @@ export const ExploreView = () => {
                 </section>
             )}
 
-            <header className="max-w-7xl mx-auto px-6 mt-16 mb-8">
-                <h2 className="text-4xl font-black text-slate-900 uppercase italic">Explorar</h2>
+            {/* --- SECCIÓN DE EVENTOS --- */}
+            {!searchTerm && events.length > 0 && (
+                <section className="max-w-7xl mx-auto px-6 mt-16 animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-200 text-left">
+                    <div className="flex items-end justify-between mb-8 px-2">
+                        <div>
+                            <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tighter italic leading-none">Eventos Próximos</h3>
+                            <p className="text-[10px] text-teal-600 font-black uppercase tracking-widest mt-2">Quedadas presenciales en librerías</p>
+                        </div>
+                        <button className="text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-teal-600 transition-colors">Ver Agenda →</button>
+                    </div>
+
+                    <div className="flex gap-6 overflow-x-auto pb-8 no-scrollbar -mx-6 px-6">
+                        {events.map((event) => (
+                            <div 
+                                key={event.id} 
+                                onClick={() => setSelectedEvent(event)} 
+                                className="min-w-[280px] md:min-w-[340px] bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-100 hover:shadow-xl transition-all duration-500 group cursor-pointer flex flex-col"
+                            >
+                                <div className="flex items-center gap-2 mb-4 text-left">
+                                    <div className="p-2 bg-teal-50 text-teal-600 rounded-xl group-hover:bg-teal-600 group-hover:text-white transition-colors">
+                                        <Store size={14} />
+                                    </div>
+                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest truncate">{event.organizer?.libraryName}</span>
+                                </div>
+                                <h4 className="text-xl font-black text-slate-900 uppercase text-left leading-tight mb-4 group-hover:text-teal-600 transition-colors line-clamp-2 min-h-[3rem]">{event.title}</h4>
+                                
+                                <div className="space-y-3 mt-auto pt-6 border-t border-slate-50">
+                                    <div className="flex items-center gap-3">
+                                        <Clock className="text-teal-500" size={14} />
+                                        <span className="text-[10px] font-bold text-slate-600 uppercase">
+                                            {new Date(event.eventDate).toLocaleDateString([], { day: '2-digit', month: 'long' })} • {new Date(event.eventDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        </span>
+                                    </div>
+                                    {/* BOTÓN CONECTADO AL MODAL */}
+                                    <button 
+                                        onClick={(e) => { e.stopPropagation(); setSelectedEvent(event); }} 
+                                        className="w-full mt-2 py-3 bg-slate-50 text-slate-400 rounded-xl font-black text-[9px] uppercase tracking-widest group-hover:bg-slate-900 group-hover:text-white transition-all flex items-center justify-center gap-2"
+                                    >
+                                        Más Información <ChevronRight size={12} />
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </section>
+            )}
+
+            <header className="max-w-7xl mx-auto px-6 mt-16 mb-8 text-left">
+                <h2 className="text-4xl font-black text-slate-900 uppercase italic leading-none">Explorar</h2>
                 <div className="relative w-full md:max-w-md group mt-6">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
                     <input type="text" placeholder="Busca por título o @lector..." className="w-full bg-white border border-slate-200 rounded-[1.5rem] py-4 pl-12 pr-4 text-sm font-bold focus:ring-8 focus:ring-teal-500/5 outline-none shadow-sm" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
@@ -217,6 +261,7 @@ export const ExploreView = () => {
             </header>
 
             <main className="max-w-7xl mx-auto px-6 space-y-12">
+                {/* Book Results */}
                 {bookResults.length > 0 && (
                     <section>
                         <h3 className="text-[10px] font-black text-teal-600 uppercase tracking-[0.3em] mb-6 ml-2 flex items-center gap-2"><BookIcon size={14} /> Catálogo de Libros</h3>
@@ -235,6 +280,7 @@ export const ExploreView = () => {
                     </section>
                 )}
 
+                {/* Users list */}
                 <section>
                     <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-6 ml-2 flex items-center gap-2"><UserIcon size={14} /> Comunidad de Lectores</h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -244,6 +290,13 @@ export const ExploreView = () => {
             </main>
 
             <AvailabilityModal isOpen={isAvailabilityOpen} onClose={() => setIsAvailabilityOpen(false)} stores={availableStores} bookTitle={selectedBookForStores} />
+
+            <JoinEventModal 
+                isOpen={!!selectedEvent} 
+                event={selectedEvent} 
+                onClose={() => setSelectedEvent(null)} 
+                onStatusChange={loadExploreData} 
+            />
         </div>
     );
 };

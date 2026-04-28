@@ -70,14 +70,14 @@ export function MainLayout() {
     const navItems = [
 
         //USERS
-        { path: "/explore", icon: Compass, label: "Descubrir", roles: ['user']},
+        { path: "/explore", icon: Compass, label: "Descubrir", roles: ['user'] },
         { path: "/feed", icon: Sparkles, label: "Feed", roles: ['user'] },
         { path: "/library", icon: Bookmark, label: "Biblioteca", roles: ['user'] },
         { path: "/dashboard", icon: BarChart3, label: "Estadísticas", roles: ['user'] },
         { path: "/requests", icon: Bell, label: "Solicitudes", badge: totalRequests, roles: ['user'] },
         { path: "/chat", icon: MessageCircle, label: "Chat", badge: totalUnread, roles: ['user'] },
         { path: "/clubs", icon: Club, label: "Clubs", roles: ['user'] },
-        { path: "/bookstore", icon: Store, label: "Bookstore", roles: ['user']},
+        { path: "/bookstore", icon: Store, label: "Bookstore", roles: ['user'] },
 
         //ADMIN
         { path: "/admin/users", icon: User, label: "Gestión Usuarios", roles: ['admin'] },
@@ -86,7 +86,7 @@ export function MainLayout() {
         //LIBREROS
         { path: "/librero/catalog", icon: Library, label: "Mi Catálogo", roles: ['librero'] },
         { path: "/librero/events", icon: Sparkles, label: "Mis Eventos", roles: ['librero'] },
-
+        
         // Comunes
         { path: "/myprofile", icon: User, label: "Perfil", roles: ['user', 'admin', 'librero'] },
     ];
