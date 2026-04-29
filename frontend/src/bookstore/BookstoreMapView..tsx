@@ -1,9 +1,9 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
-import { 
-    Loader2, MapPinHouse, MapPin, 
-    Book as BookIcon, X, ShoppingBag,  
+import {
+    Loader2, MapPin,
+    Book as BookIcon, Search, X
 } from 'lucide-react';
 import api from './../services/api';
 
@@ -39,12 +39,10 @@ export const BookstoresMapView = () => {
     const [bookstores, setBookstores] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
-    // ESTADOS PARA BÚSQUEDA DE UBICACIÓN
     const [searchQuery, setSearchQuery] = useState('');
     const [suggestions, setSuggestions] = useState<any[]>([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
 
-    // ESTADOS PARA BÚSQUEDA DE LIBRO
     const [bookSearch, setBookSearch] = useState('');
     const [bookSuggestions, setBookSuggestions] = useState<any[]>([]);
     const [selectedBook, setSelectedBook] = useState<any | null>(null);
@@ -121,7 +119,18 @@ export const BookstoresMapView = () => {
                 setSuggestions(data);
                 setShowSuggestions(true);
             }, 300);
+        } else {
+            setSuggestions([]);
+            setShowSuggestions(false);
         }
+    };
+
+    const selectLocation = (lat: string, lon: string, display: string) => {
+        const coords: [number, number] = [parseFloat(lat), parseFloat(lon)];
+        setViewPos(coords);
+        setSearchQuery(display);
+        setShowSuggestions(false);
+        fetchBookstores(coords[0], coords[1], selectedBook?.id);
     };
 
     useEffect(() => {
@@ -140,50 +149,44 @@ export const BookstoresMapView = () => {
     }, [fetchBookstores]);
 
     return (
-        <div className="h-[calc(100vh-140px)] p-6 animate-in fade-in duration-700 text-left">
-            <header className="mb-6 flex flex-col xl:flex-row justify-between items-start xl:items-end gap-6 relative">
+        <div className="flex flex-col h-[calc(100dvh-140px)] md:h-[calc(100vh-120px)] p-4 md:p-6 animate-in fade-in duration-700 text-left overflow-hidden">
+            <header className="mb-4 flex flex-col xl:flex-row justify-between items-start xl:items-end gap-4 relative shrink-0">
                 <div>
-                    <h1 className="text-4xl font-black text-slate-900 tracking-tighter">
+                    <h1 className="text-3xl lg:text-4xl font-black text-slate-900 tracking-tighter">
                         Encuentra <span className="text-teal-600 italic font-serif">Stock.</span>
                     </h1>
-                    <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-2 flex items-center gap-2">
-                        {loading ? (
-                            <span className="flex items-center gap-2 text-teal-600"><Loader2 size={12} className="animate-spin"/> Actualizando mapa...</span>
-                        ) : selectedBook ? (
-                            <span className="flex items-center gap-1 text-teal-600"><ShoppingBag size={12}/> Mostrando tiendas con este ejemplar</span>
-                        ) : (
-                            `Explorando ${bookstores.length} puntos de venta`
-                        )}
+                    <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-1">
+                        {loading ? "Actualizando mapa..." : `Explorando ${bookstores.length} puntos de venta`}
                     </p>
                 </div>
 
-                <div className="flex flex-col md:flex-row gap-3 w-full xl:w-auto">
-                    <div className="relative w-full md:w-80">
-                        <div className={`relative group transition-all ${selectedBook ? 'ring-2 ring-teal-500 rounded-2xl' : ''}`}>
+                <div className="flex flex-col md:flex-row gap-2 w-full xl:w-auto">
+                    {/* BUSCADOR DE LIBROS */}
+                    <div className="relative w-full md:w-72 group">
+                        <div className="relative">
                             <input
                                 type="text"
-                                placeholder="¿Buscas un libro concreto?"
+                                placeholder="¿Buscas un libro?"
                                 value={bookSearch}
                                 onChange={handleBookInputChange}
-                                className="w-full bg-white border border-slate-200 rounded-2xl px-6 py-3 pl-12 text-sm shadow-md focus:border-teal-600 outline-none font-bold"
+                                className="w-full bg-white border border-slate-200 rounded-2xl px-4 py-2.5 pl-10 text-xs shadow-sm focus:border-teal-600 outline-none font-bold"
                             />
-                            {isSearchingBook ? (
-                                <Loader2 className="absolute left-4 top-1/2 -translate-y-1/2 text-teal-600 animate-spin" size={18} />
-                            ) : (
-                                <BookIcon className={`absolute left-4 top-1/2 -translate-y-1/2 ${selectedBook ? 'text-teal-600' : 'text-slate-400'}`} size={18} />
-                            )}
-                            {selectedBook && (
-                                <button onClick={clearBookFilter} className="absolute right-4 top-1/2 -translate-y-1/2 text-rose-500"><X size={16}/></button>
-                            )}
+                            <BookIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                            {isSearchingBook && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-teal-600" size={14} />}
                         </div>
+
                         {bookSuggestions.length > 0 && (
-                            <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden z-[1001]">
-                                {bookSuggestions.map((b) => (
-                                    <button key={b.id} onClick={() => selectBook(b)} className="w-full flex items-center gap-3 px-4 py-3 hover:bg-teal-50 text-left border-b border-slate-50 last:border-0">
-                                        <img src={b.urlPortada} className="w-8 h-10 object-cover rounded-md" alt="" />
+                            <div className="absolute top-full left-0 w-full bg-white mt-2 rounded-2xl shadow-2xl border border-slate-100 z-[1001] overflow-hidden">
+                                {bookSuggestions.map((book) => (
+                                    <button
+                                        key={book.id}
+                                        onClick={() => selectBook(book)}
+                                        className="w-full p-3 flex items-center gap-3 hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-none text-left"
+                                    >
+                                        <img src={book.urlPortada} className="w-8 h-12 object-cover rounded shadow-sm" alt="" />
                                         <div>
-                                            <p className="text-xs font-bold text-slate-800 truncate">{b.title}</p>
-                                            <p className="text-[10px] text-slate-400 uppercase">{b.author}</p>
+                                            <p className="text-[10px] font-black text-slate-900 uppercase leading-tight">{book.title}</p>
+                                            <p className="text-[9px] text-slate-400 font-bold uppercase">{book.author}</p>
                                         </div>
                                     </button>
                                 ))}
@@ -191,23 +194,29 @@ export const BookstoresMapView = () => {
                         )}
                     </div>
 
-                    <div className="relative w-full md:w-80">
-                        <div className="relative group">
+                    {/* BUSCADOR DE LOCALIZACIÓN */}
+                    <div className="relative w-full md:w-72">
+                        <div className="relative">
                             <input
                                 type="text"
                                 placeholder="Cambiar ubicación..."
                                 value={searchQuery}
                                 onChange={handleLocationChange}
-                                className="w-full bg-slate-100 border-none rounded-2xl px-6 py-3 pl-12 text-sm focus:bg-white focus:ring-4 focus:ring-teal-500/5 outline-none transition-all font-medium"
+                                className="w-full bg-slate-100 border-none rounded-2xl px-4 py-2.5 pl-10 text-xs focus:bg-white focus:ring-1 focus:ring-slate-200 outline-none font-medium"
                             />
-                            <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                            <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                         </div>
+
                         {showSuggestions && suggestions.length > 0 && (
-                            <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden z-[1000]">
-                                {suggestions.map((s, i) => (
-                                    <button key={i} onClick={() => { setViewPos([parseFloat(s.lat), parseFloat(s.lon)]); setSearchQuery(s.display_name); setShowSuggestions(false); fetchBookstores(parseFloat(s.lat), parseFloat(s.lon), selectedBook?.id); }} className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 text-left border-b border-slate-50 last:border-0">
-                                        <MapPin size={14} className="text-teal-600" />
-                                        <span className="text-xs text-slate-600 truncate">{s.display_name}</span>
+                            <div className="absolute top-full left-0 w-full bg-white mt-2 rounded-2xl shadow-2xl border border-slate-100 z-[1001] overflow-hidden">
+                                {suggestions.map((loc: any, idx: number) => (
+                                    <button
+                                        key={idx}
+                                        onClick={() => selectLocation(loc.lat, loc.lon, loc.display_name)}
+                                        className="w-full p-3 text-[10px] font-bold text-slate-600 hover:bg-teal-50 hover:text-teal-700 transition-colors border-b border-slate-50 last:border-none text-left flex items-center gap-2"
+                                    >
+                                        <Search size={12} />
+                                        <span className="truncate">{loc.display_name}</span>
                                     </button>
                                 ))}
                             </div>
@@ -216,22 +225,29 @@ export const BookstoresMapView = () => {
                 </div>
             </header>
 
-            <div className="h-full rounded-[3rem] overflow-hidden shadow-2xl border-8 border-white relative bg-slate-50">
+            <div className="flex-1 min-h-0 w-full rounded-[2.5rem] overflow-hidden shadow-2xl border-4 md:border-8 border-white relative bg-slate-50">
                 {selectedBook && (
-                    <div className="absolute top-6 left-6 z-[999] animate-in slide-in-from-left-4">
-                        <div className="bg-white/90 backdrop-blur-md p-4 rounded-3xl shadow-xl border border-teal-100 flex items-center gap-4">
-                            <img src={selectedBook.urlPortada} className="w-12 h-16 object-cover rounded-xl shadow-md" alt="" />
-                            <div>
-                                <p className="text-[10px] font-black text-teal-600 uppercase tracking-widest">Buscando ejemplar:</p>
-                                <h3 className="text-sm font-black text-slate-900 leading-tight">{selectedBook.title}</h3>
-                                <button onClick={clearBookFilter} className="text-[10px] font-bold text-rose-500 underline uppercase mt-1">Quitar filtro</button>
+                    <div className="absolute top-4 left-4 z-[999] animate-in slide-in-from-left-4">
+                        <div className="bg-white/90 backdrop-blur-md p-3 rounded-2xl shadow-xl border border-teal-100 flex items-center gap-3">
+                            <img src={selectedBook.urlPortada} className="w-8 h-12 object-cover rounded-lg shadow-sm" alt="" />
+                            <div className="max-w-[120px]">
+                                <p className="text-[8px] font-black text-teal-600 uppercase tracking-widest leading-none mb-1">Filtrando por:</p>
+                                <h3 className="text-[10px] font-black text-slate-900 leading-tight truncate">{selectedBook.title}</h3>
+                                <button onClick={clearBookFilter} className="flex items-center gap-1 mt-1 text-[8px] font-black text-rose-500 uppercase hover:text-rose-700">
+                                    <X size={8} /> Quitar filtro
+                                </button>
                             </div>
                         </div>
                     </div>
                 )}
 
                 {viewPos ? (
-                    <MapContainer center={viewPos} zoom={14} className="h-full w-full">
+                    <MapContainer
+                        center={viewPos}
+                        zoom={14}
+                        className="h-full w-full"
+                        attributionControl={false}
+                    >
                         <TileLayer url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" />
                         <ChangeView center={viewPos} />
 
@@ -240,27 +256,18 @@ export const BookstoresMapView = () => {
                         </Marker>
 
                         {bookstores.map(store => (
-                            <Marker 
-                                key={store.id} 
-                                position={[store.latitude, store.longitude]} 
+                            <Marker
+                                key={store.id}
+                                position={[store.latitude, store.longitude]}
                                 icon={selectedBook ? iconBookInStock : iconBookstore}
                             >
                                 <Popup>
-                                    <div className="p-2 min-w-[180px] text-left">
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <div className="w-8 h-8 bg-teal-50 rounded-lg flex items-center justify-center text-teal-600"><MapPinHouse size={16} /></div>
-                                            <h3 className="font-black text-slate-900 uppercase text-[10px] leading-tight">{store.name}</h3>
-                                        </div>
-                                        {selectedBook && (
-                                            <div className="mb-3 p-2 bg-emerald-50 rounded-xl border border-emerald-100 flex items-center gap-2">
-                                                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-                                                <p className="text-[9px] font-black text-emerald-700 uppercase">¡Libro disponible!</p>
-                                            </div>
-                                        )}
-                                        <p className="text-[9px] text-slate-500 mb-3 italic">{store.address}</p>
+                                    <div className="p-1 min-w-[150px] text-left">
+                                        <h3 className="font-black text-slate-900 uppercase text-[10px] mb-1">{store.name}</h3>
+                                        <p className="text-[9px] text-slate-500 mb-2 italic leading-tight">{store.address}</p>
                                         <div className="grid grid-cols-2 gap-2">
-                                            <a href={`tel:${store.phone}`} className="py-2 bg-teal-600 text-white rounded-xl text-[9px] font-black uppercase text-center">Llamar</a>
-                                            <a href={`https://www.google.com/maps/dir/?api=1&destination=${store.latitude},${store.longitude}`} target="_blank" rel="noreferrer" className="py-2 bg-slate-900 text-white rounded-xl text-[9px] font-black uppercase text-center">Ruta</a>
+                                            <a href={`tel:${store.phone}`} className="py-1.5 bg-teal-600 text-white rounded-lg text-[9px] font-black uppercase text-center shadow-sm">Llamar</a>
+                                            <a href={`https://www.google.com/maps/dir/?api=1&destination=${store.latitude},${store.longitude}`} target="_blank" rel="noreferrer" className="py-1.5 bg-slate-900 text-white rounded-lg text-[9px] font-black uppercase text-center shadow-sm">Ruta</a>
                                         </div>
                                     </div>
                                 </Popup>
@@ -268,9 +275,9 @@ export const BookstoresMapView = () => {
                         ))}
                     </MapContainer>
                 ) : (
-                    <div className="h-full flex flex-col items-center justify-center gap-4">
+                    <div className="h-full flex flex-col items-center justify-center gap-4 bg-white/50">
                         <Loader2 className="animate-spin text-teal-600" size={48} />
-                        <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Sincronizando satélites...</p>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Localizando...</p>
                     </div>
                 )}
             </div>

@@ -52,11 +52,9 @@ describe('LoginView', () => {
 
         renderWithProviders(<LoginView />);
 
-        // ✅ Textos corregidos para coincidir con el componente real
         fireEvent.change(screen.getByLabelText(/Correo Electrónico/i), { target: { value: 'test@test.com' } });
         fireEvent.change(screen.getByLabelText(/Contraseña/i), { target: { value: 'password123' } });
 
-        // ✅ El botón real dice "Iniciar Sesión"
         fireEvent.click(screen.getByRole('button', { name: /Iniciar Sesión/i }));
 
         await waitFor(() => {
@@ -81,7 +79,7 @@ describe('LoginView', () => {
         fireEvent.click(screen.getByRole('button', { name: /Iniciar Sesión/i }));
 
         await waitFor(() => {
-            // ✅ Comprobamos que el mensaje de error aparece en el DOM
+            // Comprobamos que el mensaje de error aparece en el DOM
             expect(screen.getByText(/Credenciales incorrectas. Inténtalo de nuevo./i)).toBeInTheDocument();
         });
     });

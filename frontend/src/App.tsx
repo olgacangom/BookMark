@@ -4,7 +4,6 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { MainLayout } from './layouts/MainLayout';
 import { LoginView } from './pages/auth/LoginView';
 import { RegisterView } from './pages/auth/RegisterView';
-import { DashboardView } from './pages/dashboard/DashboardView';
 import { LibraryView } from './pages/books/LibraryView';
 import { MyProfileView } from './pages/profile/MyProfileView';
 import { ExploreView } from './users/pages/ExploreView';
@@ -21,6 +20,7 @@ import { AdminUserListView } from './pages/admin/AdminUserListView';
 import { AdminStatsView } from './pages/admin/AdminStatsView';
 import { LibreroCatalogView } from './pages/librero/LibreroCatalogoView';
 import { LibreroEventsView } from './pages/librero/LibreroEventsView';
+import { SustainabilityView } from './pages/sustainability/SustainabilityView';
 
 function App() {
   return (
@@ -37,7 +37,6 @@ function App() {
           <Route element={<ProtectedRoute />}>
             <Route path="/" element={<MainLayout />}>
               <Route index element={<Navigate to="/explore" />} />
-              <Route path="dashboard" element={<DashboardView />} />
               <Route path="library" element={<LibraryView />} />
               <Route path="explore" element={<ExploreView />} />
               <Route path="feed" element={<FeedView />} />
@@ -51,6 +50,7 @@ function App() {
               <Route path="admin/stats" element={<AdminStatsView />} />
               <Route path="librero/events" element={<LibreroEventsView />} />
               <Route path="librero/catalog" element={<LibreroCatalogView />} />
+              <Route path= "sustainability" element={<SustainabilityView/>} />
               <Route path="myprofile" element={<MyProfileView />} />
             </Route>
           </Route>
