@@ -21,6 +21,11 @@ import { StoreInventory } from './entities/store-inventory.entity';
 import { LibraryEvent } from './entities/library-event.entity';
 import { LibrerosService } from './roles/libreros.service';
 import { EventRegistration } from 'src/bookstore/entities/event-registration.entity';
+import { BookListing } from './entities/book-listing.entity';
+import { DonationPoint } from './entities/donation-point.entity';
+import { SustainabilityService } from './sustainability/sustainability.service';
+import { SustainabilityController } from './sustainability/sustainability.controller';
+import { SustainabilityRequest } from './entities/sustainability-request.entity';
 
 @Module({
   imports: [
@@ -38,6 +43,9 @@ import { EventRegistration } from 'src/bookstore/entities/event-registration.ent
       ActivityIgnore,
       Club,
       Book,
+      BookListing,
+      DonationPoint,
+      SustainabilityRequest,
     ]),
   ],
   controllers: [
@@ -45,6 +53,7 @@ import { EventRegistration } from 'src/bookstore/entities/event-registration.ent
     ActivitiesController,
     AdminController,
     LibreroController,
+    SustainabilityController,
   ],
   providers: [
     UsersService,
@@ -52,6 +61,7 @@ import { EventRegistration } from 'src/bookstore/entities/event-registration.ent
     GamificationListener,
     AdminService,
     LibrerosService,
+    SustainabilityService,
   ],
   exports: [UsersService, ActivitiesService],
 })
