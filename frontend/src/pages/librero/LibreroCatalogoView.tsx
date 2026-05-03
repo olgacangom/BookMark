@@ -1,9 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
     Search, Plus, Trash2, Loader2,
-    ArrowLeft, CheckCircle2, Tag, AlertTriangle, X, Check, AlertCircle
+    CheckCircle2, Tag, AlertTriangle, X, Check, AlertCircle
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 
 import { AddStoreBookModal } from './AddStoreBookModal';
@@ -52,7 +51,6 @@ const ConfirmDeleteStoreModal = ({ isOpen, onClose, onConfirm, title }: any) => 
 };
 
 export const LibreroCatalogView = () => {
-    const navigate = useNavigate();
     const [searchTerm, setSearchTerm] = useState('');
     const [myStock, setMyStock] = useState<any[]>([]);
     const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -146,9 +144,6 @@ export const LibreroCatalogView = () => {
             
             <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-6">
                 <div className="flex items-center gap-4">
-                    <button onClick={() => navigate(-1)} className="p-2 hover:bg-slate-100 rounded-full transition-colors flex-shrink-0">
-                        <ArrowLeft size={20} />
-                    </button>
                     <div className="min-w-0">
                         <h2 className="text-2xl md:text-3xl font-black text-slate-900 leading-none mb-1">Mi Catálogo</h2>
                         <p className="text-slate-400 text-xs md:text-sm font-medium italic">Gestiona tus existencias</p>

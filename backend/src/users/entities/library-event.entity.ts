@@ -6,8 +6,8 @@ import {
   CreateDateColumn,
   OneToMany,
 } from 'typeorm';
-import { User } from './user.entity';
 import { EventRegistration } from 'src/bookstore/entities/event-registration.entity';
+import { User } from './user.entity';
 
 @Entity('library_events')
 export class LibraryEvent {

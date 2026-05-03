@@ -45,7 +45,7 @@ export class UsersService implements OnModuleInit {
     await this.setupInitialBadges();
   }
 
-  // --- SECCIÓN SEEDERS  ---
+  // --- SECCIÓN SEEDERS ---
 
   private async setupAdmin() {
     const adminEmail = this.configService.get<string>('ADMIN_EMAIL');
@@ -53,7 +53,7 @@ export class UsersService implements OnModuleInit {
 
     if (!adminEmail || !adminPass) {
       console.warn(
-        '⚠️ No se han configurado las credenciales de ADMIN en el .env',
+        'No se han configurado las credenciales de ADMIN en el .env',
       );
       return;
     }
@@ -75,7 +75,7 @@ export class UsersService implements OnModuleInit {
       });
 
       await this.usersRepository.save(admin);
-      console.log('✅ Admin creado con éxito');
+      console.log('Admin creado con éxito');
     }
   }
 
@@ -98,7 +98,7 @@ export class UsersService implements OnModuleInit {
           requirementValue: 5,
         },
       ]);
-      console.log('✅ Medallas inicializadas');
+      console.log('Medallas inicializadas');
     }
   }
 
@@ -157,10 +157,69 @@ export class UsersService implements OnModuleInit {
         'followingRelations.following',
         'stats',
         'badges',
+        'clubs',
+        'clubs.creator',
+        'clubs.members',
       ],
     });
     if (!user) throw new NotFoundException('Usuario no encontrado');
     return user;
+  }
+
+  /**
+   * Obtiene el perfil de un usuario aplicando lógica de privacidad
+   * y calculando estados de seguimiento para el usuario solicitante.
+   */
+  async findOneProfile(id: string, requesterId: string) {
+    const user = await this.usersRepository.findOne({
+      where: { id },
+      relations: [
+        'followerRelations',
+        'followerRelations.follower',
+        'followingRelations',
+        'followingRelations.following',
+        'stats',
+        'badges',
+        'clubs',
+        'clubs.creator',
+        'clubs.members',
+        'registrations',
+        'registrations.event',
+        'registrations.event.organizer',
+      ],
+    });
+
+    if (!user) throw new NotFoundException('Usuario no encontrado');
+
+    const isFollowing = user.followerRelations.some(
+      (f) =>
+        f.follower.id === requesterId && f.status === FollowStatus.ACCEPTED,
+    );
+
+    const hasPendingRequest = user.followerRelations.some(
+      (f) => f.follower.id === requesterId && f.status === FollowStatus.PENDING,
+    );
+
+    // Verificamos privacidad: si es privado y no soy yo ni le sigo, Forbidden
+    if (!user.isPublic && user.id !== requesterId && !isFollowing) {
+      throw new ForbiddenException('Este perfil es privado');
+    }
+
+    const attendedEvents =
+      user.registrations?.map((reg) => ({
+        ...reg.event,
+        registrationId: reg.id,
+      })) || [];
+
+    const userInstance = user as Partial<User>;
+    delete userInstance.password;
+
+    return {
+      ...userInstance,
+      isFollowing,
+      hasPendingRequest,
+      events: attendedEvents,
+    };
   }
 
   async update(id: string, updateUserDto: UpdateUserDto) {
@@ -174,7 +233,7 @@ export class UsersService implements OnModuleInit {
     return this.findOne(id);
   }
 
-  // --- SISTEMA SOCIAL  ---
+  // --- SISTEMA SOCIAL ---
 
   async followUser(followerId: string, targetUserId: string) {
     if (followerId === targetUserId) {
@@ -260,36 +319,22 @@ export class UsersService implements OnModuleInit {
     });
   }
 
-  async findOneProfile(id: string, requesterId: string) {
-    const user = await this.findOne(id);
-
-    const isFollowing = user.followerRelations.some(
-      (f) =>
-        f.follower.id === requesterId && f.status === FollowStatus.ACCEPTED,
-    );
-
-    const hasPendingRequest = user.followerRelations.some(
-      (f) => f.follower.id === requesterId && f.status === FollowStatus.PENDING,
-    );
-
-    if (!user.isPublic && user.id !== requesterId && !isFollowing) {
-      throw new ForbiddenException('Este perfil es privado');
-    }
-
-    const userInstance = user as Partial<User>;
-    delete userInstance.password;
-
-    return {
-      ...userInstance,
-      isFollowing,
-      hasPendingRequest,
-    };
-  }
-
   async remove(id: string) {
     const user = await this.usersRepository.findOneBy({ id });
     if (!user) throw new NotFoundException('Usuario no encontrado');
     return this.usersRepository.remove(user);
+  }
+
+  async getFollowingIds(userId: string): Promise<string[]> {
+    const follows = await this.followRepository.find({
+      where: {
+        follower: { id: userId },
+        status: FollowStatus.ACCEPTED,
+      },
+      relations: ['following'],
+    });
+
+    return follows.map((f) => f.following.id);
   }
 
   // --- GAMIFICACIÓN ---

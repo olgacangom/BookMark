@@ -10,6 +10,7 @@ import {
   Req,
   Query,
   ParseIntPipe,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { Request } from 'express';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
@@ -28,12 +29,24 @@ interface RequestWithUser extends Request {
 }
 
 @Controller('sustainability')
+@UseGuards(JwtAuthGuard)
 export class SustainabilityController {
   constructor(private readonly sustainabilityService: SustainabilityService) {}
 
   @Get('listings')
   getAll(@Query('type') type?: ListingType) {
     return this.sustainabilityService.findAllListings(type);
+  }
+
+  @Get('listings/social')
+  async getSocial(@Req() req: RequestWithUser) {
+    const userId = req.user?.id;
+
+    if (!userId) {
+      throw new UnauthorizedException('No se pudo identificar al usuario');
+    }
+
+    return this.sustainabilityService.getSocialListings(userId);
   }
 
   @Get('donation-points')
@@ -46,44 +59,35 @@ export class SustainabilityController {
     return this.sustainabilityService.findByBookId(bookId);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Post('listings')
-  create(
-    @Req() req: RequestWithUser,
-    @Body() data: CreateListingDto, 
-  ) {
+  create(@Req() req: RequestWithUser, @Body() data: CreateListingDto) {
     return this.sustainabilityService.createListing(req.user.id, data);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Get('listings/me')
   getMyListings(@Req() req: RequestWithUser) {
     return this.sustainabilityService.findMyListings(req.user.id);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Post('listings/:id/donate')
   markDonated(@Req() req: RequestWithUser, @Param('id') id: string) {
     return this.sustainabilityService.markAsDonated(req.user.id, id);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Patch('listings/:id')
   update(
     @Req() req: RequestWithUser,
     @Param('id') id: string,
-    @Body() data: UpdateListingDto, 
+    @Body() data: UpdateListingDto,
   ) {
     return this.sustainabilityService.updateListing(req.user.id, id, data);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Delete('listings/:id')
   remove(@Req() req: RequestWithUser, @Param('id') id: string) {
     return this.sustainabilityService.deleteListing(req.user.id, id);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Post('requests')
   createRequest(
     @Req() req: RequestWithUser,
@@ -92,13 +96,11 @@ export class SustainabilityController {
     return this.sustainabilityService.createRequest(req.user.id, listingId);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Get('requests/me')
   async getMyRequests(@Req() req: RequestWithUser) {
     return this.sustainabilityService.getUserRequests(req.user.id);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Patch('requests/:id/status')
   async updateStatus(
     @Req() req: RequestWithUser,
@@ -112,13 +114,11 @@ export class SustainabilityController {
     );
   }
 
-  @UseGuards(JwtAuthGuard)
   @Patch('requests/:id/return')
   markReturned(@Req() req: RequestWithUser, @Param('id') id: string) {
     return this.sustainabilityService.markAsReturned(req.user.id, id);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Delete('requests/cancel/:listingId')
   async cancel(
     @Req() req: RequestWithUser,

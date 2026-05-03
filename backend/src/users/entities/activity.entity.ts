@@ -4,7 +4,7 @@ import {
   Column,
   CreateDateColumn,
   ManyToOne,
-  OneToMany, // Añadir esto
+  OneToMany, 
 } from 'typeorm';
 import { User } from './user.entity';
 import { Book } from '../../books/entities/book.entity';
@@ -15,6 +15,7 @@ export enum ActivityType {
   FOLLOW = 'FOLLOW',
   BOOK_ADDED = 'BOOK_ADDED',
   BOOK_FINISHED = 'BOOK_FINISHED',
+  POST = 'POST',
 }
 
 @Entity('activities')
@@ -32,10 +33,10 @@ export class Activity {
   type: ActivityType;
 
   @ManyToOne(() => User, { nullable: true })
-  targetUser: User;
+  targetUser: User | null;
 
   @ManyToOne(() => Book, { nullable: true, onDelete: 'CASCADE' })
-  targetBook: Book;
+  targetBook: Book | null;
 
   @CreateDateColumn({ type: 'timestamp with time zone' })
   createdAt: Date;
@@ -51,4 +52,13 @@ export class Activity {
 
   @OneToMany(() => ActivityComment, (comment) => comment.activity)
   comments: ActivityComment[];
+
+  @Column({ type: 'text', nullable: true })
+  content: string | null; // texto del post
+
+  @Column({ type: 'text', nullable: true })
+  imageUrl: string | null;
+
+  @Column({ type: 'json', nullable: true })
+  pollOptions: string[] | null; // opciones encuesta post
 }

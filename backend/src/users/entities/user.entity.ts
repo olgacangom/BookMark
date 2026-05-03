@@ -15,6 +15,8 @@ import { Follow, FollowStatus } from './follow.entity';
 import { UserStats } from './user-stats.entity';
 import { Badge } from '../badge.entity';
 import { Club } from 'src/club/entities/club.entity';
+import { LibraryEvent } from './library-event.entity';
+import { EventRegistration } from 'src/bookstore/entities/event-registration.entity';
 
 export enum UserRole {
   USER = 'user',
@@ -96,6 +98,13 @@ export class User {
 
   @ManyToMany(() => Club, (club) => club.members)
   clubs: Club[];
+
+  @OneToMany(() => EventRegistration, (registration) => registration.user)
+  registrations: EventRegistration[];
+
+  @ManyToMany(() => LibraryEvent, (event) => event.registrations)
+  @JoinTable()
+  events: LibraryEvent[];
 
   @Column({ type: 'varchar', nullable: true })
   resetPasswordToken: string | null;

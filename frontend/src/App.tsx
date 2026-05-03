@@ -21,6 +21,7 @@ import { AdminStatsView } from './pages/admin/AdminStatsView';
 import { LibreroCatalogView } from './pages/librero/LibreroCatalogoView';
 import { LibreroEventsView } from './pages/librero/LibreroEventsView';
 import { SustainabilityView } from './pages/sustainability/SustainabilityView';
+import { EventsView } from './pages/events/EventsView';
 
 function App() {
   return (
@@ -50,7 +51,8 @@ function App() {
               <Route path="admin/stats" element={<AdminStatsView />} />
               <Route path="librero/events" element={<LibreroEventsView />} />
               <Route path="librero/catalog" element={<LibreroCatalogView />} />
-              <Route path= "sustainability" element={<SustainabilityView/>} />
+              <Route path="sustainability" element={<SustainabilityView />} />
+              <Route path="events" element={<EventsView />} />
               <Route path="myprofile" element={<MyProfileView />} />
             </Route>
           </Route>

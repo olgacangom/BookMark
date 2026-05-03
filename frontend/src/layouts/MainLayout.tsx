@@ -2,7 +2,8 @@ import { Outlet, Link, useLocation } from "react-router-dom";
 import {
     Compass, Sparkles, User, LogOut, Bell,
     BarChart3, Bookmark, Library, Club,
-    Store, MessageCircle, Leaf
+    Store, MessageCircle, Leaf,
+    Calendar
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useEffect, useState } from "react";
@@ -66,12 +67,14 @@ export function MainLayout() {
         { path: "/requests", icon: Bell, label: "Solicitudes", badge: totalRequests, roles: ['user'] },
         { path: "/chat", icon: MessageCircle, label: "Chat", badge: totalUnread, roles: ['user'] },
         { path: "/clubs", icon: Club, label: "Clubs", roles: ['user'] },
+        { path: "/events", icon: Calendar, label: "Eventos", roles: ['user'] },
         { path: "/bookstore", icon: Store, label: "Bookstore", roles: ['user'] },
         { path: "/admin/users", icon: User, label: "Gestión Usuarios", roles: ['admin'] },
         { path: "/admin/stats", icon: BarChart3, label: "Estadísticas Globales", roles: ['admin'] },
         { path: "/librero/catalog", icon: Library, label: "Mi Catálogo", roles: ['librero'] },
         { path: "/librero/events", icon: Sparkles, label: "Mis Eventos", roles: ['librero'] },
         { path: "/sustainability", icon: Leaf, label: "Sostenibilidad", roles: ['user'] },
+
     ];
 
     // Items para el menú inferior en móvil 

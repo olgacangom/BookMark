@@ -6,14 +6,15 @@ export interface Club {
     description: string;
     coverUrl?: string;
     createdAt: string;
-    creator: { id: string; fullName: string };
-    members: { id: string }[];
+    creator: { id: string; fullName: string, avatarUrl?: string, email?: string};
+    members: { id: string; fullName?: string; avatarUrl?: string; email?: string }[];
     _count?: { threads: number };
 }
 
 export interface Thread {
     id: string;
     title: string;
+    postsCount?: number;
     relatedBook?: {
         id: number;
         title: string;

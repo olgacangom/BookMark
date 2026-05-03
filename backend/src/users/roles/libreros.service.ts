@@ -8,8 +8,8 @@ import { DeepPartial, MoreThan, Repository } from 'typeorm';
 import { StoreInventory } from '../entities/store-inventory.entity';
 import { Book } from '../../books/entities/book.entity';
 import { User } from '../entities/user.entity';
-import { LibraryEvent } from '../entities/library-event.entity';
 import { EventRegistration } from 'src/bookstore/entities/event-registration.entity';
+import { LibraryEvent } from '../entities/library-event.entity';
 
 @Injectable()
 export class LibrerosService {
@@ -41,13 +41,13 @@ export class LibrerosService {
 
     const duplicate = await this.inventoryRepository.findOne({
       where: [
-        // Regla 1: Mismo ID de libro
+        // Mismo ID de libro
         { librero: { id: libreroId }, book: { id: numericBookId } },
-        // Regla 2: Mismo ISBN
+        // Mismo ISBN
         ...(bookToAdd.isbn
           ? [{ librero: { id: libreroId }, book: { isbn: bookToAdd.isbn } }]
           : []),
-        // Regla 3: Mismo Título Y mismo Autor
+        // Mismo Título Y mismo Autor
         {
           librero: { id: libreroId },
           book: { title: bookToAdd.title, author: bookToAdd.author },
