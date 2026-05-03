@@ -4,7 +4,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import {
   BookListing,
   ListingType,
@@ -14,6 +14,7 @@ import { DonationPoint } from '../entities/donation-point.entity';
 import { User } from '../entities/user.entity';
 import { SustainabilityRequest } from '../entities/sustainability-request.entity';
 import { Book } from 'src/books/entities/book.entity';
+import { UsersService } from '../users.service';
 
 export interface CreateListingDto {
   type: ListingType;
@@ -41,6 +42,8 @@ export class SustainabilityService {
     private readonly donationRepository: Repository<DonationPoint>,
     @InjectRepository(SustainabilityRequest)
     private readonly requestRepository: Repository<SustainabilityRequest>,
+
+    private readonly usersService: UsersService,
   ) {}
 
   // --- MARKETPLACE & PRÉSTAMOS ---
@@ -259,5 +262,21 @@ export class SustainabilityService {
     await this.listingRepository.save(listing);
 
     return { message: 'Libro donado con éxito' };
+  }
+
+  // Biblioteca amigos
+  async getSocialListings(userId: string) {
+    const followedIds = await this.usersService.getFollowingIds(userId);
+
+    if (followedIds.length === 0) return [];
+
+    return this.listingRepository.find({
+      where: {
+        user: In(followedIds),
+        isAvailable: true,
+      },
+      relations: ['book', 'user'],
+      order: { createdAt: 'DESC' },
+    });
   }
 }

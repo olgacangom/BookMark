@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In, Not } from 'typeorm';
 import { Activity, ActivityType } from './entities/activity.entity';
@@ -8,6 +12,8 @@ import { Book } from 'src/books/entities/book.entity';
 import { ActivityLike } from './entities/activity-like.entity';
 import { ActivityIgnore } from './entities/activity-ignore.entity';
 import { ActivityComment } from './entities/activity-comment';
+import { CreateActivityDto } from './dto/create-activity.dto';
+import { UpdateActivityDto } from './dto/update-activity.dto';
 
 @Injectable()
 export class ActivitiesService {
@@ -24,11 +30,92 @@ export class ActivitiesService {
     private readonly ignoresRepository: Repository<ActivityIgnore>,
   ) {}
 
+  /**
+   * Usuario crea una publicación
+   */
+  async createPost(userId: string, dto: CreateActivityDto) {
+    const user = await this.userRepository.findOneBy({ id: userId });
+    if (!user) throw new NotFoundException(`Usuario no encontrado`);
+
+    const activity = new Activity();
+    activity.user = user;
+    activity.type = ActivityType.POST;
+    activity.content = dto.content;
+    activity.imageUrl = dto.imageUrl ?? null;
+    activity.pollOptions = dto.pollOptions ?? null;
+    activity.likesCount = 0;
+    activity.commentsCount = 0;
+
+    if (dto.bookId) {
+      activity.targetBook = { id: dto.bookId } as Book;
+    }
+
+    const savedActivity = await this.activityRepository.save(activity);
+
+    const fullActivity = await this.activityRepository.findOne({
+      where: { id: savedActivity.id },
+      relations: ['user', 'targetBook'],
+    });
+
+    return {
+      ...fullActivity,
+      isLiked: false,
+      comments: [],
+    };
+  }
+
+  async update(userId: string, activityId: string, dto: UpdateActivityDto) {
+    const activity = await this.activityRepository.findOne({
+      where: { id: activityId },
+      relations: ['user', 'targetBook'],
+    });
+
+    if (!activity) throw new NotFoundException('Actividad no encontrada');
+    if (activity.user.id !== userId)
+      throw new ForbiddenException('No tienes permiso');
+
+    if (dto.content !== undefined) activity.content = dto.content;
+    if (dto.imageUrl !== undefined) activity.imageUrl = dto.imageUrl;
+    if (dto.pollOptions !== undefined) activity.pollOptions = dto.pollOptions;
+
+    if (dto.bookId !== undefined) {
+      activity.targetBook = dto.bookId ? ({ id: dto.bookId } as Book) : null;
+    }
+
+    await this.activityRepository.save(activity);
+
+    return this.activityRepository.findOne({
+      where: { id: activityId },
+      relations: ['user', 'targetBook'],
+    });
+  }
+
+  async remove(userId: string, activityId: string) {
+    const activity = await this.activityRepository.findOne({
+      where: { id: activityId },
+      relations: ['user'],
+    });
+
+    if (!activity) throw new NotFoundException(`La actividad no existe`);
+
+    if (String(activity.user.id) !== String(userId)) {
+      throw new ForbiddenException('No puedes borrar un post ajeno');
+    }
+
+    await this.activityRepository.remove(activity);
+    return { success: true };
+  }
+
+  /**
+   * Crea una actividad automática del sistema (FOLLOW, BOOK_ADDED, etc.)
+   */
   async create(userId: string, type: ActivityType, targetId?: string) {
     const user = await this.userRepository.findOneBy({ id: userId });
     if (!user) throw new NotFoundException(`Usuario no encontrado`);
 
-    const activity = this.activityRepository.create({ user, type });
+    const activity = new Activity();
+    activity.user = user;
+    activity.type = type;
 
     if (targetId) {
       if (type === ActivityType.FOLLOW) {
@@ -37,9 +124,13 @@ export class ActivitiesService {
         activity.targetBook = { id: Number(targetId) } as unknown as Book;
       }
     }
+
     return await this.activityRepository.save(activity);
   }
 
+  /**
+   * Obtiene el feed personalizado para el usuario
+   */
   async getFeed(userId: string) {
     const userWithFollowing = await this.userRepository.findOne({
       where: { id: userId },
@@ -62,7 +153,7 @@ export class ActivitiesService {
     const activities = await this.activityRepository.find({
       where: {
         user: { id: In(idsToFetch) },
-        id: ignoredIds.length > 0 ? Not(In(ignoredIds)) : undefined,
+        ...(ignoredIds.length > 0 && { id: Not(In(ignoredIds)) }),
       },
       relations: [
         'user',

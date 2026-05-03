@@ -6,9 +6,13 @@ import {
   Param,
   Post,
   Body,
+  Patch,
+  Delete,
 } from '@nestjs/common';
 import { ActivitiesService } from './activities.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CreateActivityDto } from './dto/create-activity.dto';
+import { UpdateActivityDto } from './dto/update-activity.dto';
 
 interface RequestWithUser {
   user: {
@@ -23,13 +27,33 @@ export class ActivitiesController {
   constructor(private readonly activitiesService: ActivitiesService) {}
 
   /**
-   * Obtiene el feed de actividad para el usuario autenticado.
-   * Incluye actividades de los usuarios seguidos y las propias.
+   * Crea una publicación manual del usuario (POST)
    */
+  @Post()
+  async create(
+    @Body() createDto: CreateActivityDto,
+    @Request() req: RequestWithUser,
+  ) {
+    return this.activitiesService.createPost(req.user.id, createDto);
+  }
 
   @Get('feed')
   async getFeed(@Request() req: RequestWithUser) {
     return this.activitiesService.getFeed(req.user.id);
+  }
+
+  @Patch(':id')
+  async update(
+    @Param('id') id: string,
+    @Body() updateDto: UpdateActivityDto,
+    @Request() req: RequestWithUser,
+  ) {
+    return this.activitiesService.update(req.user.id, id, updateDto);
+  }
+
+  @Delete(':id')
+  async remove(@Param('id') id: string, @Request() req: RequestWithUser) {
+    return this.activitiesService.remove(req.user.id, id);
   }
 
   @Post(':id/like')

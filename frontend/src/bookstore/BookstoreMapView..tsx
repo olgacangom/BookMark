@@ -153,7 +153,7 @@ export const BookstoresMapView = () => {
             <header className="mb-4 flex flex-col xl:flex-row justify-between items-start xl:items-end gap-4 relative shrink-0">
                 <div>
                     <h1 className="text-3xl lg:text-4xl font-black text-slate-900 tracking-tighter">
-                        Encuentra <span className="text-teal-600 italic font-serif">Stock.</span>
+                        Encuentra <span className="text-teal-600 italic font-serif">Librerías</span>
                     </h1>
                     <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-1">
                         {loading ? "Actualizando mapa..." : `Explorando ${bookstores.length} puntos de venta`}
