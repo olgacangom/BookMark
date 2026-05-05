@@ -10,6 +10,7 @@ import { BooksModule } from './books/books.module';
 import { ClubsModule } from './club/club.module';
 import { BookstoreModule } from './bookstore/bookstore.module';
 import { ChatModule } from './chat/chat.module';
+import { AIModule } from './ai/ai.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { ChatModule } from './chat/chat.module';
 
     AuthModule,
     BooksModule,
+    AIModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -8,6 +8,7 @@ import {
 import { useAuth } from "../context/AuthContext";
 import { useEffect, useState } from "react";
 import { io } from "socket.io-client";
+import { BibliosChat } from "../ai/components/BibliosChat";
 
 export function MainLayout() {
     const location = useLocation();
@@ -205,6 +206,7 @@ export function MainLayout() {
                     })}
                 </div>
             </nav>
+            <BibliosChat />
         </div>
     );
 }
