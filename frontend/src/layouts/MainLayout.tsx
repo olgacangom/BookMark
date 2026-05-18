@@ -8,6 +8,7 @@ import {
 import { useAuth } from "../context/AuthContext";
 import { useEffect, useState } from "react";
 import { io } from "socket.io-client";
+import { BibliosChat } from "../ai/components/BibliosChat";
 
 export function MainLayout() {
     const location = useLocation();
@@ -66,7 +67,7 @@ export function MainLayout() {
         { path: "/library", icon: Bookmark, label: "Biblioteca", roles: ['user'] },
         { path: "/requests", icon: Bell, label: "Solicitudes", badge: totalRequests, roles: ['user'] },
         { path: "/chat", icon: MessageCircle, label: "Chat", badge: totalUnread, roles: ['user'] },
-        { path: "/clubs", icon: Club, label: "Clubs", roles: ['user'] },
+        { path: "/clubs", icon: Club, label: "Clubes", roles: ['user'] },
         { path: "/events", icon: Calendar, label: "Eventos", roles: ['user'] },
         { path: "/bookstore", icon: Store, label: "Bookstore", roles: ['user'] },
         { path: "/admin/users", icon: User, label: "Gestión Usuarios", roles: ['admin'] },
@@ -86,7 +87,7 @@ export function MainLayout() {
     return (
         <div className="min-h-screen bg-[#F0F9F9] flex flex-col lg:flex-row text-left">
 
-            {/* --- SIDEBAR (SOLO DESKTOP) --- */}
+            {/* --- SIDEBAR --- */}
             <aside className="hidden lg:flex fixed left-0 top-0 bottom-0 w-64 bg-white border-r border-slate-100 flex-col z-50 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
                 <div className="p-8">
                     <Link to="/explore" className="flex items-center gap-3">
@@ -205,6 +206,7 @@ export function MainLayout() {
                     })}
                 </div>
             </nav>
+            <BibliosChat />
         </div>
     );
 }

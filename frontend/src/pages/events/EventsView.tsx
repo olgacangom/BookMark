@@ -147,10 +147,6 @@ export const EventsView = () => {
                                     </div>
                                 ))}
                             </div>
-
-                            <button className="w-full mt-6 pt-4 border-t border-slate-50 flex items-center justify-center gap-2 text-[9px] font-black text-teal-600 uppercase tracking-[0.2em] hover:text-teal-700 transition-all">
-                                Ver agenda completa <ChevronRight size={12} />
-                            </button>
                         </div>
                     </div>
                 </div>

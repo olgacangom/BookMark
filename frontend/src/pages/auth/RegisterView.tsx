@@ -1,18 +1,19 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { 
-    BookOpen, User, Mail, Lock, Loader2, 
-    Eye, EyeOff, ChevronRight, Store, Users, 
-    MapPin, Building2, UploadCloud, FileText, ShieldCheck
+import {
+    BookOpen, User, Mail, Lock, Loader2,
+    Eye, EyeOff, ChevronRight, Store, Users,
+    MapPin, Building2, UploadCloud, FileText, ShieldCheck,
+    ArrowLeft
 } from 'lucide-react';
 
 export const RegisterView = () => {
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [role, setRole] = useState('user'); 
-    
+    const [role, setRole] = useState('user');
+
     const [libraryName, setLibraryName] = useState('');
     const [libraryAddress, setLibraryAddress] = useState('');
     const [document, setDocument] = useState<File | null>(null);
@@ -22,7 +23,7 @@ export const RegisterView = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
 
-    const { register } = useAuth(); 
+    const { register } = useAuth();
     const navigate = useNavigate();
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -34,7 +35,7 @@ export const RegisterView = () => {
             const extraData = role === 'librero_pendiente' ? {
                 libraryName,
                 libraryAddress,
-                document: document, 
+                document: document,
             } : {};
 
             await register(name, email, password, role, extraData);
@@ -42,7 +43,7 @@ export const RegisterView = () => {
             if (role === 'librero_pendiente') {
                 setShowSuccessModal(true);
             } else {
-                navigate('/login'); 
+                navigate('/login');
             }
         } catch (err: any) {
             setError(err.response?.data?.message || 'Error al crear la cuenta.');
@@ -53,7 +54,7 @@ export const RegisterView = () => {
 
     return (
         <div className="min-h-screen bg-[#F0F9F9] flex items-center justify-center px-4 py-12 relative overflow-hidden font-sans">
-            
+
             {/* MODAL DE ÉXITO */}
             {showSuccessModal && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -71,10 +72,10 @@ export const RegisterView = () => {
 
             <div className="absolute top-[-5%] right-[-5%] w-80 h-80 bg-emerald-200/20 rounded-full blur-[100px]" />
             <div className="absolute bottom-[-5%] left-[-5%] w-80 h-80 bg-teal-200/20 rounded-full blur-[100px]" />
-            
+
             <div className="w-full max-w-[500px] relative z-10">
                 <div className="bg-white/90 backdrop-blur-2xl rounded-[2.5rem] shadow-xl border border-white p-10 md:p-12">
-                    
+
                     <div className="text-center mb-8">
                         <div className="inline-flex items-center justify-center w-20 h-20 bg-teal-600 rounded-[1.8rem] mb-6">
                             <BookOpen className="w-10 h-10 text-white" />
@@ -133,18 +134,18 @@ export const RegisterView = () => {
                         {role === 'librero_pendiente' && (
                             <div className="space-y-4 pt-4 border-t border-slate-100">
                                 <p className="text-[10px] font-black text-teal-600 uppercase text-center mb-4">Datos del Establecimiento</p>
-                                
+
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-bold text-slate-400 uppercase ml-2">Nombre Comercial</label>
                                     <div className="relative">
                                         <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-                                        <input 
-                                            type="text" 
-                                            value={libraryName} 
-                                            onChange={(e) => setLibraryName(e.target.value)} 
-                                            className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:border-teal-500 text-sm font-semibold outline-none" 
-                                            placeholder="Nombre de la librería" 
-                                            required={role === 'librero_pendiente'} 
+                                        <input
+                                            type="text"
+                                            value={libraryName}
+                                            onChange={(e) => setLibraryName(e.target.value)}
+                                            className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:border-teal-500 text-sm font-semibold outline-none"
+                                            placeholder="Nombre de la librería"
+                                            required={role === 'librero_pendiente'}
                                         />
                                     </div>
                                 </div>
@@ -153,12 +154,12 @@ export const RegisterView = () => {
                                     <label className="text-[10px] font-bold text-slate-400 uppercase ml-2">Dirección Física</label>
                                     <div className="relative">
                                         <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-                                        <input 
-                                            type="text" 
-                                            value={libraryAddress} 
-                                            onChange={(e) => setLibraryAddress(e.target.value)} 
-                                            className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:border-teal-500 text-sm font-semibold outline-none" 
-                                            placeholder="Calle, Ciudad..." 
+                                        <input
+                                            type="text"
+                                            value={libraryAddress}
+                                            onChange={(e) => setLibraryAddress(e.target.value)}
+                                            className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:border-teal-500 text-sm font-semibold outline-none"
+                                            placeholder="Calle, Ciudad..."
                                             required={role === 'librero_pendiente'}
                                         />
                                     </div>
@@ -167,23 +168,22 @@ export const RegisterView = () => {
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-bold text-slate-400 uppercase ml-2">Licencia (IAE/Licencia)</label>
                                     <div className="relative">
-                                        <input 
-                                            type="file" 
-                                            id="file-upload" 
+                                        <input
+                                            type="file"
+                                            id="file-upload"
                                             required={role === 'librero_pendiente'}
-                                            className="absolute w-full h-full opacity-0 cursor-pointer z-10" 
+                                            className="absolute w-full h-full opacity-0 cursor-pointer z-10"
                                             onChange={(e) => setDocument(e.target.files ? e.target.files[0] : null)}
                                         />
-                                        <div className={`flex items-center justify-center gap-3 w-full p-4 border-2 border-dashed rounded-2xl transition-all ${
-                                            document ? 'bg-teal-50 border-teal-200 text-teal-600' : 'bg-slate-50 border-slate-200 text-slate-400'
-                                        }`}>
+                                        <div className={`flex items-center justify-center gap-3 w-full p-4 border-2 border-dashed rounded-2xl transition-all ${document ? 'bg-teal-50 border-teal-200 text-teal-600' : 'bg-slate-50 border-slate-200 text-slate-400'
+                                            }`}>
                                             {document ? (
                                                 <div className="flex items-center gap-2 font-bold text-xs truncate max-w-[200px]">
-                                                    <FileText size={16} /> {document.name} 
+                                                    <FileText size={16} /> {document.name}
                                                 </div>
                                             ) : (
                                                 <div className="flex items-center gap-2 font-bold text-xs">
-                                                    <UploadCloud size={18} /> Licencia librería PDF/JPG 
+                                                    <UploadCloud size={18} /> Licencia librería PDF/JPG
                                                 </div>
                                             )}
                                         </div>
@@ -196,6 +196,9 @@ export const RegisterView = () => {
                             {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Finalizar Registro <ChevronRight size={16} /></>}
                         </button>
                     </form>
+                    <Link to="/login" className="mt-8 flex items-center justify-center gap-2 text-xs font-bold text-slate-400 hover:text-teal-600 transition-colors">
+                        <ArrowLeft size={14} /> ¿Ya tienes cuenta? Inicia sesión
+                    </Link>
                 </div>
             </div>
         </div>

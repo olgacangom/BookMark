@@ -100,7 +100,7 @@ export const ClubsListView = () => {
             <header className="max-w-7xl mx-auto px-8 mb-10 flex justify-between items-end">
                 <div>
                     <h1 className="text-4xl font-black text-slate-900 tracking-tight leading-none uppercase italic">
-                        Clubs de <span className="text-teal-600 font-serif">Lectura.</span>
+                        Clubes de <span className="text-teal-600 font-serif">Lectura.</span>
                     </h1>
                     <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mt-3">Comunidades activas</p>
                 </div>
