@@ -16,42 +16,61 @@ export class AIService implements OnModuleInit {
   onModuleInit() {
     const apiKey = this.configService.get<string>('GEMINI_API_KEY');
     this.genAI = new GoogleGenerativeAI(apiKey || '');
-    this.model = this.genAI.getGenerativeModel(
-      { model: 'gemini-3-flash-preview' },
-      { apiVersion: 'v1beta' },
-    );
+    this.model = this.genAI.getGenerativeModel({
+      model: 'gemini-3-flash-preview',
+    });
   }
 
-  async getChatResponse(userPrompt: string, history: any[], context: string) {
+  async getChatResponse(
+    userPrompt: string,
+    history: any[],
+    context: string,
+    role: string,
+  ) {
     try {
+      let roleInstruction = '';
+      if (role === 'admin') {
+        roleInstruction = `Actúas como el "Analista Jefe" de BookMark. Tu objetivo es ayudar al administrador a interpretar métricas. Sé profesional y directo.`;
+      } else if (role === 'librero') {
+        roleInstruction = `Actúas como "Consultor Estratégico" para librerías. Tu objetivo es ayudar a vender más y optimizar eventos.`;
+      } else {
+        roleInstruction = `Eres "Biblios", el bibliotecario sabio de BookMark. Ayuda al lector con sus libros, clubes y eventos.`;
+      }
+
       const systemInstruction = `
-            Eres "Biblios", el asistente inteligente y bibliotecario de la plataforma BookMark. 
-            
-            CONOCIMIENTO DE LA PLATAFORMA (CONTEXTO):
-            ${context}
+        ${roleInstruction}
+        
+        CONTEXTO REAL DE LA BASE DE DATOS: 
+        ${context}
 
-            TUS CAPACIDADES:
-            1. ANALISTA: Si preguntan por un libro específico, usa tu conocimiento interno para decir género, estilo y de qué trata.
-            2. GUÍA DE COMUNIDAD: Informa sobre Eventos y Clubes usando SOLO los datos del contexto.
-            3. RECOMENDADOR: Sugiere libros que NO estén en "MI BIBLIOTECA", priorizando el "CATÁLOGO PARA INTERCAMBIO".
+        REGLAS DE ORO (INCUMPLIRLAS PENALIZA):
+        1. SEPARACIÓN ESTRICTA: 
+           - Si preguntan por CLUBES, usa SOLO [SECCIÓN_CLUBES_UNIDOS] y [SECCIÓN_CLUBES_DISPONIBLES]. Prohibido mencionar eventos.
+           - Si preguntan por RECOMENDACIONES, usa SOLO [SECCIÓN_LIBROS_USUARIO] (para no repetir) y [SECCIÓN_MERCADO_GLOBAL]. Prohibido mencionar eventos o clubes.
+           - Si preguntan por EVENTOS, usa SOLO las secciones de eventos.
+        2. SALUDO: Sé amable, pero NO menciones el momento del día (prohibido decir "mañana", "tarde", "noche"). Usa "Un placer saludarte" o "Hola".
+        3. FORMATO VISUAL:
+           - Usa DOBLE SALTO DE LÍNEA entre párrafos.
+           - Usa ### para títulos de sección.
+           - Usa **negrita** para nombres de libros, clubes y eventos.
+           - Usa listas numeradas.
+      `;
 
-            REGLAS DE FORMATO:
-            - Saludo corto.
-            - Si das una lista de recomendaciones o eventos, usa LISTA NUMERADA con SALTOS DE LÍNEA dobles.
-            - Formato de lista: "X. **Nombre** porque [explicación]."
-            - Sé amable y usa un tono literario.
-        `;
+      // Limpiar el historial
+      const chat = this.model.startChat({
+        history: history.length > 0 ? history : [],
+      });
 
-      const chat = this.model.startChat({ history });
       const result = await chat.sendMessage(
         `${systemInstruction}\n\nPregunta: ${userPrompt}`,
       );
-
       const response = result.response;
-
       return response.text().trim();
-    } catch {
-      throw new InternalServerErrorException('Error en Biblios.');
+    } catch (error) {
+      console.error('🔴 ERROR DETALLADO DE GEMINI:', error);
+      throw new InternalServerErrorException(
+        'Error en la comunicación con Biblios.',
+      );
     }
   }
 }

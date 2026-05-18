@@ -12,7 +12,7 @@ export const ScannerModal = ({ isOpen, onClose, onScanSuccess }: ScannerModalPro
     useEffect(() => {
         if (!isOpen) return;
 
-        // Configuramos el scanner
+        // Configuración del scanner
         // El ID "reader" debe coincidir con el ID del div en el JSX
         const scanner = new Html5QrcodeScanner(
             "reader", 
@@ -26,17 +26,14 @@ export const ScannerModal = ({ isOpen, onClose, onScanSuccess }: ScannerModalPro
 
         scanner.render(
             (decodedText) => {
-                // Cuando detecta un código, lo limpiamos y cerramos
                 scanner.clear().then(() => {
                     onScanSuccess(decodedText);
                 }).catch(err => console.error("Error al detener el scanner:", err));
             },
             () => {
-                // Errores de lectura (se ignora para no saturar la consola)
             }
         );
 
-        // Cleanup al desmontar el componente o cerrar el modal
         return () => {
             scanner.clear().catch(err => console.debug("Scanner ya estaba cerrado", err));
         };
