@@ -100,6 +100,12 @@ export class UsersController {
     return this.usersService.deleteAvatar(req.user.id);
   }
 
+  @Patch('deactivate-me')
+  @UseGuards(JwtAuthGuard)
+  async deactivateMyAccount(@Req() req: { user: User }) {
+    return this.usersService.deactivateAccount(req.user.id);
+  }
+
   // RUTAS DE ACCIÓN SOCIAL
 
   @Post('follow/:id')

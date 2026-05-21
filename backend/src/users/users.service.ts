@@ -233,6 +233,18 @@ export class UsersService implements OnModuleInit {
     return this.findOne(id);
   }
 
+  async deactivateAccount(id: string) {
+    const user = await this.usersRepository.findOne({ where: { id } });
+    if (!user) {
+      throw new NotFoundException(`Usuario con ID ${id} no encontrado`);
+    }
+
+    // Cambiamos su estado a suspendido/desactivado
+    user.isActive = false;
+
+    return await this.usersRepository.save(user);
+  }
+
   // --- SISTEMA SOCIAL ---
 
   async followUser(followerId: string, targetUserId: string) {
