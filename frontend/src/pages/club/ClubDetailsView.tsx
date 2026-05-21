@@ -1,5 +1,4 @@
 import { useEffect, useState, useCallback } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
 import { Club, Thread, clubsService } from "../../club/service/club.service";
 import { bookService, Book } from "../../books/services/book.service"; 
 import { useAuth } from "../../context/AuthContext";
@@ -9,6 +8,7 @@ import {
     UserPlus, Info, CheckCircle2, MessageCircle,
     Check, Lock as LockIcon, ChevronDown,
 } from "lucide-react";
+import { useNavigate, useParams } from "react-router-dom";
 
 export const ClubDetailsView = () => {
     const { id } = useParams<{ id: string }>();
@@ -22,6 +22,7 @@ export const ClubDetailsView = () => {
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState(false);
     const [showModal, setShowModal] = useState(false);
+    const [showJoinModal, setShowJoinModal] = useState(false);
     const [isCreating, setIsCreating] = useState(false);
 
     const [newThread, setNewThread] = useState({ title: '', bookId: '' });
@@ -85,10 +86,19 @@ export const ClubDetailsView = () => {
         try {
             await clubsService.joinClub(id);
             await loadData();
+            setShowJoinModal(false);
         } catch (error) {
             console.error("Error al unirse al club:", error);
         } finally {
             setActionLoading(false);
+        }
+    };
+
+    const handleEnterThread = (threadId: string) => {
+        if (isMember) {
+            navigate(`/clubs/thread/${threadId}`);
+        } else {
+            setShowJoinModal(true);
         }
     };
 
@@ -168,7 +178,12 @@ export const ClubDetailsView = () => {
 
                         <div className="space-y-4">
                             {threads.map((thread) => (
-                                <Link key={thread.id} to={`/clubs/thread/${thread.id}`} className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-md transition-all flex items-center justify-between group">
+                                <button
+                                    key={thread.id}
+                                    type="button"
+                                    onClick={() => handleEnterThread(thread.id)}
+                                    className="w-full text-left bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-md transition-all flex items-center justify-between group"
+                                >
                                     <div className="flex items-center gap-6">
                                         <div className="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-300 overflow-hidden">
                                             {thread.relatedBook ? <img src={thread.relatedBook.urlPortada} className="w-full h-full object-cover rounded-xl" alt="portada" /> : <MessageCircle size={28} />}
@@ -185,7 +200,7 @@ export const ClubDetailsView = () => {
                                             <ArrowRight size={20} />
                                         </div>
                                     </div>
-                                </Link>
+                                </button>
                             ))}
                         </div>
                     </section>
@@ -282,6 +297,43 @@ export const ClubDetailsView = () => {
                             {isCreating ? <Loader2 className="animate-spin" size={18} /> : "Crear Sala"}
                         </button>
                     </form>
+                </div>
+            )}
+
+            {showJoinModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-md animate-in fade-in" onClick={() => setShowJoinModal(false)} />
+                    <div className="bg-white rounded-[3rem] p-10 max-w-md w-full shadow-2xl relative animate-in zoom-in-95 border-8 border-white text-center">
+                        <button type="button" onClick={() => setShowJoinModal(false)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 transition-colors">
+                            <X size={24} />
+                        </button>
+                        <div className="mb-6">
+                            <div className="w-20 h-20 bg-teal-50 rounded-full flex items-center justify-center mx-auto mb-4 text-teal-600 shadow-inner">
+                                <LockIcon size={28} />
+                            </div>
+                            <h3 className="text-2xl font-black text-slate-900 mb-2 uppercase tracking-tight">Necesitas unirte al club</h3>
+                            <p className="text-slate-500 text-sm leading-relaxed font-medium">
+                                Para entrar a las salas de discusión primero debes ser miembro de este club.
+                            </p>
+                        </div>
+                        <div className="flex flex-col gap-3">
+                            <button
+                                type="button"
+                                onClick={handleJoinClub}
+                                disabled={actionLoading}
+                                className="w-full py-4 bg-teal-600 text-white rounded-2xl font-black shadow-lg hover:bg-teal-700 transition-all uppercase text-[10px] tracking-widest flex justify-center items-center gap-2"
+                            >
+                                {actionLoading ? <Loader2 size={16} className="animate-spin" /> : 'Unirme al club'}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setShowJoinModal(false)}
+                                className="w-full py-4 font-black text-slate-400 hover:bg-slate-50 rounded-2xl transition-colors uppercase text-[10px] tracking-widest"
+                            >
+                                Cerrar
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>
