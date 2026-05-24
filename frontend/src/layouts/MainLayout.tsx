@@ -6,7 +6,7 @@ import {
     Calendar
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { io } from "socket.io-client";
 import { BibliosChat } from "../ai/components/BibliosChat";
 
@@ -16,56 +16,94 @@ export function MainLayout() {
     const [totalUnread, setTotalUnread] = useState(0);
     const [totalRequests, setTotalRequests] = useState(0);
 
-    const isActive = (path: string) => location.pathname === path;
+    const isActive = (path: string) => location.pathname === path || (path !== '/' && location.pathname.startsWith(path));
 
-    const refreshAllBadges = async () => {
+    const refreshBadges = useCallback(async () => {
         try {
-            const token = localStorage.getItem('token');
+            const token = localStorage.getItem("token");
             if (!token) return;
 
-            const chatRes = await fetch('http://localhost:3000/chat/conversations', {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const [chatRes, followRes, bookRes] = await Promise.all([
+                fetch("http://localhost:3000/chat/conversations", {
+                    headers: { Authorization: `Bearer ${token}` }
+                }),
+                fetch("http://localhost:3000/users/follow/requests", {
+                    headers: { Authorization: `Bearer ${token}` }
+                }),
+                fetch("http://localhost:3000/sustainability/requests/me", {
+                    headers: { Authorization: `Bearer ${token}` }
+                })
+            ]);
+
             const chats = await chatRes.json();
+            const follows = await followRes.json();
+            const books = await bookRes.json();
+
             if (Array.isArray(chats)) {
-                const totalM = chats.reduce((acc, c) => acc + (c.unreadCount || 0), 0);
-                setTotalUnread(totalM);
+                setTotalUnread(
+                    chats.reduce((acc, c) => acc + (c.unreadCount || 0), 0)
+                );
             }
 
-            const reqRes = await fetch('http://localhost:3000/users/follow/requests', {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            const reqs = await reqRes.json();
-            if (Array.isArray(reqs)) {
-                setTotalRequests(reqs.length);
-            }
+            const followCount = Array.isArray(follows) ? follows.length : 0;
+
+            const bookCount = Array.isArray(books)
+                ? books.filter((r) => r.isOwner && r.status === "pending").length
+                : 0;
+
+            setTotalRequests(followCount + bookCount);
+
         } catch (e) {
-            console.error("Error al sincronizar badges:", e);
+            console.error(e);
         }
-    };
+    }, []);
 
     useEffect(() => {
-        refreshAllBadges();
-        const socket = io('http://localhost:3000');
-        socket.on('new_message', (msg) => {
-            const senderId = msg.senderId || msg.sender?.id;
-            if (senderId !== user?.id) setTotalUnread(prev => prev + 1);
+        if (location.pathname === "/requests") {
+            setTotalRequests(0);
+        } else {
+            refreshBadges();
+        }
+    }, [location.pathname, refreshBadges]);
+
+
+    useEffect(() => {
+        const handleRefresh = () => refreshBadges();
+        const handleReset = () => setTotalRequests(0);
+
+        window.addEventListener("refresh_badges", handleRefresh);
+        window.addEventListener("reset_requests", handleReset);
+
+        return () => {
+            window.removeEventListener("refresh_badges", handleRefresh);
+            window.removeEventListener("reset_requests", handleReset);
+        };
+    }, [refreshBadges]);
+
+
+    useEffect(() => {
+        const socket = io("http://localhost:3000");
+
+        socket.on("new_message", (msg) => {
+            if (msg.senderId !== user?.id) {
+                setTotalUnread(prev => prev + 1);
+            }
         });
-        const handleRefresh = () => refreshAllBadges();
-        window.addEventListener('refresh_unread_global', handleRefresh);
+
+        socket.on("notification", refreshBadges);
+
         return () => {
             socket.disconnect();
-            window.removeEventListener('refresh_unread_global', handleRefresh);
         };
-    }, [user?.id]);
+    }, [user?.id, refreshBadges]);
 
-    useEffect(() => { refreshAllBadges(); }, [location.pathname]);
+
 
     const allNavItems = [
         { path: "/explore", icon: Compass, label: "Descubrir", roles: ['user'] },
         { path: "/feed", icon: Sparkles, label: "Feed", roles: ['user'] },
         { path: "/library", icon: Bookmark, label: "Biblioteca", roles: ['user'] },
-        { path: "/requests", icon: Bell, label: "Solicitudes", badge: totalRequests, roles: ['user'] },
+        { path: "/requests", icon: Bell, label: "Notificaciones", badge: totalRequests, roles: ['user'] },
         { path: "/chat", icon: MessageCircle, label: "Chat", badge: totalUnread, roles: ['user'] },
         { path: "/clubs", icon: Club, label: "Clubes", roles: ['user'] },
         { path: "/events", icon: Calendar, label: "Eventos", roles: ['user'] },
@@ -79,7 +117,7 @@ export function MainLayout() {
     ];
 
     // Items para el menú inferior en móvil 
-    const mobileBottomItems = allNavItems.filter(item => 
+    const mobileBottomItems = allNavItems.filter(item =>
         ['/explore', '/feed', '/library', '/clubs', '/bookstore', '/sustainability', '/librero/catalog', '/librero/events', '/admin/users'].includes(item.path) &&
         item.roles.includes(user?.role || '')
     );
@@ -139,7 +177,7 @@ export function MainLayout() {
 
             {/* --- CONTENIDO PRINCIPAL --- */}
             <main className="flex-1 lg:ml-64 min-h-screen relative pb-24 lg:pb-12">
-                
+
                 {/* --- HEADER (MÓVIL & PC ) --- */}
                 <header className="sticky top-0 z-[110] bg-[#F0F9F9]/80 backdrop-blur-md px-4 md:px-8 py-4 flex justify-between items-center gap-4">
                     {/* Logo Móvil */}
@@ -192,17 +230,17 @@ export function MainLayout() {
             <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-[100] bg-white/90 backdrop-blur-xl border-t border-slate-100 px-2 pb-safe shadow-[0_-10px_25px_rgba(0,0,0,0.03)]">
                 <div className="flex justify-around items-center h-16 max-w-md mx-auto">
                     {mobileBottomItems.map((item) => {
-                        const active = isActive(item.path);
-                        return (
-                            <Link key={item.path} to={item.path} className={`flex flex-col items-center justify-center flex-1 gap-1 transition-all duration-300 relative ${active ? "text-teal-600" : "text-slate-400"}`}>
-                                <div className={`p-1.5 rounded-xl transition-all ${active ? "bg-teal-50 scale-110" : ""}`}>
-                                    <item.icon size={20} strokeWidth={active ? 2.5 : 2} />
-                                </div>
-                                <span className={`text-[8px] font-black uppercase tracking-tight ${active ? "opacity-100" : "opacity-50"}`}>
-                                    {item.label}
-                                </span>
-                            </Link>
-                        );
+                        const isActive = location.pathname === item.path ||
+                            (item.path === '/clubs' && location.pathname.startsWith('/clubs')); return (
+                                <Link key={item.path} to={item.path} className={`flex flex-col items-center justify-center flex-1 gap-1 transition-all duration-300 relative ${isActive ? "text-teal-600" : "text-slate-400"}`}>
+                                    <div className={`p-1.5 rounded-xl transition-all ${isActive ? "bg-teal-50 scale-110" : ""}`}>
+                                        <item.icon size={20} strokeWidth={isActive ? 2.5 : 2} />
+                                    </div>
+                                    <span className={`text-[8px] font-black uppercase tracking-tight ${isActive ? "opacity-100" : "opacity-50"}`}>
+                                        {item.label}
+                                    </span>
+                                </Link>
+                            );
                     })}
                 </div>
             </nav>

@@ -1,18 +1,20 @@
 import { useEffect, useState, useCallback } from 'react';
-import { 
-    Loader2, UserPlus, Clock, MessageCircle, Check, X as XIcon, 
-    Inbox, Send, ShoppingBag, MoreVertical, History, RefreshCw
+import {
+    Loader2, UserPlus, Clock, MessageCircle, Check, X as XIcon,
+    Inbox, Send, ShoppingBag, MoreVertical, History, RefreshCw, Bell
 } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { io } from 'socket.io-client';
 
 export const RequestsView = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
-    
+
     const [followRequests, setFollowRequests] = useState<any[]>([]);
     const [bookRequests, setBookRequests] = useState<any[]>([]);
+    const [liveNotifications, setLiveNotifications] = useState<string[]>([]);
     const [loading, setLoading] = useState(true);
     const [actionId, setActionId] = useState<string | null>(null);
 
@@ -23,7 +25,7 @@ export const RequestsView = () => {
                 api.get(`/users/profile/${user.id}`),
                 api.get('/sustainability/requests/me')
             ]);
-            
+
             const pendingFollows = profile.followerRelations?.filter((f: any) => f.status === 'PENDING') || [];
             setFollowRequests(pendingFollows);
             setBookRequests(bRequests);
@@ -36,21 +38,30 @@ export const RequestsView = () => {
 
     useEffect(() => {
         fetchData();
+
+        window.dispatchEvent(new Event('reset_requests'));
+
+        const socket = io('http://localhost:3000');
+        socket.on('notification', (payload: { message: string }) => {
+            setLiveNotifications(prev => [payload.message, ...prev]);
+            setTimeout(() => setLiveNotifications(prev => prev.slice(0, -1)), 6000);
+            window.dispatchEvent(new Event('refresh_badges'));
+        });
+
+        return () => { socket.disconnect(); };
     }, [fetchData]);
 
     const handleFollowAction = async (requestId: string, action: 'accept' | 'decline') => {
-        setActionId(requestId);
+        setFollowRequests(prev => prev.filter(r => r.id !== requestId));
         try {
-            if (action === 'accept') {
-                await api.post(`/users/follow/accept/${requestId}`);
-            } else {
-                await api.delete(`/users/follow/decline/${requestId}`);
-            }
-            await fetchData(); 
+            if (action === 'accept') await api.post(`/users/follow/accept/${requestId}`);
+            else await api.delete(`/users/follow/decline/${requestId}`);
+
+            await fetchData();
+            window.dispatchEvent(new Event('refresh_badges'));
         } catch (error) {
-            console.error("Error en acción de seguimiento:", error);
-        } finally {
-            setActionId(null);
+            console.error("Error:", error);
+            fetchData();
         }
     };
 
@@ -59,8 +70,9 @@ export const RequestsView = () => {
         try {
             await api.patch(`/sustainability/requests/${requestId}/status`, { status });
             await fetchData();
-        } catch {
-            alert("No se pudo procesar la solicitud del libro");
+            window.dispatchEvent(new Event('refresh_badges'));
+        } catch (error) {
+            console.error("No se pudo procesar la solicitud", error);
         } finally {
             setActionId(null);
         }
@@ -80,14 +92,24 @@ export const RequestsView = () => {
 
     return (
         <div className="min-h-screen bg-[#F8FAFB] font-sans text-slate-900 pb-20 text-left animate-in fade-in duration-500">
+
+            <div className="fixed top-24 right-6 z-[500] space-y-3 pointer-events-none">
+                {liveNotifications.map((msg, i) => (
+                    <div key={i} className="flex items-center gap-3 p-4 bg-teal-600 text-white rounded-2xl shadow-xl animate-in slide-in-from-right-10 pointer-events-auto">
+                        <Bell size={16} />
+                        <span className="text-[10px] font-black uppercase tracking-widest">{msg}</span>
+                    </div>
+                ))}
+            </div>
+
             <header className="max-w-6xl mx-auto px-6 pt-12 mb-12 flex justify-between items-end">
                 <div>
                     <h1 className="text-4xl font-black text-slate-900 tracking-tighter italic">
-                        Centro de <span className="text-teal-600">Interacción.</span>
+                        Centro de <span className="text-teal-600">Notificaciones.</span>
                     </h1>
                     <p className="text-slate-400 text-[11px] font-bold uppercase tracking-[0.2em] mt-2">Acciones pendientes y red social</p>
                 </div>
-                <button 
+                <button
                     onClick={() => { setLoading(true); fetchData(); }}
                     className="p-3 bg-white border border-slate-200 rounded-2xl text-slate-400 hover:text-teal-600 hover:border-teal-100 transition-all shadow-sm"
                 >
@@ -96,7 +118,7 @@ export const RequestsView = () => {
             </header>
 
             <main className="max-w-6xl mx-auto px-6 space-y-10">
-                
+
                 {/* LIBROS SOLICITADOS */}
                 <section className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-100">
                     <div className="flex justify-between items-center mb-8">
@@ -130,19 +152,11 @@ export const RequestsView = () => {
                                         </div>
                                     </div>
                                     <div className="flex gap-2">
-                                        <button 
-                                            disabled={!!actionId}
-                                            onClick={() => handleBookAction(req.id, 'accepted')} 
-                                            className="p-3 bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 transition-all shadow-sm disabled:opacity-50"
-                                        >
-                                            {actionId === req.id ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} strokeWidth={3}/>}
+                                        <button disabled={!!actionId} onClick={() => handleBookAction(req.id, 'accepted')} className="p-3 bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 transition-all shadow-sm disabled:opacity-50">
+                                            {actionId === req.id ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} strokeWidth={3} />}
                                         </button>
-                                        <button 
-                                            disabled={!!actionId}
-                                            onClick={() => handleBookAction(req.id, 'rejected')} 
-                                            className="p-3 bg-white border border-slate-200 text-slate-400 rounded-xl hover:text-rose-500 hover:border-rose-100 transition-all shadow-sm disabled:opacity-50"
-                                        >
-                                            <XIcon size={16} strokeWidth={3}/>
+                                        <button disabled={!!actionId} onClick={() => handleBookAction(req.id, 'rejected')} className="p-3 bg-white border border-slate-200 text-slate-400 rounded-xl hover:text-rose-500 hover:border-rose-100 transition-all shadow-sm disabled:opacity-50">
+                                            <XIcon size={16} strokeWidth={3} />
                                         </button>
                                     </div>
                                 </div>
@@ -151,7 +165,7 @@ export const RequestsView = () => {
                     )}
                 </section>
 
-                {/* NUEVOS SEGUIDORES (PENDIENTES) */}
+                {/* SOLICITUDES DE SEGUIMIENTO */}
                 <section className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-100">
                     <div className="flex justify-between items-center mb-8">
                         <div className="flex items-center gap-4">
@@ -165,33 +179,17 @@ export const RequestsView = () => {
                     ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                             {followRequests.map((req) => (
-                                <div key={req.id} className="bg-slate-50/50 border border-slate-100 p-6 rounded-[2.5rem] text-center group hover:bg-white hover:shadow-xl transition-all duration-500 relative">
-                                    <div className="absolute top-4 right-4">
-                                        <button className="text-slate-300 hover:text-slate-600"><MoreVertical size={16} /></button>
-                                    </div>
-                                    <img 
-                                        src={req.follower.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${req.follower.email}`} 
-                                        className="w-16 h-16 rounded-full mx-auto mb-4 border-4 border-white shadow-md cursor-pointer" 
-                                        alt=""
-                                        onClick={() => navigate(`/profile/${req.follower.id}`)}
-                                    />
+                                <div key={req.id} className="bg-slate-50/50 border border-slate-100 p-6 rounded-[2.5rem] text-center group hover:bg-white hover:shadow-xl transition-all duration-500">
+                                    <div className="absolute top-4 right-4"><MoreVertical size={16} className="text-slate-300" /></div>
+                                    <img src={req.follower.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${req.follower.email}`} className="w-16 h-16 rounded-full mx-auto mb-4 border-4 border-white shadow-md cursor-pointer" onClick={() => navigate(`/profile/${req.follower.id}`)} alt="" />
                                     <h3 className="font-black text-slate-900 text-sm leading-none">{req.follower.fullName}</h3>
                                     <p className="text-[10px] text-teal-600 font-bold mt-1">@{req.follower.email.split('@')[0]}</p>
                                     <p className="text-[10px] text-slate-400 mt-3 italic line-clamp-2 h-8">"{req.follower.bio || 'Sin biografía aún'}"</p>
-                                    
                                     <div className="flex gap-2 mt-6">
-                                        <button 
-                                            disabled={!!actionId}
-                                            onClick={() => handleFollowAction(req.id, 'accept')} 
-                                            className="flex-1 py-2.5 bg-teal-600 text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-teal-700 shadow-md disabled:opacity-50"
-                                        >
-                                            {actionId === req.id ? <Loader2 size={12} className="animate-spin mx-auto"/> : 'Aceptar'}
+                                        <button disabled={!!actionId} onClick={() => handleFollowAction(req.id, 'accept')} className="flex-1 py-2.5 bg-teal-600 text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-teal-700 shadow-md disabled:opacity-50">
+                                            {actionId === req.id ? <Loader2 size={12} className="animate-spin mx-auto" /> : 'Aceptar'}
                                         </button>
-                                        <button 
-                                            disabled={!!actionId}
-                                            onClick={() => handleFollowAction(req.id, 'decline')} 
-                                            className="flex-1 py-2.5 bg-white border border-slate-200 text-slate-400 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-rose-50 hover:text-rose-500 transition-all disabled:opacity-50"
-                                        >
+                                        <button disabled={!!actionId} onClick={() => handleFollowAction(req.id, 'decline')} className="flex-1 py-2.5 bg-white border border-slate-200 text-slate-400 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-rose-50 hover:text-rose-500 transition-all disabled:opacity-50">
                                             Eliminar
                                         </button>
                                     </div>
@@ -201,7 +199,7 @@ export const RequestsView = () => {
                     )}
                 </section>
 
-                {/* MIS SOLICITUDES ENVIADAS (LIBROS) */}
+                {/* PETICIONES ENVIADAS */}
                 <section className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-100">
                     <div className="flex justify-between items-center mb-8">
                         <div className="flex items-center gap-4">
@@ -209,40 +207,24 @@ export const RequestsView = () => {
                             <h2 className="text-sm font-black uppercase tracking-widest text-slate-700">Estado de mis peticiones <span className="ml-2 bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full text-[10px]">{sentBookRequests.length}</span></h2>
                         </div>
                     </div>
-
                     <div className="space-y-4">
                         {sentBookRequests.length === 0 ? (
-                            <div className="text-center py-8">
-                                <p className="text-slate-300 italic text-[10px] uppercase font-bold">Aún no has solicitado ningún libro.</p>
-                            </div>
+                            <p className="text-slate-300 italic text-[10px] uppercase font-bold text-center py-6">Aún no has solicitado ningún libro.</p>
                         ) : (
                             sentBookRequests.map((req) => (
                                 <div key={req.id} className="flex items-center gap-6 p-4 bg-white border border-slate-100 rounded-3xl group hover:shadow-lg transition-all">
-                                    <div className="w-16 h-20 rounded-xl overflow-hidden shadow-md shrink-0">
-                                        <img src={req.listing.book.urlPortada} className="w-full h-full object-cover" alt="Libro" />
-                                    </div>
+                                    <img src={req.listing.book.urlPortada} className="w-16 h-20 object-cover rounded-xl shadow-md shrink-0" alt="Libro" />
                                     <div className="flex-1 min-w-0">
                                         <h4 className="font-black text-slate-900 text-sm uppercase truncate tracking-tight">{req.listing.book.title}</h4>
                                         <p className="text-[10px] text-slate-400 font-bold uppercase">{req.listing.book.author}</p>
-                                        <div className="mt-3 flex items-center gap-4 text-[10px] text-slate-500 font-medium italic">
-                                            <span>Para: <span className="text-teal-600 not-italic font-bold">@{req.listing.user.fullName.split(' ')[0]}</span></span>
-                                            <span className="hidden sm:block">Fecha: {new Date(req.createdAt).toLocaleDateString()}</span>
-                                        </div>
+                                        <div className="mt-3 text-[10px] text-slate-500 font-medium italic">Para: <span className="text-teal-600 font-bold">@{req.listing.user.fullName.split('@')[0]}</span></div>
                                     </div>
                                     <div className="flex items-center gap-4">
-                                        <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${
-                                            req.status === 'pending' ? 'bg-amber-50 text-amber-600 border-amber-100' : 
-                                            req.status === 'accepted' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 
-                                            'bg-rose-50 text-rose-600 border-rose-100'
-                                        }`}>
+                                        <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${req.status === 'pending' ? 'bg-amber-50 text-amber-600 border-amber-100' : req.status === 'accepted' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-rose-50 text-rose-600 border-rose-100'}`}>
                                             {req.status === 'pending' ? 'En espera' : req.status === 'accepted' ? 'Aceptado' : 'Rechazado'}
                                         </span>
                                         {req.status === 'accepted' && (
-                                            <button 
-                                                onClick={() => navigate(`/chat/${req.listing.user.id}`)} 
-                                                className="p-3 bg-teal-50 text-teal-600 hover:bg-teal-600 hover:text-white rounded-2xl transition-all shadow-sm"
-                                                title="Contactar para entrega"
-                                            >
+                                            <button onClick={() => navigate(`/chat/${req.listing.user.id}`)} className="p-3 bg-teal-50 text-teal-600 hover:bg-teal-600 hover:text-white rounded-2xl transition-all shadow-sm">
                                                 <MessageCircle size={18} />
                                             </button>
                                         )}

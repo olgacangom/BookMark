@@ -25,8 +25,9 @@ export const BibliosChat = () => {
             { label: "Libro Popular", prompt: "¿Cuál es el libro más registrado?" }
         ];
         if (role === 'librero') return [
-            { label: "Horario ideal", prompt: "¿En qué franja horaria asisten más lectores?" },
-            { label: "Género estrella", prompt: "¿Qué género vendo más?" }
+            { label: "Horario ideal para eventos", prompt: "¿En qué franja horaria asisten más lectores?" },
+            { label: "Género más vendido", prompt: "¿Qué género vendo más?" },
+            { label: "Usuario que más compra", prompt: "¿Qué género vendo más?" }
         ];
         return [
             { label: "Recomiéndame algo", prompt: "Dame una recomendación de libro que no tenga en mi biblioteca.", icon: <Sparkles size={16}/> },

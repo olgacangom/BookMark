@@ -8,6 +8,7 @@ import { LibraryEvent } from 'src/users/entities/library-event.entity';
 import { Club } from 'src/club/entities/club.entity';
 import { User } from 'src/users/entities/user.entity';
 import { Activity } from 'src/users/entities/activity.entity';
+import { EventRegistration } from 'src/bookstore/entities/event-registration.entity';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { Activity } from 'src/users/entities/activity.entity';
       Activity,
       BookListing,
       LibraryEvent,
+      EventRegistration,
       Club,
     ]),
   ],

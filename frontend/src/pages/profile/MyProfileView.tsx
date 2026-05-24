@@ -44,13 +44,13 @@ const PrivacyModal = ({ isOpen, onClose, onConfirm, isPublic, actionLoading }: a
                     Hacer cuenta {isPublic ? 'Privada' : 'Pública'}
                 </h3>
                 <p className="text-slate-500 text-sm mb-10 leading-relaxed font-medium">
-                    {isPublic 
-                        ? 'Si haces tu cuenta privada, solo los usuarios que te sigan podrán ver tus libros, reseñas y actividad.' 
+                    {isPublic
+                        ? 'Si haces tu cuenta privada, solo los usuarios que te sigan podrán ver tus libros, reseñas y actividad.'
                         : 'Si haces tu cuenta pública, cualquier usuario podrá visitar tu perfil y ver tu biblioteca.'}
                 </p>
                 <div className="flex flex-col gap-3">
-                    <button 
-                        onClick={onConfirm} 
+                    <button
+                        onClick={onConfirm}
                         disabled={actionLoading}
                         className={`w-full py-4 text-white rounded-2xl font-black shadow-lg transition-all uppercase text-[10px] tracking-widest flex justify-center items-center gap-2 ${isPublic ? 'bg-slate-800 hover:bg-slate-900' : 'bg-teal-600 hover:bg-teal-700'}`}
                     >
@@ -76,12 +76,12 @@ const DeactivateAccountModal = ({ isOpen, onClose, onConfirm, actionLoading }: a
                 </div>
                 <h3 className="text-xl font-black text-rose-600 mb-2 uppercase tracking-tight">Suspender Cuenta</h3>
                 <p className="text-slate-500 text-sm mb-8 leading-relaxed font-medium">
-                    ¿Estás segura de que quieres suspender tu cuenta? <br/><br/>
+                    ¿Estás segura de que quieres suspender tu cuenta? <br /><br />
                     Serás desconectada inmediatamente y <span className="font-bold text-slate-800">solo un Administrador</span> podrá reactivarla.
                 </p>
                 <div className="flex flex-col gap-3">
-                    <button 
-                        onClick={onConfirm} 
+                    <button
+                        onClick={onConfirm}
                         disabled={actionLoading}
                         className="w-full py-4 bg-rose-600 text-white rounded-2xl font-black shadow-lg hover:bg-rose-700 transition-all uppercase text-[10px] tracking-widest flex justify-center items-center gap-2"
                     >
@@ -172,7 +172,7 @@ export const MyProfileView = () => {
     const [actionLoading, setActionLoading] = useState(false);
 
     const [formData, setFormData] = useState({ name: '', bio: '' });
-    const [isPublic, setIsPublic] = useState(true); 
+    const [isPublic, setIsPublic] = useState(true);
 
     const [isFollowModalOpen, setIsFollowModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -197,7 +197,7 @@ export const MyProfileView = () => {
             setBooks(booksRes);
             setGrowthData(statsRes.data);
             setFormData({ name: profileRes.data.fullName || '', bio: profileRes.data.bio || '' });
-            setIsPublic(profileRes.data.isPublic ?? true); 
+            setIsPublic(profileRes.data.isPublic ?? true);
         } catch (error) {
             console.error(error);
         } finally {
@@ -233,7 +233,11 @@ export const MyProfileView = () => {
 
     const handleShare = async () => {
         if (navigator.share) {
-            try { await navigator.share({ title: `Perfil de ${profileData.fullName} en BookMark`, text: `Echa un vistazo a mi biblioteca.`, url: window.location.href }); } catch { }
+            try { 
+                await navigator.share({ title: `Perfil de ${profileData.fullName} en BookMark`, text: `Echa un vistazo a mi biblioteca.`, url: window.location.href }); 
+            } catch (error) { 
+                console.error(error)
+            }
         } else {
             navigator.clipboard.writeText(window.location.href);
             setShowShareTooltip(true);
@@ -366,7 +370,7 @@ export const MyProfileView = () => {
                                     >
                                         {isSaving ? <Loader2 size={14} className="animate-spin" /> : isEditing ? 'Guardar Cambios' : 'Editar Perfil'}
                                     </button>
-                                    
+
                                     <button onClick={handleShare} className="p-2.5 bg-transparent border border-white/30 rounded-full hover:bg-white/10 text-white transition-all relative">
                                         {showShareTooltip ? <Check size={16} className="text-teal-400" /> : <Share2 size={16} />}
                                     </button>
@@ -390,13 +394,13 @@ export const MyProfileView = () => {
 
                                         {/* Dropdown Menu */}
 
-                                        
+
                                         {isDropdownOpen && (
                                             <div className="absolute right-0 top-[120%] w-64 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden animate-in fade-in slide-in-from-top-2 z-50">
                                                 <div className="py-2">
                                                     {canTogglePrivacy && (
                                                         <>
-                                                            <button 
+                                                            <button
                                                                 className="w-full px-4 py-3 hover:bg-slate-50 flex items-center justify-between transition-colors cursor-pointer group"
                                                                 onClick={() => {
                                                                     setIsDropdownOpen(false);
@@ -433,9 +437,9 @@ export const MyProfileView = () => {
                                                         <LogOut size={18} className="text-slate-400" />
                                                         <span className="font-bold">Cerrar sesión</span>
                                                     </button>
-                                                    
+
                                                     <div className="h-px bg-slate-100 my-1 mx-4"></div>
-                                                    
+
                                                     {user?.role !== 'admin' && (
                                                         <button
                                                             className="w-full text-left px-4 py-3 text-sm text-rose-600 hover:bg-rose-50 flex items-center gap-3 transition-colors"
@@ -667,20 +671,20 @@ export const MyProfileView = () => {
             {/* MODALES RECOPILADOS */}
             <FollowModal isOpen={isFollowModalOpen} onClose={() => setIsFollowModalOpen(false)} activeTab={activeTab} setActiveTab={setActiveTab} data={profileData} onStartChat={handleStartChat} />
             <ConfirmDeleteAvatarModal isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)} onConfirm={handleDeleteAvatar} />
-            
-            <PrivacyModal 
-                isOpen={isPrivacyModalOpen} 
-                onClose={() => setIsPrivacyModalOpen(false)} 
-                onConfirm={confirmTogglePrivacy} 
-                isPublic={isPublic} 
-                actionLoading={actionLoading} 
+
+            <PrivacyModal
+                isOpen={isPrivacyModalOpen}
+                onClose={() => setIsPrivacyModalOpen(false)}
+                onConfirm={confirmTogglePrivacy}
+                isPublic={isPublic}
+                actionLoading={actionLoading}
             />
-            
-            <DeactivateAccountModal 
-                isOpen={isDeactivateModalOpen} 
-                onClose={() => setIsDeactivateModalOpen(false)} 
-                onConfirm={confirmDeactivateAccount} 
-                actionLoading={actionLoading} 
+
+            <DeactivateAccountModal
+                isOpen={isDeactivateModalOpen}
+                onClose={() => setIsDeactivateModalOpen(false)}
+                onConfirm={confirmDeactivateAccount}
+                actionLoading={actionLoading}
             />
         </div>
     );
