@@ -78,6 +78,19 @@ export const RequestsView = () => {
         }
     };
 
+    const handleMarkReturned = async (requestId: string) => {
+        setActionId(requestId);
+        try {
+            await api.patch(`/sustainability/requests/${requestId}/return`);
+            await fetchData();
+            window.dispatchEvent(new Event('refresh_badges'));
+        } catch (error) {
+            console.error('No se pudo marcar como devuelto', error);
+        } finally {
+            setActionId(null);
+        }
+    };
+
     if (loading) {
         return (
             <div className="flex h-[80vh] flex-col items-center justify-center bg-[#F8FAFB]">
@@ -88,6 +101,9 @@ export const RequestsView = () => {
     }
 
     const receivedPending = bookRequests.filter(r => r.isOwner && r.status === 'pending');
+    const receivedAcceptedLoans = bookRequests.filter(
+        (r) => r.isOwner && r.status === 'accepted' && r.listing?.type === 'loan',
+    );
     const sentBookRequests = bookRequests.filter(r => !r.isOwner);
 
     return (
@@ -157,6 +173,47 @@ export const RequestsView = () => {
                                         </button>
                                         <button disabled={!!actionId} onClick={() => handleBookAction(req.id, 'rejected')} className="p-3 bg-white border border-slate-200 text-slate-400 rounded-xl hover:text-rose-500 hover:border-rose-100 transition-all shadow-sm disabled:opacity-50">
                                             <XIcon size={16} strokeWidth={3} />
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </section>
+
+                {/* PRESTADOS - MARCAR DEVUELTO */}
+                <section className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-100 mt-8">
+                    <div className="flex justify-between items-center mb-8">
+                        <div className="flex items-center gap-4">
+                            <div className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl"><History size={24} /></div>
+                            <h2 className="text-sm font-black uppercase tracking-widest text-slate-700">Prestados - Marcar devuelto <span className="ml-2 bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full text-[10px]">{receivedAcceptedLoans.length}</span></h2>
+                        </div>
+                    </div>
+
+                    {receivedAcceptedLoans.length === 0 ? (
+                        <div className="py-12 text-center bg-slate-50/50 rounded-[2rem] border border-dashed border-slate-200">
+                            <History size={32} className="mx-auto text-slate-200 mb-3" />
+                            <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">No tienes préstamos activos para marcar como devueltos</p>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {receivedAcceptedLoans.map((req) => (
+                                <div key={req.id} className="bg-slate-50/50 p-5 rounded-[2rem] border border-slate-100 flex items-center justify-between group hover:bg-white hover:shadow-md transition-all">
+                                    <div className="flex items-center gap-4">
+                                        <div className="relative shrink-0 cursor-pointer" onClick={() => navigate(`/book/${req.listing.book.isbn}`)}>
+                                            <img src={req.listing.book.urlPortada} className="w-12 h-16 object-cover rounded-xl shadow-sm" alt="" />
+                                            <div className="absolute -bottom-2 -right-2 w-6 h-6 bg-emerald-600 rounded-full border-2 border-white flex items-center justify-center text-white">
+                                                <Clock size={10} />
+                                            </div>
+                                        </div>
+                                        <div className="text-left">
+                                            <p className="text-[10px] font-black text-emerald-600 uppercase">@{req.requester.fullName.split(' ')[0]} actualmente tiene:</p>
+                                            <h4 className="font-bold text-slate-900 text-xs line-clamp-1 uppercase tracking-tight">{req.listing.book.title}</h4>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button disabled={!!actionId} onClick={() => handleMarkReturned(req.id)} className="p-3 bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 transition-all shadow-sm disabled:opacity-50">
+                                            {actionId === req.id ? <Loader2 size={16} className="animate-spin" /> : 'Marcar devuelto'}
                                         </button>
                                     </div>
                                 </div>

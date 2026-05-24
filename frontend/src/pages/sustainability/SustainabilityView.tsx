@@ -3,8 +3,8 @@ import api from '../../services/api';
 import { CreateListingModal } from './components/CreateListingModal';
 import {
     Leaf, Plus, Search,
-    RefreshCw, Heart, Loader2, 
-    Trash2, Clock, Tag, 
+    RefreshCw, Heart, Loader2,
+    Trash2, Clock, Tag,
     ShoppingBag, Info, Globe, Sparkle,
     Edit3, Users, Calendar, X, Check, HandHelping
 } from 'lucide-react';
@@ -39,21 +39,22 @@ const ActionModal = ({ isOpen, type, title, onClose, onConfirm }: any) => {
 };
 
 // MODAL DETALLES AMIGOS ---
-const SocialDetailsModal = ({ isOpen, onClose, listing, onToggleRequest, isRequested }: any) => {
+const SocialDetailsModal = ({ isOpen, onClose, listing, onToggleRequest, isRequested, currentUserId }: any) => {
     if (!isOpen || !listing) return null;
     const isSale = listing.type === 'sale';
+    const isOwner = listing.user?.id === currentUserId;
 
     return (
         <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4 animate-in fade-in">
             <div className="bg-white rounded-[2.5rem] w-full max-w-sm overflow-hidden shadow-2xl border-[8px] border-white animate-in zoom-in-95 flex flex-col relative">
-                
+
                 <header className="relative h-56 bg-slate-100 shrink-0">
                     <img src={listing.book?.urlPortada} className="w-full h-full object-cover blur-lg opacity-40 scale-110" alt="" />
                     <div className="absolute inset-0 bg-gradient-to-t from-white via-transparent to-transparent"></div>
                     <div className="absolute inset-0 flex items-center justify-center pt-4">
                         <img src={listing.book?.urlPortada} className="h-40 w-28 object-cover rounded-xl shadow-xl border-2 border-white rotate-[-1deg]" alt="" />
                     </div>
-                    <button onClick={onClose} className="absolute top-3 right-3 p-1.5 bg-black/5 hover:bg-black/10 text-slate-700 rounded-full transition-all"><X size={16}/></button>
+                    <button onClick={onClose} className="absolute top-3 right-3 p-1.5 bg-black/5 hover:bg-black/10 text-slate-700 rounded-full transition-all"><X size={16} /></button>
                 </header>
 
                 <div className="px-6 pb-8 pt-2 text-center">
@@ -82,11 +83,18 @@ const SocialDetailsModal = ({ isOpen, onClose, listing, onToggleRequest, isReque
                         </div>
                     </div>
 
-                    <button 
-                        onClick={() => onToggleRequest(listing.id, isRequested)}
-                        className={`w-full py-4 rounded-xl font-black uppercase text-[10px] tracking-[0.2em] transition-all shadow-lg active:scale-95 ${isRequested ? 'bg-amber-500 text-white' : 'bg-slate-900 text-white hover:bg-teal-600'}`}
+                    <button
+                        onClick={() => !isOwner && !isRequested && onToggleRequest(listing.id, isRequested)}
+                        disabled={isOwner || isRequested} 
+                        className={`w-full py-4 rounded-xl font-black uppercase text-[10px] tracking-[0.2em] transition-all shadow-lg active:scale-95 
+        ${isRequested
+                                ? 'bg-amber-500 text-white cursor-default'
+                                : isOwner
+                                    ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                                    : 'bg-slate-900 text-white hover:bg-teal-600'
+                            }`}
                     >
-                        {isRequested ? 'Solicitado' : 'Solicitar ahora'}
+                        {isOwner ? 'Es tu anuncio' : isRequested ? 'Solicitado' : 'Solicitar ahora'}
                     </button>
                 </div>
             </div>
@@ -165,6 +173,20 @@ export const SustainabilityView = () => {
 
     const handleToggleRequest = async (listingId: string, isRequested: boolean) => {
         try {
+            const findListing = (id: string) => {
+                if (socialModalData && socialModalData.id === id) return socialModalData;
+                const foundInListings = listings.find((l: any) => l.id === id);
+                if (foundInListings) return foundInListings;
+                const foundInSocial = socialListings.find((l: any) => l.id === id);
+                return foundInSocial;
+            };
+
+            const listingObj = findListing(listingId as string);
+            if (listingObj && listingObj.user && listingObj.user.id === user?.id) {
+                // already owner — ignore action
+                setFeedback({ isOpen: true, type: 'cancel' });
+                return;
+            }
             if (isRequested) {
                 await api.delete(`/sustainability/requests/cancel/${listingId}`);
                 setMySentRequestIds(prev => prev.filter(id => id !== listingId));
@@ -195,7 +217,7 @@ export const SustainabilityView = () => {
     return (
         <div className="min-h-screen bg-[#F8FAFB] font-sans text-[#1E293B] pb-32 text-left">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-                
+
                 <header className="flex justify-between items-start mb-12">
                     <div className="flex items-center gap-4">
                         <div className="p-3 bg-[#F0FDF4] rounded-2xl border border-[#CCFBF1]"><Leaf className="text-[#407B75]" size={32} /></div>
@@ -216,14 +238,14 @@ export const SustainabilityView = () => {
                                 { id: 'social', icon: Users, label: 'Biblioteca Amigos' }
                             ].map((tab) => (
                                 <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={`px-8 py-3.5 rounded-xl font-black uppercase text-[10px] tracking-[0.15em] transition-all flex items-center gap-2 whitespace-nowrap ${activeTab === tab.id ? "bg-[#1E293B] text-white shadow-md scale-[1.02]" : "text-[#94A3B8] bg-white hover:bg-slate-50"}`}>
-                                    <tab.icon size={14} strokeWidth={2.5}/> {tab.label}
+                                    <tab.icon size={14} strokeWidth={2.5} /> {tab.label}
                                 </button>
                             ))}
                         </div>
 
                         <main>
                             {activeTab === 'market' && <MarketplaceSection listings={listings} onEdit={(item: any) => { setListingToEdit(item); setIsCreateOpen(true); }} loadData={loadData} onAction={(type: string, item: any) => setActionModal({ isOpen: true, type, data: item })} />}
-                            {activeTab === 'history' && <HistorySection items={history} />}
+                            {activeTab === 'history' && <HistorySection items={history} userId={user?.id} onReturnSuccess={loadData} />}
                             {activeTab === 'social' && <SocialSection listings={socialListings} onOpenDetails={(item: any) => setSocialModalData(item)} myRequests={mySentRequestIds} />}
                         </main>
                     </div>
@@ -231,7 +253,7 @@ export const SustainabilityView = () => {
                     <aside className="lg:col-span-3 space-y-6 h-fit sticky top-8">
                         <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-50">
                             <div className="flex items-center gap-3 mb-8">
-                                <div className="text-[#407B75]"><Sparkle size={20} fill="currentColor"/></div>
+                                <div className="text-[#407B75]"><Sparkle size={20} fill="currentColor" /></div>
                                 <h3 className="font-black text-[#1E293B] uppercase text-[11px] tracking-widest mt-1">Tu Impacto</h3>
                             </div>
                             <div className="space-y-6">
@@ -248,7 +270,7 @@ export const SustainabilityView = () => {
                         </div>
 
                         <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-50">
-                            <h3 className="font-black text-[#1E293B] uppercase text-[10px] tracking-widest mb-4 flex items-center gap-2">¿Sabías que? <Info size={12}/></h3>
+                            <h3 className="font-black text-[#1E293B] uppercase text-[10px] tracking-widest mb-4 flex items-center gap-2">¿Sabías que? <Info size={12} /></h3>
                             <p className="text-[11px] text-[#64748B] font-medium leading-relaxed">Reutilizar un libro ahorra hasta 10kg de CO₂.</p>
                             <div className="mt-6 flex justify-end">
                                 <div className="p-2.5 bg-emerald-50 rounded-full"><Globe size={16} className="text-emerald-600" /></div>
@@ -261,12 +283,13 @@ export const SustainabilityView = () => {
             <CreateListingModal isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} onSuccess={loadData} listingToEdit={listingToEdit} />
             <FeedbackModal isOpen={feedback.isOpen} onClose={() => setFeedback({ ...feedback, isOpen: false })} type={feedback.type} />
             <ActionModal isOpen={actionModal.isOpen} type={actionModal.type} title={actionModal.data?.book?.title || actionModal.data?.listing?.book?.title} onClose={() => setActionModal({ isOpen: false, type: '', data: null })} onConfirm={handleActionConfirm} />
-            <SocialDetailsModal 
-                isOpen={!!socialModalData} 
-                listing={socialModalData} 
-                onClose={() => setSocialModalData(null)} 
+            <SocialDetailsModal
+                isOpen={!!socialModalData}
+                listing={socialModalData}
+                onClose={() => setSocialModalData(null)}
                 onToggleRequest={handleToggleRequest}
                 isRequested={socialModalData ? mySentRequestIds.includes(socialModalData.id) : false}
+                currentUserId={user?.id}
             />
         </div>
     );
@@ -274,7 +297,7 @@ export const SustainabilityView = () => {
 
 const ImpactItem = ({ icon: Icon, color, count, label }: any) => (
     <div className="flex items-center gap-4">
-        <div className={`w-9 h-9 flex items-center justify-center rounded-xl bg-slate-50`}><Icon size={20} className={color} strokeWidth={2.5}/></div>
+        <div className={`w-9 h-9 flex items-center justify-center rounded-xl bg-slate-50`}><Icon size={20} className={color} strokeWidth={2.5} /></div>
         <div>
             <div className="text-[16px] font-black text-[#1E293B] leading-none mb-0.5">{count}</div>
             <div className="text-[9px] font-bold text-[#94A3B8] uppercase tracking-widest">{label}</div>
@@ -348,16 +371,61 @@ const MarketplaceSection = ({ listings, onEdit, onAction }: any) => {
     );
 };
 
-const HistorySection = ({ items }: any) => {
+const HistorySection = ({ items, userId, onReturnSuccess }: any) => {
+    const [actionId, setActionId] = useState<string | null>(null);
+
+    const handleMarkReturned = async (requestId: string) => {
+        setActionId(requestId);
+        try {
+            await api.patch(`/sustainability/requests/${requestId}/return`);
+            if (onReturnSuccess) onReturnSuccess();
+        } catch (e) {
+            console.error('Error marcando devolución', e);
+        } finally {
+            setActionId(null);
+        }
+    };
+
+    const getStatusInfo = (item: any) => {
+        const isManualDonation = item.status === 'donated' || item.isManualDonation;
+        const isLoan = item.listing?.type === 'loan';
+
+        if (isManualDonation) return { label: "DONADO", styles: "bg-amber-50 text-amber-600" };
+
+        switch (item.status) {
+            case 'completed':
+                return { label: isLoan ? "DEVUELTO" : "VENDIDO", styles: "bg-[#F0FDF4] text-[#407B75]" };
+            case 'accepted':
+                return { label: isLoan ? "PRESTADO" : "ACEPTADO", styles: "bg-blue-50 text-blue-600" };
+            case 'rejected':
+                return { label: "RECHAZADO", styles: "bg-rose-50 text-rose-600" };
+            default:
+                return { label: item.status.toUpperCase(), styles: "bg-slate-100 text-slate-600" };
+        }
+    };
+
     return (
         <div className="space-y-6 animate-in fade-in">
             <div className="grid gap-4">
                 {items.map((item: any) => {
-                    const isManualDonation = item.status === 'donated' || item.isManualDonation;
                     const bookData = item.listing?.book || item.book;
                     const date = new Date(item.createdAt);
-                    const statusLabel = isManualDonation ? "DONADO" : item.status.toUpperCase();
-                    const statusStyles = item.status === 'donated' ? "bg-amber-50 text-amber-600" : "bg-[#F0FDF4] text-[#407B75]";
+                    const { label, styles } = getStatusInfo(item);
+
+                    const isOwner = item.listing?.user?.id === userId;
+                    const otherUser = isOwner ? item.requester : item.listing?.user;
+                    const otherName = otherUser?.fullName?.split(' ')[0] || "Usuario";
+
+                    let labelText = "";
+                    if (item.status === 'donated' || item.isManualDonation) {
+                        labelText = "Donación externa realizada";
+                    } else if (item.listing?.type === 'loan') {
+                        labelText = isOwner ? `Prestado a @${otherName}` : `Préstamo de @${otherName}`;
+                    } else {
+                        labelText = isOwner ? `Vendido a @${otherName}` : `Compra a @${otherName}`;
+                    }
+
+                    const canMarkReturn = item.status === 'accepted' && item.listing?.type === 'loan' && isOwner;
 
                     return (
                         <div key={item.id} className="bg-white p-5 rounded-[2rem] border border-slate-100 flex items-center justify-between shadow-sm hover:shadow-md transition-all group">
@@ -365,8 +433,8 @@ const HistorySection = ({ items }: any) => {
                                 <img src={bookData?.urlPortada} className="w-16 h-24 object-cover rounded-xl shadow-sm grayscale-[0.3]" alt="" />
                                 <div>
                                     <h4 className="font-black text-[#1E293B] text-[14px] uppercase tracking-tight mb-1">{bookData?.title}</h4>
-                                    <p className="text-[11px] text-[#64748B] font-medium italic mb-3">{isManualDonation ? "Donación externa realizada" : `Intercambio con @${item.requester?.fullName?.split(' ')[0]}`}</p>
-                                    <span className={`text-[8px] px-3 py-1 rounded-full font-black tracking-widest ${statusStyles}`}>{statusLabel}</span>
+                                    <p className="text-[11px] text-[#64748B] font-medium italic mb-3">{labelText}</p>
+                                    <span className={`text-[8px] px-3 py-1 rounded-full font-black tracking-widest ${styles}`}>{label}</span>
                                 </div>
                             </div>
                             <div className="flex items-center gap-8">
@@ -374,6 +442,13 @@ const HistorySection = ({ items }: any) => {
                                     <Calendar className="text-[#94A3B8]" size={14} />
                                     <div className="text-[10px] font-black text-[#64748B] uppercase tracking-widest">{date.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
                                 </div>
+                                {canMarkReturn && (
+                                    <div>
+                                        <button disabled={!!actionId} onClick={() => handleMarkReturned(item.id)} className="py-2 px-4 bg-emerald-500 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-sm hover:bg-emerald-600">
+                                            {actionId === item.id ? <Loader2 className="w-4 h-4 animate-spin inline-block" /> : 'Marcar devuelto'}
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     );
@@ -385,7 +460,7 @@ const HistorySection = ({ items }: any) => {
 
 const SocialSection = ({ listings, error, onOpenDetails, myRequests }: any) => {
     if (error) return <EmptyState text="Error al cargar amigos" isSocial />;
-    
+
     return (
         <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
@@ -403,8 +478,8 @@ const SocialSection = ({ listings, error, onOpenDetails, myRequests }: any) => {
                         <div className="text-left px-1 flex-1 flex flex-col">
                             <h3 className="font-black text-[#1E293B] text-[13px] mb-1 uppercase line-clamp-1 leading-none">{item.book?.title}</h3>
                             <p className="text-[#94A3B8] font-bold text-[9px] mb-5 uppercase tracking-widest">{item.book?.author}</p>
-                            <button 
-                                onClick={() => onOpenDetails(item)} 
+                            <button
+                                onClick={() => onOpenDetails(item)}
                                 className={`mt-auto w-full py-4 rounded-2xl text-[9px] font-black uppercase tracking-[0.2em] shadow-md transition-all ${myRequests.includes(item.id) ? 'bg-amber-500 text-white' : 'bg-[#407B75] text-white hover:bg-[#2b534f]'}`}
                             >
                                 {myRequests.includes(item.id) ? 'Solicitado' : 'Ver detalles'}
