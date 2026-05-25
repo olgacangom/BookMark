@@ -10,7 +10,7 @@ import { LibraryEvent } from '../users/entities/library-event.entity';
 import { Activity } from 'src/users/entities/activity.entity';
 import { Club } from '../club/entities/club.entity';
 import { BookListing } from 'src/users/entities/book-listing.entity';
-import { EventRegistration } from 'src/bookstore/entities/event-registration.entity';
+import { AdminService } from 'src/users/roles/admin.service';
 
 interface RequestWithUser extends Request {
   user: { id: string; role: string };
@@ -32,14 +32,13 @@ interface BookAggregationResult {
 export class AIController {
   constructor(
     private readonly aiService: AIService,
+    private readonly adminService: AdminService,
     @InjectRepository(User) private readonly userRepo: Repository<User>,
     @InjectRepository(Book) private readonly bookRepo: Repository<Book>,
     @InjectRepository(Activity)
     private readonly activityRepo: Repository<Activity>,
     @InjectRepository(LibraryEvent)
     private readonly eventRepo: Repository<LibraryEvent>,
-    @InjectRepository(EventRegistration)
-    private readonly registrationRepo: Repository<EventRegistration>,
     @InjectRepository(Club) private readonly clubRepo: Repository<Club>,
     @InjectRepository(BookListing)
     private readonly listingRepo: Repository<BookListing>,
@@ -67,7 +66,7 @@ export class AIController {
       if (role === 'admin') {
         context = await this.getAdminContext();
       } else if (role === 'librero') {
-        context = await this.getLibreroContext(userId);
+        context = await this.getLibreroContext();
       } else {
         context = await this.getLectorContext(userId);
       }
@@ -279,9 +278,14 @@ ${slotDetails}`;
     `;
   }
 
-  private async getLibreroContext(userId: string): Promise<string> {
-    const count = await this.bookRepo.count({ where: { userId } });
-    return `[DATOS LIBRERÍA]: El catálogo cuenta con ${count} libros registrados.`;
+  private async getLibreroContext(): Promise<string> {
+    const popularBook = await this.adminService.getMostRequestedBook();
+
+    if (!popularBook) {
+      return 'Aún no hay suficientes solicitudes de libros registradas para determinar cuál es el más solicitado.';
+    }
+
+    return `El libro que más solicitan los usuarios a través de la plataforma es "${popularBook.title} de ${popularBook.author}".`;
   }
 
   private async getLectorContext(userId: string): Promise<string> {

@@ -26,8 +26,7 @@ export const BibliosChat = () => {
         ];
         if (role === 'librero') return [
             { label: "Horario ideal para eventos", prompt: "¿En qué franja horaria asisten más lectores?" },
-            { label: "Género más vendido", prompt: "¿Qué género vendo más?" },
-            { label: "Usuario que más compra", prompt: "¿Qué género vendo más?" }
+            { label: "Libro más buscado", prompt: "¿Cuál es el libro que más aparece en las búsquedas o que más interesa a los lectores?" }, 
         ];
         return [
             { label: "Recomiéndame algo", prompt: "Dame una recomendación de libro que no tenga en mi biblioteca.", icon: <Sparkles size={16}/> },
@@ -79,8 +78,8 @@ export const BibliosChat = () => {
                     <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-50/50 custom-scrollbar">
                         {messages.length === 0 ? (
                             <div className="space-y-6">
-                                <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-200 text-slate-600 text-sm font-medium">
-                                    ¡Hola! Soy **Biblios**. Estoy conectado a la red de **BookMark**. ¿En qué puedo ayudarte hoy?
+                                <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-200 text-slate-700 text-sm font-medium">
+                                    ¡Hola! Soy Biblios. Estoy conectado a la red de BookMark. ¿En qué puedo ayudarte hoy?
                                 </div>
                                 <div className="grid gap-3">
                                     {getQuickActions().map((q, i) => (

@@ -9,6 +9,8 @@ import { Club } from 'src/club/entities/club.entity';
 import { User } from 'src/users/entities/user.entity';
 import { Activity } from 'src/users/entities/activity.entity';
 import { EventRegistration } from 'src/bookstore/entities/event-registration.entity';
+import { AdminService } from 'src/users/roles/admin.service';
+import { SustainabilityRequest } from 'src/users/entities/sustainability-request.entity';
 
 @Module({
   imports: [
@@ -20,9 +22,11 @@ import { EventRegistration } from 'src/bookstore/entities/event-registration.ent
       LibraryEvent,
       EventRegistration,
       Club,
+      SustainabilityRequest,
     ]),
   ],
   controllers: [AIController],
-  providers: [AIService],
+  providers: [AIService, AdminService],
+  exports: [AdminService],
 })
 export class AIModule {}

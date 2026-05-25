@@ -71,7 +71,7 @@ export const LibreroCatalogView = () => {
         try {
             const res = await api.get('/librero/inventory');
             setMyStock(res.data);
-        } catch { console.error("Error al cargar inventario"); } 
+        } catch { console.error("Error al cargar inventario"); }
         finally { setIsLoading(false); }
     }, []);
 
@@ -97,11 +97,11 @@ export const LibreroCatalogView = () => {
 
     const handleOpenAdd = (book: any) => { setIsEditing(false); setSelectedItem(book); setIsAddStoreModalOpen(true); };
     const handleOpenEdit = (inventoryItem: any) => { setIsEditing(true); setSelectedItem(inventoryItem); setIsAddStoreModalOpen(true); };
-    
-    const handleOpenDelete = (e: React.MouseEvent, item: any) => { 
-        e.stopPropagation(); 
-        setItemToDelete(item); 
-        setIsDeleteModalOpen(true); 
+
+    const handleOpenDelete = (e: React.MouseEvent, item: any) => {
+        e.stopPropagation();
+        setItemToDelete(item);
+        setIsDeleteModalOpen(true);
     };
 
     const confirmAction = async (formData: { price: number; inStock: boolean }) => {
@@ -132,7 +132,7 @@ export const LibreroCatalogView = () => {
             setItemToDelete(null);
             fetchInventory();
             setFeedback({ isOpen: true, type: 'success', title: 'Retirado', message: 'El libro ha sido eliminado de tu catálogo.' });
-        } catch { 
+        } catch {
             setFeedback({ isOpen: true, type: 'error', title: 'Error', message: 'No se pudo eliminar el ejemplar.' });
         }
     };
@@ -141,7 +141,7 @@ export const LibreroCatalogView = () => {
 
     return (
         <div className="py-6 md:py-8 animate-in fade-in duration-700 text-left px-4">
-            
+
             <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-6">
                 <div className="flex items-center gap-4">
                     <div className="min-w-0">
@@ -149,8 +149,8 @@ export const LibreroCatalogView = () => {
                         <p className="text-slate-400 text-xs md:text-sm font-medium italic">Gestiona tus existencias</p>
                     </div>
                 </div>
-                <button 
-                    onClick={() => { setIsEditing(false); setIsCreateNewModalOpen(true); }} 
+                <button
+                    onClick={() => { setIsEditing(false); setIsCreateNewModalOpen(true); }}
                     className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-4 md:py-3 bg-[#0f172a] text-white rounded-2xl font-bold text-xs uppercase hover:bg-teal-600 transition-all shadow-lg active:scale-95"
                 >
                     <Plus size={18} /> Añadir Libro Nuevo
@@ -159,13 +159,10 @@ export const LibreroCatalogView = () => {
 
             {/* BUSCADOR */}
             <div className="relative mb-10 text-left">
-                <div className="bg-white p-5 md:p-6 rounded-[2rem] md:rounded-[2.5rem] shadow-sm border border-slate-100 relative z-30">
-                    <label className="text-[10px] font-black text-teal-600 uppercase tracking-widest mb-3 block ml-2">Buscador rápido global</label>
-                    <div className="relative group">
-                        <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300" size={20} />
-                        <input type="text" placeholder="Busca por título o autor..." className="w-full pl-14 pr-4 py-4 md:py-5 bg-slate-50 border border-slate-100 rounded-2xl md:rounded-3xl focus:outline-none focus:border-teal-500 text-sm font-semibold transition-all shadow-inner" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-                        {isSearching && <Loader2 className="absolute right-5 top-1/2 -translate-y-1/2 animate-spin text-teal-600" size={20} />}
-                    </div>
+                <div className="relative group">
+                    <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300" size={20} />
+                    <input type="text" placeholder="Busca por título o autor..." className="w-full pl-14 pr-4 py-4 md:py-5 bg-slate-50 border border-slate-100 rounded-2xl md:rounded-3xl focus:outline-none focus:border-teal-500 text-sm font-semibold transition-all shadow-inner" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                    {isSearching && <Loader2 className="absolute right-5 top-1/2 -translate-y-1/2 animate-spin text-teal-600" size={20} />}
                 </div>
 
                 {searchResults.length > 0 && (
@@ -196,15 +193,15 @@ export const LibreroCatalogView = () => {
             </div>
 
             <h3 className="text-lg md:text-xl font-black text-slate-900 uppercase tracking-tight mb-6 md:mb-8 ml-2">Artículos a la venta ({myStock.length})</h3>
-            
+
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 md:gap-6">
                 {myStock.map((item) => (
-                    <div 
-                        key={item.id} 
+                    <div
+                        key={item.id}
                         onClick={() => handleOpenEdit(item)}
                         className="group bg-white p-3 md:p-5 rounded-[2rem] md:rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col hover:shadow-2xl hover:scale-[1.02] hover:border-teal-500/30 transition-all duration-300 relative overflow-hidden cursor-pointer"
                     >
-                        <button 
+                        <button
                             onClick={(e) => handleOpenDelete(e, item)}
                             className="absolute top-4 right-4 z-20 p-2.5 bg-white/90 backdrop-blur-md text-rose-500 rounded-xl opacity-100 md:opacity-0 md:group-hover:opacity-100 hover:bg-rose-500 hover:text-white transition-all shadow-md border border-slate-100"
                         >
@@ -242,12 +239,12 @@ export const LibreroCatalogView = () => {
             <CreateStoreBookModal isOpen={isCreateNewModalOpen} onClose={() => setIsCreateNewModalOpen(false)} onSuccess={fetchInventory} />
             <ConfirmDeleteStoreModal isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)} onConfirm={confirmDelete} title={itemToDelete?.book?.title || ''} />
 
-            <FeedbackModal 
-                isOpen={feedback.isOpen} 
-                onClose={() => setFeedback({ ...feedback, isOpen: false })} 
-                type={feedback.type} 
-                title={feedback.title} 
-                message={feedback.message} 
+            <FeedbackModal
+                isOpen={feedback.isOpen}
+                onClose={() => setFeedback({ ...feedback, isOpen: false })}
+                type={feedback.type}
+                title={feedback.title}
+                message={feedback.message}
             />
         </div>
     );

@@ -13,6 +13,12 @@ interface RawCreatedAt {
   createdAt: string | Date;
 }
 
+interface RawBookResult {
+  title: string;
+  author: string;
+  requestcount: string | number;
+}
+
 @Injectable()
 export class AdminService {
   constructor(
@@ -294,5 +300,26 @@ export class AdminService {
     return this.userRepository.find({
       where: [{ role: UserRole.LIBRERO }, { role: UserRole.LIBRERO_PENDIENTE }],
     });
+  }
+
+  async getMostRequestedBook(): Promise<{
+    title: string;
+    author: string;
+  } | null> {
+    const result = await this.requestRepository
+      .createQueryBuilder('req')
+      .innerJoin('req.listing', 'listing')
+      .innerJoin('listing.book', 'book')
+      .select('book.title', 'title')
+      .addSelect('book.author', 'author')
+      .addSelect('COUNT(req.id)', 'requestcount')
+      .groupBy('book.id')
+      .addGroupBy('book.title')
+      .addGroupBy('book.author')
+      .orderBy('requestcount', 'DESC')
+      .limit(1)
+      .getRawOne<RawBookResult>();
+
+    return result ? { title: result.title, author: result.author } : null;
   }
 }
