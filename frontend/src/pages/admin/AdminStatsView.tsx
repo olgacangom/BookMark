@@ -1,239 +1,481 @@
 import { useEffect, useState } from "react";
 import api from "../../services/api";
-import { 
-  Star, BookOpen, ArrowUpRight,
-  Zap, Globe, ChevronRight, RefreshCw,
+import {
+  Star,
+  BookOpen,
+  RefreshCw,
+  Users,
+  Megaphone,
+  Calendar,
+  ClipboardList,
+  Globe2,
+  Mail,
+  Library,
+  MessageSquareText
 } from "lucide-react";
-import { 
-  ResponsiveContainer, AreaChart, Area,
-  PieChart, Pie, Cell, Tooltip,
+import {
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
 } from "recharts";
 
-const COLORS = ["#3b82f6", "#f59e0b", "#0d9488", "#8b5cf6", "#94a3b8", "#f43f5e"];
+const COLORS = [
+  "#5B74E8",
+  "#C89A33",
+  "#5A9985",
+  "#7B61FF",
+  "#AAB4C5",
+];
 
 export const AdminStatsView = () => {
   const [stats, setStats] = useState<any>(null);
 
   useEffect(() => {
-    api.get('/admin/stats-global').then(res => {
-        setStats(res.data);
-    });
+    api.get("/admin/stats-global").then((res) => setStats(res.data));
   }, []);
 
-  if (!stats) return (
-    <div className="h-96 flex flex-col items-center justify-center bg-[#F8FAFB]">
-        <RefreshCw className="animate-spin text-teal-600 mb-4" size={40} />
-        <p className="text-slate-400 font-black uppercase tracking-widest text-[10px]">Sincronizando Dashboard...</p>
-    </div>
-  );
+  if (!stats)
+    return (
+      <div className="fixed inset-0 bg-linear-to-r from-slate-700 via-teal-600 to-emerald-600 p-5 lg:p-8 overflow-y-auto">        <RefreshCw className="animate-spin text-white" size={42} />
+      </div>
+    );
 
-  // Datos simulados para las gráficas de las tarjetas ( Sparklines )
-  const userHistory = [
-    { n: 'L', v: 400 }, { n: 'M', v: 300 }, { n: 'M', v: 600 }, 
-    { n: 'J', v: 800 }, { n: 'V', v: 500 }, { n: 'S', v: 900 }, { n: 'D', v: 1100 }
-  ];
-
-  const bookHistory = [
-    { n: 'L', v: 20 }, { n: 'M', v: 45 }, { n: 'M', v: 30 }, 
-    { n: 'J', v: 70 }, { n: 'V', v: 40 }, { n: 'S', v: 85 }, { n: 'D', v: 100 }
-  ];
-
-  const chartData = stats.topGenres?.map((g: any) => ({
-    name: g.genre || 'Otros',
-    value: Number(g.count) || 0
-  })) || [];
+  const chartData =
+    stats.topGenres?.map((g: any) => ({
+      name: g.genre,
+      value: Number(g.count),
+    })) || [];
 
   return (
-    <div className="py-8 space-y-8 animate-in fade-in duration-700 px-4 sm:px-8 bg-[#F8FAFB] min-h-screen text-left">
-      
-      {/* HEADER */}
-      <header className="flex justify-between items-center">
-        <div>
-          <h2 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tighter uppercase italic">
-            Dashboard <span className="text-teal-600 font-serif lowercase">bookmark</span>
-          </h2>
-          <p className="text-slate-400 font-bold uppercase text-[10px] tracking-[0.3em] mt-1">
+      <div>
+
+        <header className="mb-8">
+          <h1 className="text-4xl font-black uppercase italic text-white">
+            ESTADÍSTICAS
+          </h1>
+          <p className="mt-2 text-[10px] uppercase tracking-[0.35em] font-black text-white/70">
             Panel de control administrativo • Global
           </p>
-        </div>
-      </header>
+        </header>
 
-      {/* CARDS DE RESUMEN CON GRÁFICAS (SPARKINES) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        
-        {/* Usuarios Activos */}
-        <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden group">
-          <div className="relative z-10">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Usuarios Activos</p>
-            <div className="flex items-baseline gap-2">
-                <span className="text-4xl font-black text-slate-900 tracking-tighter">{stats.totalUsers}</span>
-                <span className="text-emerald-500 text-[10px] font-bold flex items-center gap-0.5">
-                    <ArrowUpRight size={12} /> 22%
-                </span>
+        {/* TOP */}
+        <div className="grid xl:grid-cols-[1fr_280px] gap-5 mb-6">
+          <div className="rounded-[2rem] overflow-hidden border border-white/10 bg-white/80 backdrop-blur-md shadow-lg">
+            <div className="grid md:grid-cols-4 divide-x divide-black/20">
+
+              <StatBlock
+                title="Usuarios lectores"
+                value={stats.totalUsers}
+                sub="usuarios que leen"
+                icon={<Users />}
+                color="emerald"
+                chart={
+                  <StatChart
+                    data={stats.weeklyUserGrowth}
+                    color="#16a34a"
+                  />
+                }
+              />
+
+              <StatBlock
+                title="Libreros"
+                value={stats.totalLibreros}
+                sub={`Pendientes: ${stats.pendingLibreros}`}
+                icon={<Library />}
+                color="amber"
+                chart={
+                  <StatChart
+                    data={stats.weeklyLibreroGrowth?.length ? stats.weeklyLibreroGrowth : stats.weeklyUserGrowth}
+                    color="#f59e0b"
+                  />
+                }
+              />
+
+              <StatBlock
+                title="Libros Totales"
+                value={stats.totalBooks}
+                sub="libros registrados"
+                icon={<BookOpen />}
+                color="blue"
+                chart={
+                  <StatChart
+                    data={stats.weeklyListingGrowth}
+                    color="#2563eb"
+                  />
+                }
+              />
+
+              <StatBlock
+                title="Anuncios de libros"
+                value={stats.totalAvailableListings}
+                sub={`actuales de ${stats.totalListings} registrados`}
+                icon={<Megaphone />}
+                color="amber"
+                chart={
+                  <StatChart
+                    data={stats.weeklyListingGrowth}
+                    color="#f59e0b"
+                  />
+                }
+              />
             </div>
           </div>
-          {/* Sparkline */}
-          <div className="absolute inset-0 pt-12">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={userHistory}>
-                <defs>
-                  <linearGradient id="colorU" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.1}/>
-                    <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <Area type="monotone" dataKey="v" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorU)" isAnimationActive={true} />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
 
-        {/* Libros en Sistema */}
-        <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden group">
-          <div className="relative z-10">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Libros Totales</p>
-            <div className="flex items-baseline gap-2">
-                <span className="text-4xl font-black text-slate-900 tracking-tighter">{stats.totalBooks}</span>
-                <span className="text-blue-500 text-[10px] font-bold flex items-center gap-0.5">
-                    <ArrowUpRight size={12} /> 8%
-                </span>
+          <div className="relative overflow-hidden rounded-[2rem] bg-[#07111e] p-6 shadow-xl">
+            <p className="text-[10px] uppercase tracking-[0.3em] font-black text-white/60">
+              Solicitudes Totales
+            </p>
+
+            <div className="mt-4 flex items-end gap-2">
+              <span className="text-5xl font-black text-white">
+                {stats.totalRequests}
+              </span>
+              <span className="text-xl text-emerald-300 font-bold">
+                +{stats.acceptedRequests}
+              </span>
             </div>
+
+            <p className="mt-4 text-[9px] uppercase tracking-[0.2em] text-emerald-300 font-bold">
+              Aceptadas: {stats.acceptedRequests}
+              <br />
+              Completadas: {stats.completedRequests}
+            </p>
+
+            <Globe2
+              size={100}
+              className="absolute right-[-15px] bottom-[-15px] text-white/5"
+            />
           </div>
-          <div className="absolute inset-0 pt-12">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={bookHistory}>
-                <defs>
-                  <linearGradient id="colorB" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1}/>
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <Area type="monotone" dataKey="v" stroke="#3b82f6" strokeWidth={2} fillOpacity={1} fill="url(#colorB)" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-          <BookOpen className="absolute right-4 top-4 text-slate-100 group-hover:text-blue-50 transition-colors" size={40} />
         </div>
 
-        {/* Interacciones */}
-        <div className="bg-slate-900 p-6 rounded-[2.5rem] shadow-xl relative overflow-hidden group">
-          <div className="relative z-10">
-            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Interacciones</p>
-            <div className="flex items-baseline gap-2">
-                <span className="text-4xl font-black text-white tracking-tighter">{stats.totalInteractions || stats.totalBooks * 2}</span>
-                <Zap size={14} className="text-teal-400 fill-teal-400 animate-pulse" />
+        {/* MIDDLE */}
+        <div className="rounded-[2rem] overflow-hidden border border-white/10 bg-white/80 backdrop-blur-md shadow-lg mb-6">
+          <div className="grid md:grid-cols-3 divide-x divide-black/20">
+            <StatBlock
+              title="Eventos"
+              value={stats.totalEvents}
+              sub={`Próximos: ${stats.upcomingEvents}`}
+              icon={<Calendar />}
+              color="emerald"
+            />
+
+            <StatBlock
+              title="Registros"
+              value={stats.totalRegistrations}
+              sub={`Media: ${stats.avgRegistrationsPerEvent}`}
+              icon={<ClipboardList />}
+              color="blue"
+            />
+
+            <StatBlock
+              title="Clubes"
+              value={stats.totalClubs}
+              sub="en total"
+              icon={<MessageSquareText />}
+              color="amber" />
+          </div>
+
+          <div className="grid md:grid-cols-3 border-t border-black/20">
+            <SmallInfo
+              label="Interacciones"
+              value={stats.totalInteractions}
+            />
+            <SmallInfo
+              label="Ventas"
+              value={stats.totalSaleListings}
+            />
+            <SmallInfo
+              label="Préstamos"
+              value={stats.totalLoanListings}
+            />
+          </div>
+        </div>
+
+        {/* BOTTOM */}
+        <div className="grid xl:grid-cols-2 gap-8 mb-6">
+
+          <section className="rounded-[2rem] overflow-hidden border border-white/10 bg-white/80 backdrop-blur-md shadow-lg p-8 mb-6">
+            <h3 className="font-black uppercase text-xs text-slate-900 mb-5">
+              Géneros Populares
+            </h3>
+
+            <div className="flex gap-3 mb-6">
+              <MetricPill label="Total" value={stats.totalBooks} />
+              <MetricPill label="Géneros" value={chartData.length} />
             </div>
-            <p className="text-[9px] text-teal-400 font-bold uppercase mt-2">Sincronizado Live</p>
-          </div>
-          <Globe className="absolute -right-2 -bottom-2 text-white/5" size={100} />
-        </div>
-      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        
-        {/* DISTRIBUCIÓN POR GÉNERO */}
-        <div className="lg:col-span-7 bg-white p-8 rounded-[3.5rem] border border-slate-100 shadow-sm self-start">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-8">
-            <div className="w-full md:w-1/2 flex flex-col items-center">
-              <h3 className="text-[11px] font-black text-slate-800 uppercase tracking-widest mb-10 self-start border-l-4 border-teal-500 pl-3">
-                  Géneros Populares
-              </h3>
-              
-              <div className="relative w-56 h-56 shrink-0">
-                <PieChart width={220} height={220}>
+            <div className="grid lg:grid-cols-[220px_1fr] gap-6 items-center">
+              <div className="relative h-56">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
                     <Pie
-                        data={chartData}
-                        cx="50%" cy="50%"
-                        innerRadius={65}
-                        outerRadius={95}
-                        paddingAngle={5}
-                        dataKey="value"
-                        stroke="none"
-                        cornerRadius={6}
+                      data={chartData}
+                      innerRadius={55}
+                      outerRadius={85}
+                      dataKey="value"
                     >
-                        {chartData.map((_: any, index: number) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} className="outline-none" />
-                        ))}
+                      {chartData.map((_: any, i: number) => (
+                        <Cell
+                          key={i}
+                          fill={COLORS[i % COLORS.length]}
+                        />
+                      ))}
                     </Pie>
-                    <Tooltip contentStyle={{borderRadius: '16px', border: 'none'}} />
-                </PieChart>
-                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                  <span className="text-5xl font-black text-slate-900 tracking-tighter leading-none">{stats.totalBooks}</span>
-                  <span className="text-[10px] font-black text-slate-400 uppercase mt-1">Libros</span>
+                  </PieChart>
+                </ResponsiveContainer>
+
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-5xl font-black text-slate-900">
+                    {stats.totalBooks}
+                  </span>
                 </div>
               </div>
+
+              <div className="space-y-4">
+                {chartData.map((g: any, i: number) => {
+                  const total = chartData.reduce(
+                    (a: number, b: any) => a + b.value,
+                    0
+                  );
+
+                  const pct = Math.round((g.value / total) * 100);
+
+                  return (
+                    <div key={i}>
+                      <div className="flex justify-between text-sm font-bold text-slate-800 mb-1">
+                        <span>{g.name}</span>
+                        <span>{pct}%</span>
+                      </div>
+
+                      <div className="h-2 bg-slate-200 rounded-full">
+                        <div
+                          className="h-full rounded-full"
+                          style={{
+                            width: `${pct}%`,
+                            backgroundColor:
+                              COLORS[i % COLORS.length],
+                          }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </section>
+
+          <section className="rounded-[2rem] overflow-hidden border border-white/10 bg-white/80 backdrop-blur-md shadow-lg p-8 mb-6">
+            <div className="flex justify-between mb-5">
+              <h3 className="font-black uppercase text-xs text-slate-900 flex items-center gap-2">
+                <Star className="text-amber-500 fill-amber-500" />
+                Libros Tendencia
+              </h3>
             </div>
 
-            <div className="w-full md:w-1/2 space-y-4">
-              {stats.topGenres.map((g: any, i: number) => (
-                <div key={i} className="group">
-                  <div className="flex items-center justify-between mb-1">
-                    <div className="flex items-center gap-2">
-                        <div className="w-1.5 h-4 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-                        <span className="text-[10px] font-black text-slate-700 uppercase">{g.genre || 'Otros'}</span>
-                    </div>
-                    <span className="text-[10px] font-black text-slate-900">{Math.round((g.count / stats.totalBooks) * 100)}%</span>
-                  </div>
-                  <div className="w-full h-1 bg-slate-50 rounded-full overflow-hidden">
-                    <div className="h-full bg-slate-200 group-hover:bg-teal-500 transition-all duration-500" style={{ width: `${(g.count / stats.totalBooks) * 100}%` }} />
+            <div className="space-y-4">
+              {stats.topBooks?.map((b: any, i: number) => (
+                <div key={i} className="flex gap-3 items-center">
+                  <span className="text-3xl font-black text-emerald-600 w-10">
+                    0{i + 1}
+                  </span>
+
+                  <img
+                    src={b.urlPortada}
+                    className="w-12 h-16 rounded-xl object-cover"
+                  />
+
+                  <div>
+                    <p className="font-black text-sm text-slate-900">
+                      {b.title}
+                    </p>
+                    <p className="text-xs text-slate-700">
+                      {b.author}
+                    </p>
                   </div>
                 </div>
               ))}
             </div>
-          </div>
+          </section>
         </div>
 
-        {/* RANKING DE LIBROS */}
-        <div className="lg:col-span-5 bg-white p-8 rounded-[3.5rem] border border-slate-100 shadow-sm flex flex-col h-[550px]">
-          <div className="flex justify-between items-center mb-8">
-            <h3 className="text-[11px] font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
-              <Star size={16} className="text-amber-500 fill-amber-500" /> Libros Tendencia
+        {/* LIBREROS */}
+        <section className="rounded-[2rem] overflow-hidden border border-white/10 bg-white/80 backdrop-blur-md shadow-lg p-8">
+          <div className="flex items-center gap-3 mb-8">
+            <div className="p-3 rounded-2xl bg-white/20">
+              <Users size={18} />
+            </div>
+
+            <h3 className="font-black uppercase text-xs text-slate-900">
+              Usuarios Top
             </h3>
-            <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest italic">Top Global</span>
           </div>
 
-          <div className="space-y-6 overflow-y-auto pr-2 custom-scrollbar flex-1">
-            {stats.topBooks.map((b: any, i: number) => (
-              <div key={i} className="flex items-center gap-4 group transition-all p-1">
-                <span className="text-3xl font-black text-slate-100 group-hover:text-teal-500/20 transition-colors w-10 italic shrink-0">
-                  0{i + 1}
-                </span>
-                
-                {/* Portada Real */}
-                <div className="w-12 h-16 rounded-xl bg-[#E8EDF2] flex items-center justify-center shrink-0 relative overflow-hidden shadow-sm group-hover:-rotate-2 transition-transform border border-slate-200">
-                  {b.urlPortada ? (
-                      <img 
-                        src={b.urlPortada} 
-                        className="w-full h-full object-cover relative z-10" 
-                        alt="" 
-                      />
-                  ) : (
-                      <span className="text-[#8B98A5] font-bold text-[10px] uppercase">Book</span>
-                  )}
-                </div>
+          <div className="grid md:grid-cols-2 gap-4">
+            {stats.topLibreros.map((l: any, i: number) => (
+              <div
+                key={i}
+                className="rounded-[1.5rem] border border-white/15 p-5 bg-white/15 flex items-center justify-between"
+              >
+                <div className="flex items-center gap-4">
+                  <img
+                    src={l.avatarUrl}
+                    className="w-14 h-14 rounded-full object-cover"
+                  />
 
-                <div className="flex-1 min-w-0">
-                  <h4 className="text-[11px] font-black text-slate-900 uppercase truncate leading-tight tracking-tight group-hover:text-teal-600 transition-colors">
-                    {b.title}
-                  </h4>
-                  <div className="flex flex-col gap-1 mt-1">
-                    <p className="text-[9px] font-bold text-slate-400 uppercase truncate">{b.author}</p>
-                    <div className="flex items-center gap-1.5 bg-teal-50 px-2 py-0.5 rounded-full w-max border border-teal-100/50">
-                        <div className="w-1 h-1 bg-teal-500 rounded-full" />
-                        <span className="text-[9px] font-black text-teal-600 uppercase tracking-tighter">
-                            {b.totalSaves || 0} lecturas
-                        </span>
+                  <div>
+                    <p className="font-black text-slate-900">
+                      {l.fullName}
+                    </p>
+
+                    <div className="flex gap-2 text-xs text-slate-700">
+                      <Mail size={12} />
+                      {l.email}
                     </div>
+
+                    <p className="text-xs text-emerald-700 font-bold mt-1">
+                      {l.listingsCount} anuncios
+                    </p>
                   </div>
                 </div>
 
-                <ChevronRight size={18} className="text-slate-200" />
+                <span className="text-3xl font-black text-emerald-600">
+                  #{i + 1}
+                </span>
               </div>
             ))}
           </div>
-        </div>
-
+        </section>
       </div>
+  );
+};
+
+const StatBlock = ({
+  title,
+  value,
+  sub,
+  icon,
+  color,
+  chart,
+}: any) => {
+  const styles: any = {
+    emerald: ["bg-emerald-100", "text-emerald-600"],
+    red: ["bg-red-100", "text-red-600"],
+    blue: ["bg-blue-100", "text-blue-600"],
+    amber: ["bg-amber-100", "text-amber-600"],
+  };
+
+  return (
+    <div className="p-6">
+      <div className="flex justify-between mb-4">
+        <p className="font-black uppercase text-xs text-slate-900">
+          {title}
+        </p>
+
+        <div className={`rounded-2xl p-3 ${styles[color][0]} ${styles[color][1]}`}>
+          {icon}
+        </div>
+      </div>
+
+      <div className="text-5xl font-black text-slate-900">
+        {value}
+      </div>
+
+      {chart}
+
+      <p className="text-sm mt-4 text-slate-800">
+        {sub}
+      </p>
+    </div>
+  );
+};
+
+const SmallInfo = ({ label, value }: any) => (
+  <div className="p-4 text-center">
+    <p className="text-[12px] uppercase text-black/80">
+      {label}
+    </p>
+    <p className="text-lg font-black text-black/80">
+      {value}
+    </p>
+  </div>
+);
+
+const MetricPill = ({ label, value }: any) => (
+  <div className="rounded-2xl bg-white/20 px-4 py-2">
+    <p className="text-[10px] uppercase text-slate-700">
+      {label}
+    </p>
+    <p className="text-xl font-black text-slate-900">
+      {value}
+    </p>
+  </div>
+);
+
+const StatChart = ({ data, color }: any) => {
+  if (!data?.length) return null;
+
+  const values = data.map((d: any) => d.value);
+  const max = Math.max(...values, 1);
+  const min = Math.min(...values, 0);
+
+  const range = max - min || 1;
+
+  const points = data
+    .map((d: any, i: number) => {
+      const x = 8 + i * (104 / (data.length - 1));
+
+      // escala real para que no salga plano
+      const normalized = (d.value - min) / range;
+
+      // altura entre 8 y 32
+      const y = 32 - normalized * 22;
+
+      return `${x},${y}`;
+    })
+    .join(" ");
+
+  return (
+    <div className="mt-4 rounded-3xl bg-white/30 p-3 border border-white/20">
+      <svg viewBox="0 0 120 40" className="w-full h-9">
+
+        <defs>
+          <filter id="glow">
+            <feGaussianBlur stdDeviation="2" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+
+        <polyline
+          fill="none"
+          stroke={color}
+          strokeWidth="3"
+          points={points}
+          filter="url(#glow)"
+          className="animate-pulse"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+
+        {data.map((d: any, i: number) => {
+          const x = 8 + i * (104 / (data.length - 1));
+          const normalized = (d.value - min) / range;
+          const y = 32 - normalized * 22;
+
+          return (
+            <circle
+              key={i}
+              cx={x}
+              cy={y}
+              r="2.5"
+              fill={color}
+            />
+          );
+        })}
+      </svg>
     </div>
   );
 };

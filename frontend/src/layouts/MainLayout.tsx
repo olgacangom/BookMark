@@ -15,6 +15,11 @@ export function MainLayout() {
     const { user, logout } = useAuth();
     const [totalUnread, setTotalUnread] = useState(0);
     const [totalRequests, setTotalRequests] = useState(0);
+    const isSpecialBackground = ['/admin/users', '/admin/stats'].includes(location.pathname);
+
+    const mainBackground = isSpecialBackground
+        ? "bg-linear-to-r from-slate-700 via-teal-600 to-emerald-600"
+        : "bg-[#F0F9F9]";
 
     const isActive = (path: string) => location.pathname === path || (path !== '/' && location.pathname.startsWith(path));
 
@@ -118,7 +123,7 @@ export function MainLayout() {
 
     // Items para el menú inferior en móvil 
     const mobileBottomItems = allNavItems.filter(item =>
-        ['/explore', '/feed', '/library', '/clubs', '/bookstore', '/sustainability', '/librero/catalog', '/librero/events', '/admin/users'].includes(item.path) &&
+        ['/explore', '/feed', '/library', '/clubs', '/bookstore', '/sustainability', '/librero/catalog', '/librero/events', '/admin/users', '/admin/stats'].includes(item.path) &&
         item.roles.includes(user?.role || '')
     );
 
@@ -176,10 +181,9 @@ export function MainLayout() {
             </aside>
 
             {/* --- CONTENIDO PRINCIPAL --- */}
-            <main className="flex-1 lg:ml-64 min-h-screen relative pb-24 lg:pb-12">
-
+            <main className={`flex-1 lg:ml-64 min-h-screen relative pb-24 lg:pb-12 ${mainBackground}`}>
                 {/* --- HEADER (MÓVIL & PC ) --- */}
-                <header className="sticky top-0 z-[110] bg-[#F0F9F9]/80 backdrop-blur-md px-4 md:px-8 py-4 flex justify-between items-center gap-4">
+                <header className="sticky top-0 z-[110]  backdrop-blur-md px-4 md:px-8 py-4 flex justify-between items-center gap-4">
                     {/* Logo Móvil */}
                     <div className="lg:hidden flex items-center gap-2">
                         <div className="w-8 h-8 bg-teal-600 rounded-lg flex items-center justify-center shadow-lg"><Library size={18} className="text-white" /></div>
@@ -188,21 +192,25 @@ export function MainLayout() {
 
                     {/* ICONS GROUP (Solo visible en Móvil) */}
                     <div className="flex lg:hidden items-center gap-1">
-                        {/* Chat Icon */}
-                        <Link to="/chat" className={`p-2.5 rounded-xl relative transition-all ${isActive('/chat') ? 'bg-teal-600 text-white shadow-md' : 'text-slate-400'}`}>
-                            <MessageCircle size={20} />
-                            {totalUnread > 0 && (
-                                <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-rose-500 text-white text-[8px] font-black rounded-full flex items-center justify-center border-2 border-[#F0F9F9]">{totalUnread}</span>
-                            )}
-                        </Link>
+                        {user && user.role !== 'admin' && user.role !== 'librero' && (
+                            <>
+                                {/* Chat Icon */}
+                                <Link to="/chat" className={`p-2.5 rounded-xl relative transition-all ${isActive('/chat') ? 'bg-teal-600 text-white shadow-md' : 'text-slate-400'}`}>
+                                    <MessageCircle size={20} />
+                                    {totalUnread > 0 && (
+                                        <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-rose-500 text-white text-[8px] font-black rounded-full flex items-center justify-center border-2 border-[#F0F9F9]">{totalUnread}</span>
+                                    )}
+                                </Link>
 
-                        {/* Requests/Bell Icon */}
-                        <Link to="/requests" className={`p-2.5 rounded-xl relative transition-all ${isActive('/requests') ? 'bg-teal-600 text-white shadow-md' : 'text-slate-400'}`}>
-                            <Bell size={20} />
-                            {totalRequests > 0 && (
-                                <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-rose-500 text-white text-[8px] font-black rounded-full flex items-center justify-center border-2 border-[#F0F9F9]">{totalRequests}</span>
-                            )}
-                        </Link>
+                                {/* Requests/Bell Icon */}
+                                <Link to="/requests" className={`p-2.5 rounded-xl relative transition-all ${isActive('/requests') ? 'bg-teal-600 text-white shadow-md' : 'text-slate-400'}`}>
+                                    <Bell size={20} />
+                                    {totalRequests > 0 && (
+                                        <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-rose-500 text-white text-[8px] font-black rounded-full flex items-center justify-center border-2 border-[#F0F9F9]">{totalRequests}</span>
+                                    )}
+                                </Link>
+                            </>
+                        )}
 
                         {/* Profile Small Avatar */}
                         <Link to="/myprofile" className={`p-1 rounded-full border-2 transition-all ${isActive('/myprofile') ? 'border-teal-600 scale-110' : 'border-transparent'}`}>
@@ -212,13 +220,12 @@ export function MainLayout() {
                         </Link>
 
                         {/* Logout */}
-                        <button onClick={logout} className="p-2.5 text-slate-300 hover:text-rose-500 transition-colors"><LogOut size={20} /></button>
+                        <button onClick={logout} className="p-2.5 text-slate-300 hover:text-rose-500 transition-colors">
+                            <LogOut size={20} />
+                        </button>
                     </div>
 
-                    {/* PC Header (Solo logout o botones extra) */}
-                    <div className="hidden lg:flex flex-1 justify-end items-center gap-4 text-slate-400 text-xs font-bold uppercase tracking-widest italic">
-                        {user?.role === 'librero' ? 'Panel de Gestión Profesional' : 'Explora tu universo literario'}
-                    </div>
+
                 </header>
 
                 <div className="px-4 md:px-8 max-w-7xl mx-auto">

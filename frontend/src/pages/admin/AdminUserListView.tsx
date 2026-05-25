@@ -197,14 +197,14 @@ export const AdminUserListView = () => {
             {/* --- CABECERA PRINCIPAL --- */}
             <header className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
                 <div>
-                    <h2 className="text-3xl font-black text-slate-900 tracking-tight leading-none mb-3 italic">Admin<span className="text-teal-600 font-serif">Mark</span></h2>
+                    <h2 className="text-4xl font-black uppercase italic text-white">Admin<span className="text-teal-400 font-serif">Mark</span></h2>
                     <div className="flex items-center gap-3">
                         <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">Gestión de comunidad</p>
                         <span className="px-2 py-0.5 bg-slate-100 text-slate-500 rounded-full text-[10px] font-black">{filteredUsers.length} Usuarios</span>
                     </div>
                 </div>
                 
-                <div className="flex bg-white p-1.5 rounded-[1.5rem] border border-slate-100 shadow-sm">
+                <div className="flex bg-white/80 p-1.5 rounded-[1.5rem] border border-slate-80 shadow-sm">
                     <button onClick={() => { setTabFilter('all'); resetFilters(); }} className={`px-6 py-2.5 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${tabFilter === 'all' ? 'bg-slate-900 text-white shadow-xl' : 'text-slate-400 hover:text-slate-600'}`}>Todos</button>
                     <button onClick={() => { setTabFilter('pending'); resetFilters(); }} className={`px-6 py-2.5 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${tabFilter === 'pending' ? 'bg-amber-500 text-white shadow-xl' : 'text-slate-400 hover:text-slate-600'}`}>Pendientes</button>
                 </div>
@@ -217,7 +217,7 @@ export const AdminUserListView = () => {
                     <input 
                         type="text" 
                         placeholder="Buscar por nombre, email o librería..."
-                        className="w-full pl-12 pr-4 py-4 bg-white border border-slate-100 rounded-[1.5rem] text-sm font-semibold text-slate-700 shadow-sm focus:outline-none focus:border-teal-500 transition-all"
+                        className="w-full pl-12 pr-4 py-4 bg-white/80 border border-slate-100 rounded-[1.5rem] text-sm font-semibold text-slate-700 shadow-sm focus:outline-none focus:border-teal-500 transition-all"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
@@ -227,7 +227,7 @@ export const AdminUserListView = () => {
                 {tabFilter === 'all' && (
                     <div className="md:col-span-2 relative">
                         <select 
-                            className="w-full appearance-none px-4 py-4 bg-white border border-slate-100 rounded-[1.5rem] text-xs font-bold uppercase text-slate-500 focus:outline-none focus:border-teal-500 shadow-sm cursor-pointer"
+                            className="w-full appearance-none px-4 py-4 bg-white/80 border border-slate-100 rounded-[1.5rem] text-xs font-bold uppercase text-slate-500 focus:outline-none focus:border-teal-500 shadow-sm cursor-pointer"
                             value={roleFilter}
                             onChange={(e) => setRoleFilter(e.target.value)}
                         >
@@ -243,7 +243,7 @@ export const AdminUserListView = () => {
                 {/* Filtro por Estado */}
                 <div className="md:col-span-2 relative">
                     <select 
-                        className="w-full appearance-none px-4 py-4 bg-white border border-slate-100 rounded-[1.5rem] text-xs font-bold uppercase text-slate-500 focus:outline-none focus:border-teal-500 shadow-sm cursor-pointer"
+                        className="w-full appearance-none px-4 py-4 bg-white/80 border border-slate-100 rounded-[1.5rem] text-xs font-bold uppercase text-slate-500 focus:outline-none focus:border-teal-500 shadow-sm cursor-pointer"
                         value={statusFilter}
                         onChange={(e) => setStatusFilter(e.target.value)}
                     >
@@ -257,7 +257,7 @@ export const AdminUserListView = () => {
                 {/* Botón Reset */}
                 <button 
                     onClick={resetFilters}
-                    className="md:col-span-1 flex items-center justify-center bg-slate-50 hover:bg-slate-100 text-slate-400 rounded-[1.5rem] border border-slate-100 transition-all group"
+                    className="md:col-span-1 flex items-center justify-center bg-white/80 hover:bg-slate-100 text-slate-400 rounded-[1.5rem] border border-slate-100 transition-all group"
                     title="Limpiar filtros"
                 >
                     <RotateCcw size={20} className="group-hover:rotate-[-45deg] transition-transform" />
@@ -265,14 +265,14 @@ export const AdminUserListView = () => {
             </div>
 
             {/* --- TABLA PRINCIPAL --- */}
-            <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
+            <div className="bg-white/90 rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
                 <table className="w-full">
-                    <thead className="bg-slate-50/50 border-b border-slate-100">
+                    <thead className="bg-slate-200 border-b border-slate-300">
                         <tr>
-                            <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-left">Usuario / Establecimiento</th>
-                            <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Libros</th>
-                            <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-left">Rol / Status</th>
-                            <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Control</th>
+                            <th className="px-8 py-6 text-[11px] font-black text-slate-500 uppercase tracking-widest text-left">Usuario / Establecimiento</th>
+                            <th className="px-8 py-6 text-[11px] font-black text-slate-500 uppercase tracking-widest text-center">Libros</th>
+                            <th className="px-8 py-6 text-[11px] font-black text-slate-500 uppercase tracking-widest text-left">Rol / Status</th>
+                            <th className="px-8 py-6 text-[11px] font-black text-slate-500 uppercase tracking-widest text-right">Control</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50">
@@ -292,7 +292,7 @@ export const AdminUserListView = () => {
                                         </div>
                                     </td>
                                     <td className="px-8 py-5 text-center">
-                                        <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-slate-50 text-slate-600 rounded-xl text-xs font-bold border border-slate-100 group-hover:bg-white transition-all">
+                                        <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-slate-50 text-slate-600 rounded-xl text-xs font-bold border border-slate-300 group-hover:bg-emerald-100 transition-all">
                                             <BookCopy size={12} className="text-teal-600" /> {u.booksCount || 0}
                                         </span>
                                     </td>
