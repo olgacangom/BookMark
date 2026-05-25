@@ -46,7 +46,7 @@ export const EventsView = () => {
     );
 
     return (
-        <div className="min-h-screen bg-[#F8FAFB] font-sans text-slate-900 pb-20 text-left">
+        <div className="min-h-screen font-sans text-slate-900 pb-20 text-left">
             <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10 py-8">
 
                 {/* HEADER */}
@@ -69,7 +69,7 @@ export const EventsView = () => {
                                 placeholder="Buscar eventos, librerías o temas..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pl-16 pr-6 py-4 bg-white border border-slate-100 rounded-[1.5rem] shadow-sm outline-none focus:ring-4 focus:ring-teal-500/5 transition-all font-medium text-sm"
+                                className="w-full bg-white border border-slate-200 rounded-2xl py-4 pl-14 pr-6 text-sm shadow-sm focus:ring-4 focus:ring-teal-500/5 focus:border-teal-500/20 transition-all outline-none font-medium placeholder:text-slate-400"                            
                             />
                         </div>
 

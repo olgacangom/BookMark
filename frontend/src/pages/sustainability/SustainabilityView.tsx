@@ -85,7 +85,7 @@ const SocialDetailsModal = ({ isOpen, onClose, listing, onToggleRequest, isReque
 
                     <button
                         onClick={() => !isOwner && !isRequested && onToggleRequest(listing.id, isRequested)}
-                        disabled={isOwner || isRequested} 
+                        disabled={isOwner || isRequested}
                         className={`w-full py-4 rounded-xl font-black uppercase text-[10px] tracking-[0.2em] transition-all shadow-lg active:scale-95 
         ${isRequested
                                 ? 'bg-amber-500 text-white cursor-default'
@@ -212,18 +212,17 @@ export const SustainabilityView = () => {
         } catch { console.error("Error"); }
     };
 
-    if (loading) return <div className="min-h-screen bg-[#F8FAFB] flex items-center justify-center"><Loader2 className="w-10 h-10 animate-spin text-[#407B75]" /></div>;
+    if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-10 h-10 animate-spin text-[#407B75]" /></div>;
 
     return (
-        <div className="min-h-screen bg-[#F8FAFB] font-sans text-[#1E293B] pb-32 text-left">
+        <div className="min-h-screen font-sans text-[#1E293B] pb-32 text-left">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
 
                 <header className="flex justify-between items-start mb-12">
                     <div className="flex items-center gap-4">
                         <div className="p-3 bg-[#F0FDF4] rounded-2xl border border-[#CCFBF1]"><Leaf className="text-[#407B75]" size={32} /></div>
                         <div>
-                            <h1 className="text-3xl font-black text-[#1E293B] uppercase tracking-tighter italic leading-none mb-1">Rincón Circular</h1>
-                            <p className="text-[#94A3B8] font-bold text-[9px] uppercase tracking-widest italic leading-none">Economía de {user?.fullName?.split(' ')[0]}</p>
+                            <h1 className="text-3xl font-black text-[#1E293B] uppercase tracking-tighter italic leading-none mb-1">Rincón Circular de {user?.fullName?.split(' ')[0]}</h1>
                         </div>
                     </div>
                     <button onClick={() => { setListingToEdit(null); setIsCreateOpen(true); }} className="flex items-center gap-2 px-6 py-3 bg-[#2F4858] text-white rounded-[1rem] font-bold text-[10px] uppercase shadow-md hover:bg-[#1E2E38] transition-all tracking-widest"><Plus size={16} strokeWidth={3} /> Publicar Libro</button>
@@ -321,7 +320,13 @@ const MarketplaceSection = ({ listings, onEdit, onAction }: any) => {
             <div className="flex flex-col md:flex-row gap-3">
                 <div className="relative flex-1 group">
                     <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-                    <input type="text" placeholder="Buscar por libro..." value={search} onChange={e => setSearch(e.target.value)} className="w-full pl-14 pr-6 py-4 bg-white border border-slate-100 rounded-2xl text-[11px] font-bold shadow-sm outline-none focus:ring-2 focus:ring-[#407B75]/10" />
+                    <input
+                        type="text"
+                        placeholder="Buscar por libro..."
+                        value={search}
+                        onChange={e => setSearch(e.target.value)}
+                        className="w-full bg-white border border-slate-200 rounded-2xl py-4 pl-14 pr-6 text-sm shadow-sm focus:ring-4 focus:ring-teal-500/5 focus:border-teal-500/20 transition-all outline-none font-medium placeholder:text-slate-400"
+                    />
                 </div>
                 <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="px-6 py-4 bg-white border border-slate-100 rounded-2xl text-[10px] font-black uppercase text-slate-500 outline-none cursor-pointer shadow-sm">
                     <option value="Todos">TODOS LOS ESTADOS</option>

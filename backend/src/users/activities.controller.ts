@@ -8,6 +8,7 @@ import {
   Body,
   Patch,
   Delete,
+  Req,
 } from '@nestjs/common';
 import { ActivitiesService } from './activities.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -76,5 +77,14 @@ export class ActivitiesController {
     @Request() req: RequestWithUser,
   ) {
     return this.activitiesService.ignoreActivity(req.user.id, id);
+  }
+
+  @Post(':id/vote')
+  votePoll(
+    @Param('id') id: string,
+    @Body() body: { optionIndex: number },
+    @Req() req: RequestWithUser,
+  ) {
+    return this.activitiesService.votePoll(id, req.user.id, body.optionIndex);
   }
 }

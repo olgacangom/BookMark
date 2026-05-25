@@ -96,7 +96,7 @@ export const ClubsListView = () => {
     }, [clubs, searchTerm]);
 
     return (
-        <div className="min-h-screen bg-[#F8FAFB] font-sans text-slate-900 pb-24 text-left animate-in fade-in duration-500">           
+        <div className="min-h-screen font-sans text-slate-900 pb-24 text-left animate-in fade-in duration-500">           
             <header className="max-w-7xl mx-auto px-8 mb-10 flex justify-between items-end">
                 <div>
                     <h1 className="text-4xl font-black text-slate-900 tracking-tight leading-none uppercase italic">
@@ -113,7 +113,7 @@ export const ClubsListView = () => {
             </header>
 
              {/* BARRA DE BÚSQUEDA */}
-            <div className="relative z-5 px-4 py-3 bg-white/50 backdrop-blur-md border-b border-slate-100 mb-8">
+            <div className="relative z-5 px-4 py-3 mb-8">
                 <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
                     <div className="relative flex-1 w-full max-w-2xl group">
                         <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-teal-600 transition-colors" size={20} />

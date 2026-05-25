@@ -26,6 +26,7 @@ import { DonationPoint } from './entities/donation-point.entity';
 import { SustainabilityService } from './sustainability/sustainability.service';
 import { SustainabilityController } from './sustainability/sustainability.controller';
 import { SustainabilityRequest } from './entities/sustainability-request.entity';
+import { PollVote } from './entities/poll-vote.entity';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { SustainabilityRequest } from './entities/sustainability-request.entity'
       BookListing,
       DonationPoint,
       SustainabilityRequest,
+      PollVote,
     ]),
   ],
   controllers: [

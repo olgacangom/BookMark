@@ -60,5 +60,10 @@ export class Activity {
   imageUrl: string | null;
 
   @Column({ type: 'json', nullable: true })
-  pollOptions: string[] | null; // opciones encuesta post
+  poll: {
+    options: {
+      text: string;
+      votes: number;
+    }[];
+  } | null;
 }

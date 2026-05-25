@@ -242,7 +242,7 @@ export const ExploreView = () => {
                         if (!groupedBooks.has(key)) groupedBooks.set(key, book);
                     });
                     setBookResults(Array.from(groupedBooks.values()));
-                } catch (e) { console.error(e); } 
+                } catch (e) { console.error(e); }
             } else { setBookResults([]); }
         }, 500);
         return () => clearTimeout(delayDebounceFn);
@@ -292,30 +292,30 @@ export const ExploreView = () => {
     if (loading) return <div className="flex h-screen items-center justify-center bg-[#F8FAFB]"><Loader2 className="w-10 h-10 animate-spin text-teal-600" /></div>;
 
     return (
-        <div className="min-h-screen bg-[#F8FAFB] font-sans text-slate-900 pb-20 animate-in fade-in duration-500 text-left">
-            <div className="relative z-10 px-8 py-4">
-                <div className="max-w-[1400px] mx-auto flex justify-between items-center gap-8">
-                    <div className="relative flex-1 max-w-2xl">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                        <input
-                            type="text"
-                            placeholder="Busca libros, autores, usuarios o clubes..."
-                            className="w-full bg-slate-100 border-none rounded-xl py-3 pl-12 pr-4 text-sm focus:ring-2 focus:ring-teal-500/20 outline-none transition-all"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                        />
-                    </div>
-                </div>
-            </div>
+        <div className="min-h-screen font-sans pb-20 animate-in fade-in duration-500 text-left">
+
 
             <div className="max-w-[1400px] mx-auto px-8 pt-8 flex flex-col lg:flex-row gap-8">
                 <div className="flex-1 space-y-10 min-w-0">
                     {!searchTerm && (
                         <header className="text-left">
-                            <h1 className="text-3xl font-black text-slate-900 tracking-tight">¡Hola, {currentUser?.fullName?.split(' ')[0]}! 👋</h1>
+                            <h1 className="text-4xl font-black text-slate-800 tracking-tight">¡Hola, {currentUser?.fullName?.split(' ')[0]}!</h1>
                             <p className="text-slate-500 text-sm mt-1 font-medium">Explora, conecta y comparte tu pasión por la lectura.</p>
                         </header>
                     )}
+
+                    <div className="max-w-[1400px] mx-auto flex justify-between items-center gap-8">
+                        <div className="relative flex-1 max-w-2xl">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                            <input
+                                type="text"
+                                placeholder="Busca libros, autores, usuarios o clubes..."
+                                className="w-full bg-white border border-slate-200 rounded-2xl py-4 pl-14 pr-6 text-sm shadow-sm focus:ring-4 focus:ring-teal-500/5 focus:border-teal-500/20 transition-all outline-none font-medium placeholder:text-slate-400"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                        </div>
+                    </div>
 
                     {searchTerm && bookResults.length > 0 && (
                         <section className="animate-in fade-in duration-500">
@@ -391,14 +391,14 @@ export const ExploreView = () => {
                                 {events.slice(0, 2).map((event) => (
                                     <div key={event.id} onClick={() => setSelectedEvent(event)} className="bg-white rounded-[2rem] p-4 shadow-sm border border-slate-100 flex flex-col sm:flex-row items-center gap-6 cursor-pointer hover:shadow-md hover:border-teal-100 transition-all group">
                                         <div className="w-full sm:w-40 h-40 sm:h-28 rounded-[1.5rem] overflow-hidden shrink-0">
-                                            <img 
-                                                src={event.imageUrl && event.imageUrl.trim().length > 0 
-                                                    ? event.imageUrl 
+                                            <img
+                                                src={event.imageUrl && event.imageUrl.trim().length > 0
+                                                    ? event.imageUrl
                                                     : `https://picsum.photos/seed/${event.id}/600/400`
-                                                } 
-                                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" 
+                                                }
+                                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                                                 alt={event.title}
-                                                onError={(e: any) => { e.target.src = FALLBACK_EVENT_IMAGE }} 
+                                                onError={(e: any) => { e.target.src = FALLBACK_EVENT_IMAGE }}
                                             />
                                         </div>
                                         <div className="flex-1 text-left w-full py-2">
@@ -443,31 +443,62 @@ export const ExploreView = () => {
                         </div>
                         <div className="space-y-4 pt-4 border-t border-slate-50">
                             <div className="flex justify-between items-center text-xs"><span className="flex items-center gap-2 text-slate-500 font-bold"><Clock size={14} className="text-slate-400" /> Reseñas escritas</span><span className="font-black text-slate-800">2</span></div>
-                            <div className="flex justify-between items-center text-xs"><span className="flex items-center gap-2 text-slate-500 font-bold"><Flame size={14} className="text-orange-400" /> Días de racha</span><span className="font-black text-slate-800 flex items-center gap-1">7 <Flame size={12} className="text-orange-500 fill-orange-500" /></span></div>
+                            <div className="flex justify-between items-center text-xs"><span className="flex items-center gap-2 text-slate-500 font-bold"><Flame size={14} className="text-orange-500 fill-orange-500" /> Días de racha</span><span className="font-black text-slate-800 flex items-center gap-1">7 </span></div>
                         </div>
                     </section>
 
                     <section className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-100 text-left">
                         <div className="flex justify-between items-center mb-6">
-                            <h4 className="font-black text-sm tracking-tight text-slate-900">Tus Clubes</h4>
-                            <button onClick={() => navigate('/clubs')} className="text-[10px] font-bold text-teal-600 hover:underline flex items-center">Explorar Clubes<ChevronRight size={12} /></button>
+                            <h4 className="font-black text-sm tracking-tight text-slate-900">
+                                Tus Clubes
+                            </h4>
+                            <button
+                                onClick={() => navigate('/clubs')}
+                                className="text-[10px] font-bold text-teal-600 hover:underline flex items-center"
+                            >
+                                Explorar Clubes
+                                <ChevronRight size={12} />
+                            </button>
                         </div>
+
                         <div className="space-y-4">
                             {myClubs.length > 0 ? (
                                 myClubs.map((club) => (
-                                    <div key={club.id} onClick={() => navigate(`/clubs/${club.id}`)} className="flex items-center gap-4 group cursor-pointer p-2 hover:bg-slate-50 rounded-xl transition-colors -mx-2">
-                                        <div className="w-12 h-12 rounded-[1rem] bg-teal-50 text-teal-600 flex items-center justify-center shrink-0 border border-teal-100/50">
-                                            <LayoutGrid size={20} />
+                                    <div
+                                        key={club.id}
+                                        onClick={() => navigate(`/clubs/${club.id}`)}
+                                        className="flex items-center gap-4 group cursor-pointer p-2 hover:bg-slate-50 rounded-xl transition-colors -mx-2"
+                                    >
+                                        <div className="w-12 h-12 rounded-[1rem] overflow-hidden shrink-0 border border-teal-100/50 bg-teal-50 flex items-center justify-center">
+                                            <img
+                                                src={
+                                                    club.coverUrl?.trim()
+                                                        ? club.coverUrl
+                                                        : `https://picsum.photos/seed/${club.id}/200/200`
+                                                }
+                                                alt={club.name}
+                                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                                                onError={(e) => {
+                                                    e.currentTarget.src = FALLBACK_EVENT_IMAGE;
+                                                }}
+                                            />
                                         </div>
+
                                         <div className="min-w-0 flex-1">
-                                            <p className="text-[11px] font-black text-slate-800 uppercase tracking-tight truncate group-hover:text-teal-600 transition-colors">{club.name}</p>
-                                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{club.members?.length || 0} miembros</p>
+                                            <p className="text-[11px] font-black text-slate-800 uppercase tracking-tight truncate group-hover:text-teal-600 transition-colors">
+                                                {club.name}
+                                            </p>
+                                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+                                                {club.members?.length || 0} miembros
+                                            </p>
                                         </div>
                                     </div>
                                 ))
                             ) : (
                                 <div className="text-center p-4 bg-slate-50 rounded-xl border border-dashed border-slate-200">
-                                    <p className="text-[10px] text-slate-400 font-bold uppercase">No perteneces a ningún club aún.</p>
+                                    <p className="text-[10px] text-slate-400 font-bold uppercase">
+                                        No perteneces a ningún club aún.
+                                    </p>
                                 </div>
                             )}
                         </div>

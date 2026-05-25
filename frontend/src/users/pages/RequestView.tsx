@@ -107,7 +107,7 @@ export const RequestsView = () => {
     const sentBookRequests = bookRequests.filter(r => !r.isOwner);
 
     return (
-        <div className="min-h-screen bg-[#F8FAFB] font-sans text-slate-900 pb-20 text-left animate-in fade-in duration-500">
+        <div className="min-h-screen font-sans text-slate-900 pb-20 text-left animate-in fade-in duration-500">
 
             <div className="fixed top-24 right-6 z-[500] space-y-3 pointer-events-none">
                 {liveNotifications.map((msg, i) => (
