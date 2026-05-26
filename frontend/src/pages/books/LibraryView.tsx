@@ -60,19 +60,19 @@ export const LibraryView = () => {
     );
 
     return (
-        <div className="min-h-screen font-sans text-slate-900 pb-20">
+        <div className="font-sans text-slate-900 pb-6 md:pb-10">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
                 {/* HEADER */}
-                <div className="mb-10">
-                    <h1 className="text-3xl font-black tracking-tighter text-slate-900 italic uppercase">
+                <div className="mb-6 md:mb-10 px-1">
+                    <h1 className="text-2xl md:text-3xl font-black tracking-tighter text-slate-900 italic uppercase">
                         Mi <span className="text-teal-600 font-serif">Biblioteca</span>
                     </h1>
                     <p className="text-slate-400 text-sm font-medium tracking-tight">Tu catálogo personal de libros.</p>
                 </div>
 
                 {/* STAT CARDS */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 mb-12">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-5 mb-8 md:mb-12">
                     <StatCard label="Total" value={books.length} icon={<BookMarked size={18} />} color="bg-teal-500" />
                     <StatCard label="Leyendo" value={books.filter(b => b.status === 'Reading').length} icon={<BookOpen size={18} />} color="bg-sky-500" />
                     <StatCard label="Completados" value={books.filter(b => b.status === 'Read').length} icon={<CheckCircle size={18} />} color="bg-indigo-500" />
@@ -80,19 +80,20 @@ export const LibraryView = () => {
                 </div>
 
                 {/* FILTROS TABS */}
-                <div className="flex items-center gap-2 mb-8 bg-slate-200/40 p-1.5 rounded-2xl w-fit">
-                    {["todos", "Reading", "Read", "Want to Read"].map((status) => (
+                <div className="overflow-x-auto no-scrollbar pb-2 -mx-4 px-4 mb-8">
+                    <div className="flex items-center gap-2 bg-slate-200/40 p-1.5 rounded-2xl w-max min-w-full md:min-w-0 md:w-fit">                    {["todos", "Reading", "Read", "Want to Read"].map((status) => (
                         <button
                             key={status}
                             onClick={() => setFilterStatus(status)}
-                            className={`px-6 py-2 rounded-xl font-bold text-[10px] uppercase tracking-widest transition-all ${filterStatus === status
-                                ? "bg-[#1A535C] text-white shadow-md"
-                                : "text-slate-500 hover:text-[#1A535C]"
+                            className={`shrink-0 px-4 md:px-6 py-2 rounded-xl font-bold text-[10px] uppercase tracking-widest transition-all ${filterStatus === status
+                                    ? "bg-[#1A535C] text-white shadow-md"
+                                    : "text-slate-500 hover:text-[#1A535C]"
                                 }`}
                         >
                             {status === 'todos' ? 'Todos' : status === 'Reading' ? 'Leyendo' : status === 'Read' ? 'Completados' : 'Pendientes'}
                         </button>
                     ))}
+                    </div>
                 </div>
 
                 {/* BARRA DE BÚSQUEDA Y ACCIONES */}
@@ -105,7 +106,7 @@ export const LibraryView = () => {
                                 placeholder="Buscar por título o autor"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full bg-white border border-slate-200 rounded-2xl py-4 pl-14 pr-6 text-sm shadow-sm focus:ring-4 focus:ring-teal-500/5 focus:border-teal-500/20 transition-all outline-none font-medium placeholder:text-slate-400"                            />
+                                className="w-full bg-white border border-slate-200 rounded-2xl py-4 pl-14 pr-6 text-sm shadow-sm focus:ring-4 focus:ring-teal-500/5 focus:border-teal-500/20 transition-all outline-none font-medium placeholder:text-slate-400" />
                         </div>
 
                         {/* DESPLEGABLE DE FILTROS FUNCIONAL */}
@@ -133,7 +134,7 @@ export const LibraryView = () => {
                     <div className="flex items-center gap-3 w-full md:w-auto">
                         <button
                             onClick={() => { setSelectedBook(null); setIsModalOpen(true); }}
-                            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-8 py-3.5 bg-[#1A535C] text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-[#14424a] transition-all shadow-lg shadow-teal-900/20 active:scale-95"
+                            className="w-full md:w-auto flex items-center justify-center gap-2 px-8 py-3.5 bg-[#1A535C] text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-[#14424a] transition-all shadow-lg shadow-teal-900/20 active:scale-95"
                         >
                             <Plus size={18} strokeWidth={3} />
                             <span>Añadir libro</span>
@@ -159,7 +160,7 @@ export const LibraryView = () => {
 
                 {/* GRID DE LIBROS */}
                 {filteredBooks.length > 0 ? (
-                    <div className={`grid gap-x-6 gap-y-10 ${gridCols === 6 ? 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6' : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4'}`}>
+                    <div className={`grid gap-x-6 gap-y-10 ${gridCols === 6 ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-6' : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4'}`}>
                         {filteredBooks.map((book) => (
                             <BookCard
                                 key={book.id}

@@ -33,6 +33,11 @@ export class AdminController {
     return this.adminService.getGlobalStats();
   }
 
+  @Get('stats/monthly-growth')
+  async getMonthlyGrowth() {
+    return this.adminService.getMonthlyUserGrowth();
+  }
+
   @Get('stats')
   getAppStats() {
     return this.adminService.getMainStats();

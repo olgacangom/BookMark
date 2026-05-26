@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import api from '../../services/api';
 import { CreateListingModal } from './components/CreateListingModal';
 import {
-    Leaf, Plus, Search,
+    Plus, Search,
     RefreshCw, Heart, Loader2,
     Trash2, Clock, Tag,
     ShoppingBag, Info, Globe, Sparkle,
@@ -22,7 +22,7 @@ const ActionModal = ({ isOpen, type, title, onClose, onConfirm }: any) => {
 
     return (
         <div className="fixed inset-0 z-[1200] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in">
-            <div className="bg-white rounded-[2.5rem] p-8 max-w-xs w-full shadow-2xl border-4 border-white text-center animate-in zoom-in-95">
+            <div className="bg-white rounded-3xl p-5 sm:p-8 max-w-xs sm:max-w-sm w-full shadow-2xl border-4 border-white text-center animate-in zoom-in-95">
                 <div className={`w-14 h-14 ${c.bg} ${c.color} rounded-full flex items-center justify-center mx-auto mb-4 shadow-inner`}><Icon size={24} strokeWidth={2.5} /></div>
                 <h3 className="text-lg font-black text-slate-900 mb-1 uppercase tracking-tight">{c.label}</h3>
                 <p className="text-slate-500 text-[10px] font-medium mb-6 italic px-2">
@@ -48,7 +48,7 @@ const SocialDetailsModal = ({ isOpen, onClose, listing, onToggleRequest, isReque
         <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4 animate-in fade-in">
             <div className="bg-white rounded-[2.5rem] w-full max-w-sm overflow-hidden shadow-2xl border-[8px] border-white animate-in zoom-in-95 flex flex-col relative">
 
-                <header className="relative h-56 bg-slate-100 shrink-0">
+                <header className="relative h-44 sm:h-56 bg-slate-100 shrink-0">
                     <img src={listing.book?.urlPortada} className="w-full h-full object-cover blur-lg opacity-40 scale-110" alt="" />
                     <div className="absolute inset-0 bg-gradient-to-t from-white via-transparent to-transparent"></div>
                     <div className="absolute inset-0 flex items-center justify-center pt-4">
@@ -108,7 +108,7 @@ const FeedbackModal = ({ isOpen, onClose, type }: any) => {
     const isSuccess = type === 'success';
     return (
         <div className="fixed inset-0 z-[1300] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-in fade-in">
-            <div className="bg-white rounded-[2.5rem] p-8 max-w-xs w-full shadow-2xl text-center animate-in zoom-in-95 border-4 border-white">
+            <div className="bg-white rounded-3xl p-5 sm:p-8 max-w-xs sm:max-w-sm w-full shadow-2xl text-center animate-in zoom-in-95 border-4 border-white">
                 <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${isSuccess ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}`}>
                     {isSuccess ? <Check size={32} strokeWidth={3} /> : <X size={32} strokeWidth={3} />}
                 </div>
@@ -216,27 +216,31 @@ export const SustainabilityView = () => {
 
     return (
         <div className="min-h-screen font-sans text-[#1E293B] pb-32 text-left">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+            <div className="max-w-7xl mx-auto px-3 sm:px-6 py-6 md:py-8">
 
-                <header className="flex justify-between items-start mb-12">
+                <header className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-6 mb-8 md:mb-12">
                     <div className="flex items-center gap-4">
-                        <div className="p-3 bg-[#F0FDF4] rounded-2xl border border-[#CCFBF1]"><Leaf className="text-[#407B75]" size={32} /></div>
-                        <div>
-                            <h1 className="text-3xl font-black text-[#1E293B] uppercase tracking-tighter italic leading-none mb-1">Rincón Circular de {user?.fullName?.split(' ')[0]}</h1>
-                        </div>
+                        <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-[#1E293B] uppercase tracking-tighter italic leading-none mb-1">Rincón Circular de {user?.fullName?.split(' ')[0]}</h1>
                     </div>
                     <button onClick={() => { setListingToEdit(null); setIsCreateOpen(true); }} className="flex items-center gap-2 px-6 py-3 bg-[#2F4858] text-white rounded-[1rem] font-bold text-[10px] uppercase shadow-md hover:bg-[#1E2E38] transition-all tracking-widest"><Plus size={16} strokeWidth={3} /> Publicar Libro</button>
                 </header>
 
-                <div className="grid lg:grid-cols-12 gap-8">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8">
                     <div className="lg:col-span-9">
-                        <div className="flex items-center gap-2 bg-white p-2 rounded-2xl w-fit shadow-sm border border-slate-100/50 mb-10 overflow-x-auto no-scrollbar">
+                        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar bg-white p-1.5 rounded-2xl w-full md:w-fit">
                             {[
                                 { id: 'market', icon: ShoppingBag, label: 'Mi Inventario' },
                                 { id: 'history', icon: Clock, label: 'Mi Historial' },
                                 { id: 'social', icon: Users, label: 'Biblioteca Amigos' }
                             ].map((tab) => (
-                                <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={`px-8 py-3.5 rounded-xl font-black uppercase text-[10px] tracking-[0.15em] transition-all flex items-center gap-2 whitespace-nowrap ${activeTab === tab.id ? "bg-[#1E293B] text-white shadow-md scale-[1.02]" : "text-[#94A3B8] bg-white hover:bg-slate-50"}`}>
+                                <button
+                                    key={tab.id}
+                                    onClick={() => setActiveTab(tab.id as any)}
+                                    className={`px-4 md:px-8 py-3 rounded-xl whitespace-nowrap font-black uppercase text-[10px] tracking-[0.15em] transition-all flex items-center gap-2 ${activeTab === tab.id
+                                        ? "bg-[#1E293B] text-white shadow-md scale-[1.02]"
+                                        : "text-[#94A3B8] bg-white hover:bg-slate-50"
+                                        }`}
+                                >
                                     <tab.icon size={14} strokeWidth={2.5} /> {tab.label}
                                 </button>
                             ))}
@@ -249,7 +253,7 @@ export const SustainabilityView = () => {
                         </main>
                     </div>
 
-                    <aside className="lg:col-span-3 space-y-6 h-fit sticky top-8">
+                    <aside className="lg:col-span-3 space-y-6 h-fit lg:sticky lg:top-8">
                         <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-50">
                             <div className="flex items-center gap-3 mb-8">
                                 <div className="text-[#407B75]"><Sparkle size={20} fill="currentColor" /></div>
@@ -335,10 +339,10 @@ const MarketplaceSection = ({ listings, onEdit, onAction }: any) => {
                 </select>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4">
                 {filtered.map((item: any) => (
                     <div key={item.id} className="bg-white rounded-[2rem] p-4 shadow-sm border border-slate-100 hover:shadow-xl transition-all duration-500 flex flex-col group relative">
-                        <div className="relative aspect-[3/4.5] rounded-[1.5rem] overflow-hidden mb-4 bg-slate-50">
+                        <div className="relative aspect-[3/4] rounded-[1.5rem] overflow-hidden mb-4 bg-slate-50">
                             {item.book?.urlPortada && <img src={item.book.urlPortada} className="w-full h-full object-cover" alt="" />}
                             <div className="absolute top-0 left-0 right-0 p-3 flex flex-col items-center gap-1.5">
                                 <div className={`px-4 py-1.5 ${item.type === 'sale' ? 'bg-[#407B75]' : 'bg-[#5B6BF9]'} text-white text-[8px] font-black uppercase tracking-widest rounded-full shadow-md`}>
@@ -433,8 +437,8 @@ const HistorySection = ({ items, userId, onReturnSuccess }: any) => {
                     const canMarkReturn = item.status === 'accepted' && item.listing?.type === 'loan' && isOwner;
 
                     return (
-                        <div key={item.id} className="bg-white p-5 rounded-[2rem] border border-slate-100 flex items-center justify-between shadow-sm hover:shadow-md transition-all group">
-                            <div className="flex items-center gap-6 flex-1 text-left">
+                        <div key={item.id} className="bg-white p-5 rounded-[2rem] border border-slate-100 flex flex-col md:flex-row md:items-center md:justify-between gap-4 shadow-sm hover:shadow-md transition-all group">
+                            <div className="flex items-center gap-4 md:gap-6 flex-1">
                                 <img src={bookData?.urlPortada} className="w-16 h-24 object-cover rounded-xl shadow-sm grayscale-[0.3]" alt="" />
                                 <div>
                                     <h4 className="font-black text-[#1E293B] text-[14px] uppercase tracking-tight mb-1">{bookData?.title}</h4>
@@ -474,7 +478,7 @@ const SocialSection = ({ listings, error, onOpenDetails, myRequests }: any) => {
                         <div className="relative aspect-[3/4.5] rounded-[1.5rem] overflow-hidden mb-5 bg-slate-50">
                             <img src={item.book?.urlPortada} className="w-full h-full object-cover" alt="" />
                             <div className="absolute bottom-4 left-0 right-0 flex justify-center">
-                                <div className="flex items-center gap-2 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-full shadow-sm">
+                                <div className="flex overflow-x-auto no-scrollbar gap-2 bg-white p-2 rounded-2xl w-full">
                                     <img src={item.user?.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${item.user?.email}`} className="w-5 h-5 rounded-full object-cover" alt="" />
                                     <span className="text-[9px] font-black text-slate-800 uppercase tracking-tighter">@{item.user?.fullName?.split(' ')[0]}</span>
                                 </div>

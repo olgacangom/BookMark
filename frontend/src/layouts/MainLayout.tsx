@@ -181,7 +181,7 @@ export function MainLayout() {
             </aside>
 
             {/* --- CONTENIDO PRINCIPAL --- */}
-            <main className={`flex-1 lg:ml-64 min-h-screen relative pb-24 lg:pb-12 ${mainBackground}`}>
+            <main className={`flex-1 lg:ml-64 min-h-dvh relative pb-[88px] lg:pb-12 overflow-x-hidden ${mainBackground}`}>
                 {/* --- HEADER (MÓVIL & PC ) --- */}
                 <header className="sticky top-0 z-[110]  backdrop-blur-md px-4 md:px-8 py-4 flex justify-between items-center gap-4">
                     {/* Logo Móvil */}
@@ -234,8 +234,20 @@ export function MainLayout() {
             </main>
 
             {/* --- BOTTOM NAV (SOLO MÓVIL) --- */}
-            <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-[100] bg-white/90 backdrop-blur-xl border-t border-slate-100 px-2 pb-safe shadow-[0_-10px_25px_rgba(0,0,0,0.03)]">
-                <div className="flex justify-around items-center h-16 max-w-md mx-auto">
+            <nav className="
+  lg:hidden
+  fixed
+  bottom-0
+  inset-x-0
+  z-[999]
+  h-[78px]
+  pb-safe
+  bg-white/95
+  backdrop-blur-xl
+  border-t border-slate-100
+  shadow-[0_-10px_25px_rgba(0,0,0,0.03)]
+">
+                <div className="flex justify-around items-center h-full max-w-md mx-auto px-2">
                     {mobileBottomItems.map((item) => {
                         const isActive = location.pathname === item.path ||
                             (item.path === '/clubs' && location.pathname.startsWith('/clubs')); return (

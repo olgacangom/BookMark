@@ -19,6 +19,12 @@ interface RawBookResult {
   requestcount: string | number;
 }
 
+interface MonthlyGrowthResult {
+  month: string;
+  role: UserRole;
+  count: string;
+}
+
 @Injectable()
 export class AdminService {
   constructor(
@@ -185,23 +191,6 @@ export class AdminService {
         .limit(5)
         .getRawMany();
 
-      const recentUsers = await this.userRepository
-        .createQueryBuilder('user')
-        .select('user.createdAt', 'createdAt')
-        .where('user.createdAt >= :since', {
-          since: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString(),
-        })
-        .getRawMany<RawCreatedAt>();
-
-      const recentLibreros = await this.userRepository
-        .createQueryBuilder('user')
-        .select('user.createdAt', 'createdAt')
-        .where('user.role = :role', { role: UserRole.LIBRERO })
-        .andWhere('user.createdAt >= :since', {
-          since: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000),
-        })
-        .getRawMany<RawCreatedAt>();
-
       const recentListings = await this.listingRepository
         .createQueryBuilder('listing')
         .select('listing.createdAt', 'createdAt')
@@ -210,16 +199,6 @@ export class AdminService {
         })
         .getRawMany<RawCreatedAt>();
 
-      const weeklyUserGrowth = this.formatWeeklyGrowth(
-        recentUsers.map((item) => ({
-          createdAt: new Date(item.createdAt),
-        })),
-      );
-      const weeklyLibreroGrowth = this.formatWeeklyGrowth(
-        recentLibreros.map((item) => ({
-          createdAt: new Date(item.createdAt),
-        })),
-      );
       const weeklyListingGrowth = this.formatWeeklyGrowth(
         recentListings.map((item) => ({ createdAt: new Date(item.createdAt) })),
       );
@@ -248,8 +227,6 @@ export class AdminService {
         topGenres,
         topBooks,
         topLibreros,
-        weeklyUserGrowth,
-        weeklyLibreroGrowth,
         weeklyListingGrowth,
       };
     } catch (error) {
@@ -321,5 +298,42 @@ export class AdminService {
       .getRawOne<RawBookResult>();
 
     return result ? { title: result.title, author: result.author } : null;
+  }
+
+  async getMonthlyUserGrowth() {
+    const queryBuilder = this.userRepository.createQueryBuilder('user');
+
+    const isPostgres = process.env.DB_TYPE === 'postgres' || true;
+    const monthSelect = isPostgres
+      ? "TO_CHAR(user.createdAt, 'YYYY-MM')"
+      : "strftime('%Y-%m', user.createdAt)";
+
+    const results: MonthlyGrowthResult[] = await queryBuilder
+      .select(monthSelect, 'month')
+      .addSelect('user.role', 'role')
+      .addSelect('COUNT(user.id)', 'count')
+      .where('user.createdAt IS NOT NULL')
+      .groupBy('month')
+      .addGroupBy('user.role')
+      .orderBy('month', 'ASC')
+      .getRawMany();
+
+    const formatted: Record<
+      string,
+      { month: string; reader: number; librero: number }
+    > = {};
+
+    results.forEach((curr) => {
+      const month = curr.month || 'Desconocido';
+      if (!formatted[month]) {
+        formatted[month] = { month, reader: 0, librero: 0 };
+      }
+
+      const count = parseInt(curr.count, 10) || 0;
+      if (curr.role === UserRole.USER) formatted[month].reader = count;
+      if (curr.role === UserRole.LIBRERO) formatted[month].librero = count;
+    });
+
+    return Object.values(formatted);
   }
 }
