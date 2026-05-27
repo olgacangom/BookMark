@@ -217,12 +217,18 @@ export const SustainabilityView = () => {
     return (
         <div className="min-h-screen font-sans text-[#1E293B] pb-32 text-left">
             <div className="max-w-7xl mx-auto px-3 sm:px-6 py-6 md:py-8">
-
                 <header className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-6 mb-8 md:mb-12">
-                    <div className="flex items-center gap-4">
-                        <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-[#1E293B] uppercase tracking-tighter italic leading-none mb-1">Rincón Circular de {user?.fullName?.split(' ')[0]}</h1>
+                    <div>
+                        <h1 className="text-2xl md:text-3xl font-black tracking-tighter text-slate-900 italic uppercase">
+                            Rincón Circular <span className="text-teal-600 font-serif">de {user?.fullName?.split(' ')[0]}</span>
+                        </h1>
                     </div>
-                    <button onClick={() => { setListingToEdit(null); setIsCreateOpen(true); }} className="flex items-center gap-2 px-6 py-3 bg-[#2F4858] text-white rounded-[1rem] font-bold text-[10px] uppercase shadow-md hover:bg-[#1E2E38] transition-all tracking-widest"><Plus size={16} strokeWidth={3} /> Publicar Libro</button>
+                    <button
+                        onClick={() => { setListingToEdit(null); setIsCreateOpen(true); }}
+                        className="bg-slate-900 text-white px-4.5 py-3.5 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-teal-600 transition-all shadow-xl active:scale-95 flex items-center gap-2"
+                    >
+                        <Plus size={16} strokeWidth={3} /> Publicar club
+                    </button>
                 </header>
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8">

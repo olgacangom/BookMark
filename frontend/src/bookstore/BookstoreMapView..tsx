@@ -152,9 +152,9 @@ export const BookstoresMapView = () => {
         <div className="flex flex-col h-[calc(100dvh-140px)] md:h-[calc(100vh-120px)] p-4 md:p-6 animate-in fade-in duration-700 text-left overflow-hidden">
             <header className="mb-4 flex flex-col xl:flex-row justify-between items-start xl:items-end gap-4 relative shrink-0">
                 <div>
-                    <h1 className="text-3xl lg:text-4xl font-black text-slate-900 tracking-tighter">
-                        Encuentra <span className="text-teal-600 italic font-serif">Librerías</span>
-                    </h1>
+                    <h1 className="text-2xl md:text-3xl font-black tracking-tighter text-slate-900 italic uppercase">
+                            Encuentra <span className="text-teal-600 font-serif">Librerías</span>
+                        </h1>
                     <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-1">
                         {loading ? "Actualizando mapa..." : `Explorando ${bookstores.length} puntos de venta`}
                     </p>
@@ -202,7 +202,7 @@ export const BookstoresMapView = () => {
                                 placeholder="Cambiar ubicación..."
                                 value={searchQuery}
                                 onChange={handleLocationChange}
-                                className="w-full bg-slate-100 border-none rounded-2xl px-4 py-2.5 pl-10 text-xs focus:bg-white focus:ring-1 focus:ring-slate-200 outline-none font-medium"
+                                className="w-full bg-slate-100 border-b-emerald-700 rounded-2xl px-4 py-2.5 pl-10 text-xs focus:bg-white focus:ring-1 focus:ring-slate-200 outline-none font-medium"
                             />
                             <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                         </div>

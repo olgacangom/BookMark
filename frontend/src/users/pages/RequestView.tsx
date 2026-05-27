@@ -118,18 +118,18 @@ export const RequestsView = () => {
                 ))}
             </div>
 
-            <header className="max-w-6xl mx-auto px-6 pt-12 mb-12 flex justify-between items-end">
+            <header className="flex justify-between items-start mb-8">
                 <div>
-                    <h1 className="text-4xl font-black text-slate-900 tracking-tighter italic">
-                        Centro de <span className="text-teal-600">Notificaciones.</span>
+                    <h1 className="text-2xl md:text-3xl font-black tracking-tighter text-slate-900 italic uppercase">
+                        Centro de <span className="text-teal-600 font-serif">Notificaciones</span>
                     </h1>
-                    <p className="text-slate-400 text-[11px] font-bold uppercase tracking-[0.2em] mt-2">Acciones pendientes y red social</p>
+                    <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mt-3">Comunidades activas</p>
                 </div>
                 <button
                     onClick={() => { setLoading(true); fetchData(); }}
-                    className="p-3 bg-white border border-slate-200 rounded-2xl text-slate-400 hover:text-teal-600 hover:border-teal-100 transition-all shadow-sm"
+                    className="p-2.5 bg-white border border-slate-100 rounded-xl text-slate-400 hover:text-teal-600 transition-all shadow-sm"
                 >
-                    <RefreshCw size={20} className={actionId ? 'animate-spin' : ''} />
+                    <RefreshCw size={17} className={actionId ? 'animate-spin' : ''} />
                 </button>
             </header>
 

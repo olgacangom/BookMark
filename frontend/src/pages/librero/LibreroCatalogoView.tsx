@@ -140,22 +140,22 @@ export const LibreroCatalogView = () => {
     if (isLoading) return <div className="flex justify-center py-20"><Loader2 className="animate-spin text-teal-600" size={40} /></div>;
 
     return (
-        <div className="py-6 md:py-8 animate-in fade-in duration-700 text-left px-4">
+        <div className="py-6 md:py-8 animate-in fade-in text-left px-4 animate-in fade-in duration-500">
+            <header className="flex justify-between items-start mb-4">
+                <div>
+                    <h1 className="text-2xl md:text-3xl font-black tracking-tighter text-slate-900 italic uppercase">
+                        Mi <span className="text-teal-600 font-serif">Catálogo</span>
+                    </h1>
+                    <p className="text-slate-400 text-xs md:text-sm font-medium italic">Gestiona tus existencias</p>
 
-            <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-6">
-                <div className="flex items-center gap-4">
-                    <div className="min-w-0">
-                        <h2 className="text-2xl md:text-3xl font-black text-slate-900 leading-none mb-1">Mi Catálogo</h2>
-                        <p className="text-slate-400 text-xs md:text-sm font-medium italic">Gestiona tus existencias</p>
-                    </div>
                 </div>
                 <button
                     onClick={() => { setIsEditing(false); setIsCreateNewModalOpen(true); }}
-                    className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-4 md:py-3 bg-[#0f172a] text-white rounded-2xl font-bold text-xs uppercase hover:bg-teal-600 transition-all shadow-lg active:scale-95"
+                    className="bg-slate-900 text-white px-4.5 py-3.5 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-teal-600 transition-all shadow-xl active:scale-95 flex items-center gap-2"
                 >
-                    <Plus size={18} /> Añadir Libro Nuevo
+                    <Plus size={16} strokeWidth={3} /> Añadir Libro Nuevo
                 </button>
-            </div>
+            </header>
 
             {/* BUSCADOR */}
             <div className="relative mb-10 text-left">

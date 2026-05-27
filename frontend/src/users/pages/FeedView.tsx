@@ -254,10 +254,8 @@ export const FeedView = () => {
     return (
         <div className="min-h-screen font-sans text-slate-900 pb-24 text-left animate-in fade-in duration-500">
             <div className="max-w-6xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-12 gap-8 pt-8">
-
                 <div className="lg:col-span-8 space-y-6">
-
-                    <header className="flex items-center justify-between mb-2">
+                    <header className="flex items-center justify-between mb-4">
                         <div>
                             <p className="text-slate-400 text-[12px] font-bold uppercase tracking-[0.2em]">
                                 Actividad de tu círculo literario
@@ -269,7 +267,7 @@ export const FeedView = () => {
                             className="p-2.5 bg-white border border-slate-100 rounded-xl text-slate-400 hover:text-teal-600 transition-all shadow-sm"
                         >
                             <RefreshCw
-                                size={18}
+                                size={17}
                                 className={loading ? 'animate-spin' : ''}
                             />
                         </button>

@@ -122,10 +122,11 @@ export function MainLayout() {
     ];
 
     // Items para el menú inferior en móvil 
-    const mobileBottomItems = allNavItems.filter(item =>
-        ['/explore', '/feed', '/library', '/clubs', '/bookstore', '/sustainability', '/librero/catalog', '/librero/events', '/admin/users', '/admin/stats'].includes(item.path) &&
-        item.roles.includes(user?.role || '')
-    );
+    const mobileBottomItems = allNavItems
+        .filter(item =>
+            ['/explore', '/feed', '/library', '/clubs', '/events', '/sustainability', '/librero/catalog', '/librero/events', '/admin/users', '/admin/stats'].includes(item.path) &&
+            item.roles.includes(user?.role || '')
+        );
 
     return (
         <div className="min-h-screen bg-[#F0F9F9] flex flex-col lg:flex-row text-left">
@@ -181,10 +182,8 @@ export function MainLayout() {
             </aside>
 
             {/* --- CONTENIDO PRINCIPAL --- */}
-            <main className={`flex-1 lg:ml-64 min-h-dvh relative pb-[88px] lg:pb-12 overflow-x-hidden ${mainBackground}`}>
-                {/* --- HEADER (MÓVIL & PC ) --- */}
-                <header className="sticky top-0 z-[110]  backdrop-blur-md px-4 md:px-8 py-4 flex justify-between items-center gap-4">
-                    {/* Logo Móvil */}
+            <main className={`flex-1 lg:ml-64 min-h-dvh relative pb-[102px] lg:pb-12 overflow-x-hidden ${mainBackground}`}>                {/* --- HEADER (MÓVIL & PC ) --- */}
+                <header className="sticky top-0 z-[110] backdrop-blur-md px-4 md:px-8 py-4 flex justify-between items-center gap-4">                    {/* Logo Móvil */}
                     <div className="lg:hidden flex items-center gap-2">
                         <div className="w-8 h-8 bg-teal-600 rounded-lg flex items-center justify-center shadow-lg"><Library size={18} className="text-white" /></div>
                         <span className="font-black text-slate-900 tracking-tighter uppercase text-sm">BookMark</span>
@@ -194,6 +193,14 @@ export function MainLayout() {
                     <div className="flex lg:hidden items-center gap-1">
                         {user && user.role !== 'admin' && user.role !== 'librero' && (
                             <>
+                                {/* Chat Icon */}
+                                <Link to="/bookstore" className={`p-2.5 rounded-xl relative transition-all ${isActive('/bookstore') ? 'bg-teal-600 text-white shadow-md' : 'text-slate-400'}`}>
+                                    <Store size={20} />
+                                    {totalUnread > 0 && (
+                                        <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-rose-500 text-white text-[8px] font-black rounded-full flex items-center justify-center border-2 border-[#F0F9F9]">{totalUnread}</span>
+                                    )}
+                                </Link>
+
                                 {/* Chat Icon */}
                                 <Link to="/chat" className={`p-2.5 rounded-xl relative transition-all ${isActive('/chat') ? 'bg-teal-600 text-white shadow-md' : 'text-slate-400'}`}>
                                     <MessageCircle size={20} />
@@ -234,32 +241,23 @@ export function MainLayout() {
             </main>
 
             {/* --- BOTTOM NAV (SOLO MÓVIL) --- */}
-            <nav className="
-  lg:hidden
-  fixed
-  bottom-0
-  inset-x-0
-  z-[999]
-  h-[78px]
-  pb-safe
-  bg-white/95
-  backdrop-blur-xl
-  border-t border-slate-100
-  shadow-[0_-10px_25px_rgba(0,0,0,0.03)]
-">
-                <div className="flex justify-around items-center h-full max-w-md mx-auto px-2">
+            <nav className="lg:hidden fixed bottom-0 inset-x-0 z-[1000] h-[78px] bg-white/95 backdrop-blur-xl border-t border-slate-100 pb-[env(safe-area-inset-bottom)] shadow-[0_-5px_15px_rgba(0,0,0,0.05)]">
+                {/* Contenedor con scroll horizontal */}
+                <div className="flex items-center justify-center h-full px-2 gap-4 md:gap-8 overflow-x-auto no-scrollbar">
                     {mobileBottomItems.map((item) => {
-                        const isActive = location.pathname === item.path ||
-                            (item.path === '/clubs' && location.pathname.startsWith('/clubs')); return (
-                                <Link key={item.path} to={item.path} className={`flex flex-col items-center justify-center flex-1 gap-1 transition-all duration-300 relative ${isActive ? "text-teal-600" : "text-slate-400"}`}>
-                                    <div className={`p-1.5 rounded-xl transition-all ${isActive ? "bg-teal-50 scale-110" : ""}`}>
-                                        <item.icon size={20} strokeWidth={isActive ? 2.5 : 2} />
-                                    </div>
-                                    <span className={`text-[8px] font-black uppercase tracking-tight ${isActive ? "opacity-100" : "opacity-50"}`}>
-                                        {item.label}
-                                    </span>
-                                </Link>
-                            );
+                        const isActive = location.pathname === item.path;
+                        return (
+                            <Link
+                                key={item.path}
+                                to={item.path}
+                                className={`flex flex-col items-center justify-center flex-shrink-0 transition-all duration-300 ${isActive ? "text-teal-600" : "text-slate-400"}`}
+                            >
+                                <item.icon size={20} strokeWidth={isActive ? 2.5 : 2} />
+                                <span className="text-[8px] font-black uppercase mt-1 truncate w-full text-center px-1">
+                                    {item.label}
+                                </span>
+                            </Link>
+                        );
                     })}
                 </div>
             </nav>

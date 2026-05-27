@@ -62,16 +62,14 @@ export const LibraryView = () => {
     return (
         <div className="font-sans text-slate-900 pb-6 md:pb-10">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-
-                {/* HEADER */}
-                <div className="mb-6 md:mb-10 px-1">
-                    <h1 className="text-2xl md:text-3xl font-black tracking-tighter text-slate-900 italic uppercase">
-                        Mi <span className="text-teal-600 font-serif">Biblioteca</span>
-                    </h1>
-                    <p className="text-slate-400 text-sm font-medium tracking-tight">Tu catálogo personal de libros.</p>
+                <div className="flex items-center gap-5 mb-6">
+                    <div>
+                        <h1 className="text-2xl md:text-3xl font-black tracking-tighter text-slate-900 italic uppercase">
+                            Mi <span className="text-teal-600 font-serif">Biblioteca</span>
+                        </h1>
+                    </div>
                 </div>
 
-                {/* STAT CARDS */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-5 mb-8 md:mb-12">
                     <StatCard label="Total" value={books.length} icon={<BookMarked size={18} />} color="bg-teal-500" />
                     <StatCard label="Leyendo" value={books.filter(b => b.status === 'Reading').length} icon={<BookOpen size={18} />} color="bg-sky-500" />
@@ -86,8 +84,8 @@ export const LibraryView = () => {
                             key={status}
                             onClick={() => setFilterStatus(status)}
                             className={`shrink-0 px-4 md:px-6 py-2 rounded-xl font-bold text-[10px] uppercase tracking-widest transition-all ${filterStatus === status
-                                    ? "bg-[#1A535C] text-white shadow-md"
-                                    : "text-slate-500 hover:text-[#1A535C]"
+                                ? "bg-[#1A535C] text-white shadow-md"
+                                : "text-slate-500 hover:text-[#1A535C]"
                                 }`}
                         >
                             {status === 'todos' ? 'Todos' : status === 'Reading' ? 'Leyendo' : status === 'Read' ? 'Completados' : 'Pendientes'}
@@ -134,10 +132,9 @@ export const LibraryView = () => {
                     <div className="flex items-center gap-3 w-full md:w-auto">
                         <button
                             onClick={() => { setSelectedBook(null); setIsModalOpen(true); }}
-                            className="w-full md:w-auto flex items-center justify-center gap-2 px-8 py-3.5 bg-[#1A535C] text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-[#14424a] transition-all shadow-lg shadow-teal-900/20 active:scale-95"
+                            className="bg-slate-900 text-white px-4.5 py-3.5 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-teal-600 transition-all shadow-xl active:scale-95 flex items-center gap-2"
                         >
-                            <Plus size={18} strokeWidth={3} />
-                            <span>Añadir libro</span>
+                            <Plus size={16} strokeWidth={3} /> Añadir libro
                         </button>
 
                         {/* SELECTOR DE CUADRÍCULA */}

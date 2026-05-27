@@ -96,24 +96,23 @@ export const ClubsListView = () => {
     }, [clubs, searchTerm]);
 
     return (
-        <div className="min-h-screen font-sans text-slate-900 pb-24 text-left animate-in fade-in duration-500">           
-            <header className="max-w-7xl mx-auto px-8 mb-10 flex justify-between items-end">
+        <div className="min-h-screen font-sans text-slate-900 pb-24 text-left animate-in fade-in duration-500">
+            <header className="flex justify-between items-start mb-4">
                 <div>
-                    <h1 className="text-4xl font-black text-slate-900 tracking-tight leading-none uppercase italic">
-                        Clubes de <span className="text-teal-600 font-serif">Lectura.</span>
+                    <h1 className="text-2xl md:text-3xl font-black tracking-tighter text-slate-900 italic uppercase">
+                        Clubes de <span className="text-teal-600 font-serif">Lectura</span>
                     </h1>
-                    <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mt-3">Comunidades activas</p>
                 </div>
-                <button 
+                <button
                     onClick={() => setShowModal(true)}
-                    className="bg-slate-900 text-white px-8 py-3.5 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-teal-600 transition-all shadow-xl active:scale-95 flex items-center gap-2"
+                    className="bg-slate-900 text-white px-4.5 py-3.5 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-teal-600 transition-all shadow-xl active:scale-95 flex items-center gap-2"
                 >
                     <Plus size={16} strokeWidth={3} /> Fundar club
                 </button>
             </header>
 
-             {/* BARRA DE BÚSQUEDA */}
-            <div className="relative z-5 px-4 py-3 mb-8">
+            {/* BARRA DE BÚSQUEDA */}
+            <div className="relative z-5 px-4 py-3 mb-4">
                 <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
                     <div className="relative flex-1 w-full max-w-2xl group">
                         <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-teal-600 transition-colors" size={20} />
@@ -125,7 +124,7 @@ export const ClubsListView = () => {
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                         {searchTerm && (
-                            <button 
+                            <button
                                 onClick={() => setSearchTerm('')}
                                 className="absolute right-4 top-1/2 -translate-y-1/2 p-1 hover:bg-slate-100 rounded-full text-slate-400 transition-colors"
                             >
@@ -145,7 +144,7 @@ export const ClubsListView = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                         {filteredClubs.map((club) => {
                             const memberCount = club.members?.length || 0;
-                                                        
+
                             const displayMembers = club.members?.slice(0, 4) || [];
 
                             return (
@@ -204,7 +203,7 @@ export const ClubsListView = () => {
                                                 Entrar al club
                                             </button>
                                             {user && club.creator?.id === user.id && (
-                                                <button 
+                                                <button
                                                     onClick={(e) => {
                                                         e.stopPropagation();
                                                         setDeleteModal({ isOpen: true, id: club.id, name: club.name });
@@ -229,7 +228,7 @@ export const ClubsListView = () => {
                     <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-md animate-in fade-in" onClick={() => setShowModal(false)} />
                     <form onSubmit={handleCreateClub} className="bg-white rounded-[3rem] p-10 max-w-lg w-full shadow-2xl relative animate-in zoom-in-95 border-8 border-white text-left">
                         <button type="button" onClick={() => setShowModal(false)} className="absolute top-8 right-8 text-slate-300 hover:text-slate-900 transition-colors"><X size={24} /></button>
-                        <div className="w-16 h-16 bg-teal-50 rounded-2xl flex items-center justify-center text-teal-600 mb-6"><Plus size={32} strokeWidth={3}/></div>
+                        <div className="w-16 h-16 bg-teal-50 rounded-2xl flex items-center justify-center text-teal-600 mb-6"><Plus size={32} strokeWidth={3} /></div>
                         <h3 className="text-2xl font-black text-slate-900 mb-1 uppercase tracking-tight italic">Fundar un Club</h3>
                         <div className="space-y-6 mt-8">
                             <div>
@@ -248,11 +247,11 @@ export const ClubsListView = () => {
                 </div>
             )}
 
-            <ConfirmDeleteModal 
-                isOpen={deleteModal.isOpen} 
-                title={deleteModal.name} 
-                onClose={() => setDeleteModal({ ...deleteModal, isOpen: false })} 
-                onConfirm={handleConfirmDelete} 
+            <ConfirmDeleteModal
+                isOpen={deleteModal.isOpen}
+                title={deleteModal.name}
+                onClose={() => setDeleteModal({ ...deleteModal, isOpen: false })}
+                onConfirm={handleConfirmDelete}
             />
         </div>
     );

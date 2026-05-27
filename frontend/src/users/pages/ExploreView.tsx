@@ -299,7 +299,9 @@ export const ExploreView = () => {
                 <div className="flex-1 space-y-10 min-w-0">
                     {!searchTerm && (
                         <header className="text-left">
-                            <h1 className="text-4xl font-black text-slate-800 tracking-tight">¡Hola, {currentUser?.fullName?.split(' ')[0]}!</h1>
+                            <h1 className="text-4xl font-black text-slate-800 tracking-tight">¡Hola,
+                                <span className="text-teal-600 font-serif">{currentUser?.fullName?.split(' ')[0]}!</span>
+                            </h1>
                             <p className="text-slate-500 text-sm mt-1 font-medium">Explora, conecta y comparte tu pasión por la lectura.</p>
                         </header>
                     )}

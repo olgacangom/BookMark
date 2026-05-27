@@ -50,11 +50,12 @@ export const EventsView = () => {
             <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10 py-8">
 
                 {/* HEADER */}
-                <header className="flex justify-between items-start mb-8">
+                <header className="flex justify-between items-start mb-4">
                     <div className="flex items-center gap-5">
                         <div>
-                            <h1 className="text-3xl font-black text-slate-900 uppercase tracking-tighter italic leading-none">Eventos</h1>
-                            <p className="text-slate-400 text-[10px] font-bold mt-2 uppercase tracking-[0.2em]">Gestión de quedadas físicas en librerías</p>
+                            <h1 className="text-2xl md:text-3xl font-black tracking-tighter text-slate-900 italic uppercase">
+                                Eventos <span className="text-teal-600 font-serif">en Librerías</span>
+                            </h1>
                         </div>
                     </div>
                 </header>
@@ -69,7 +70,7 @@ export const EventsView = () => {
                                 placeholder="Buscar eventos, librerías o temas..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full bg-white border border-slate-200 rounded-2xl py-4 pl-14 pr-6 text-sm shadow-sm focus:ring-4 focus:ring-teal-500/5 focus:border-teal-500/20 transition-all outline-none font-medium placeholder:text-slate-400"                            
+                                className="w-full bg-white border border-slate-200 rounded-2xl py-4 pl-14 pr-6 text-sm shadow-sm focus:ring-4 focus:ring-teal-500/5 focus:border-teal-500/20 transition-all outline-none font-medium placeholder:text-slate-400"
                             />
                         </div>
 
@@ -188,7 +189,7 @@ const EventCard = ({ event, onOpenJoin, currentUser }: any) => {
                     src={eventImage}
                     className="w-full h-full object-cover rounded-[1.8rem] group-hover:scale-110 transition-transform duration-700"
                     alt="event"
-                    onError={(e: any) => { e.target.src = FALLBACK_EVENT_IMAGE }} 
+                    onError={(e: any) => { e.target.src = FALLBACK_EVENT_IMAGE }}
                 />
             </div>
 

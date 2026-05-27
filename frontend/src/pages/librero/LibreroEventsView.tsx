@@ -2,10 +2,9 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import api from '../../services/api';
 import {
     Clock, Users, Trash2, Plus,
-    ChevronLeft, Loader2, AlertTriangle,
+    Loader2, AlertTriangle,
     X, ChevronRight, Search
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 import { CreateEventModal } from './CreateEventModal';
 
 
@@ -83,7 +82,6 @@ const AttendeesModal = ({ isOpen, onClose, event }: any) => {
 };
 
 export const LibreroEventsView = () => {
-    const navigate = useNavigate();
     const [events, setEvents] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -128,33 +126,20 @@ export const LibreroEventsView = () => {
     if (loading) return <div className="flex justify-center py-20"><Loader2 className="animate-spin text-teal-600" size={40} /></div>;
 
     return (
-        <div className="max-w-[1400px] mx-auto py-10 px-6 sm:px-10 animate-in fade-in duration-700 text-left">
+        <div className="py-6 md:py-8 animate-in fade-in text-left px-4 animate-in fade-in duration-500">
+            <header className="flex justify-between items-start mb-4">
+                <div>
+                    <h1 className="text-2xl md:text-3xl font-black tracking-tighter text-slate-900 italic uppercase">
+                        Quedadas <span className="text-teal-600 font-serif">físicas</span>
+                    </h1>
+                    <p className="text-slate-400 text-xs md:text-sm font-medium italic">Gestiona tus eventos y asistencias</p>
 
-            {/* HEADER */}
-            <header className="flex justify-between items-center mb-10">
-                <div className="flex items-center gap-5">
-                    <button
-                        onClick={() => navigate(-1)}
-                        className="p-3 bg-white rounded-2xl border border-slate-100 shadow-sm hover:bg-slate-50"
-                    >
-                        <ChevronLeft size={22} />
-                    </button>
-
-                    <div>
-                        <h2 className="text-4xl font-black text-slate-900 italic tracking-tight">
-                            Quedadas físicas
-                        </h2>
-                        <p className="text-sm text-slate-400 font-medium">
-                            Gestiona tus eventos y asistencia
-                        </p>
-                    </div>
                 </div>
-
                 <button
                     onClick={() => { setSelectedEvent(null); setIsCreateModalOpen(true); }}
-                    className="flex items-center gap-2 px-6 py-3 bg-teal-600 text-white rounded-xl font-bold text-sm hover:bg-teal-700 shadow-md"
+                    className="bg-slate-900 text-white px-4.5 py-3.5 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-teal-600 transition-all shadow-xl active:scale-95 flex items-center gap-2"
                 >
-                    <Plus size={16} /> Nuevo evento
+                    <Plus size={16} strokeWidth={3} /> Nuevo evento
                 </button>
             </header>
 
@@ -180,8 +165,8 @@ export const LibreroEventsView = () => {
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id as any)}
                         className={`px-5 py-2 rounded-full text-sm font-semibold transition ${activeTab === tab.id
-                                ? 'bg-teal-600 text-white'
-                                : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                            ? 'bg-teal-600 text-white'
+                            : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
                             }`}
                     >
                         {tab.label}
