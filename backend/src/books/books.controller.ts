@@ -26,7 +26,7 @@ export interface RequestWithUser {
 
 @Controller('books')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.USER)
+@Roles(UserRole.USER, UserRole.LIBRERO)
 export class BooksController {
   constructor(private readonly booksService: BooksService) {}
 

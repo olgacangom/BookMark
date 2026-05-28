@@ -32,6 +32,9 @@ export class LibraryEvent {
   @OneToMany(() => EventRegistration, (reg) => reg.event)
   registrations: EventRegistration[];
 
+  @Column({ nullable: true })
+  imageUrl: string;
+
   @Column({ type: 'int', default: 0 })
   @CreateDateColumn()
   createdAt: Date;

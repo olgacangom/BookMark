@@ -164,15 +164,30 @@ export class LibrerosService {
   }
 
   // Eventos/Quedadas físicas
+
   async createEvent(
     libreroId: string,
     data: Partial<LibraryEvent>,
   ): Promise<LibraryEvent> {
+    // Validación de seguridad en el backend
+    if (data.title && data.title.length > 50) {
+      throw new BadRequestException(
+        'El título no puede superar los 50 caracteres',
+      );
+    }
+    if (data.description && data.description.length > 150) {
+      throw new BadRequestException(
+        'La descripción no puede superar los 150 caracteres',
+      );
+    }
+    if (data.maxCapacity !== undefined && data.maxCapacity < 0) {
+      throw new BadRequestException('El aforo no puede ser negativo');
+    }
+
     const eventData: DeepPartial<LibraryEvent> = {
       ...data,
       organizer: { id: libreroId } as User,
     };
-
     const newEvent = this.eventRepository.create(eventData);
 
     return this.eventRepository.save(newEvent);

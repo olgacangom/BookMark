@@ -7,6 +7,7 @@ import {
   UseGuards,
   Request as NestRequest,
   Delete,
+  Patch,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ClubsService } from './club.service';
@@ -24,7 +25,7 @@ interface RequestWithUser {
 interface CreateClubDto {
   name: string;
   description: string;
-  coverUrl?: string;
+  coverUrl?: string | null;
 }
 
 interface CreateThreadDto {
@@ -41,6 +42,15 @@ export class ClubsController {
   @Post()
   createClub(@NestRequest() req: RequestWithUser, @Body() body: CreateClubDto) {
     return this.clubsService.createClub(req.user.id, body);
+  }
+
+  @Patch(':id')
+  updateClub(
+    @NestRequest() req: RequestWithUser,
+    @Param('id') id: string,
+    @Body() body: CreateClubDto,
+  ) {
+    return this.clubsService.updateClub(req.user.id, id, body);
   }
 
   @Get()

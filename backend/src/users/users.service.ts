@@ -143,6 +143,7 @@ export class UsersService implements OnModuleInit {
         bio: true,
         isPublic: true,
         role: true,
+        province: true,
       },
     });
   }

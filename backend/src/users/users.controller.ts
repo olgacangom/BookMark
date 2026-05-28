@@ -38,7 +38,6 @@ interface GrowthData {
 }
 
 @Controller('users')
-@UseGuards(JwtAuthGuard, RolesGuard)
 @UseInterceptors(ClassSerializerInterceptor)
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
@@ -58,8 +57,9 @@ export class UsersController {
     return this.usersService.searchUsers(q);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Patch('profile')
+  @Roles(UserRole.USER, UserRole.LIBRERO, UserRole.ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   updateProfile(
     @Request() req: RequestWithUser,
     @Body() updateUserDto: UpdateUserDto,
@@ -138,7 +138,7 @@ export class UsersController {
   // RUTAS CON PARÁMETROS DINÁMICOS
 
   @Get('profile/:id')
-  @Roles(UserRole.USER)
+  @Roles(UserRole.USER, UserRole.LIBRERO, UserRole.ADMIN)
   async getProfile(@Request() req: RequestWithUser, @Param('id') id: string) {
     return this.usersService.findOneProfile(id, req.user.id);
   }
@@ -173,7 +173,7 @@ export class UsersController {
   }
 
   @Get('stats/growth')
-  @UseGuards(JwtAuthGuard)
+  @Roles(UserRole.USER, UserRole.LIBRERO)
   async getGrowth(@Req() req: RequestWithUser): Promise<GrowthData[]> {
     return this.usersService.getBooksGrowth(req.user.id);
   }

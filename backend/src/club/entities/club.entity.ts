@@ -22,8 +22,8 @@ export class Club {
   @Column({ type: 'text', nullable: true })
   description: string;
 
-  @Column({ nullable: true })
-  coverUrl: string;
+  @Column({ type: 'varchar', nullable: true })
+  coverUrl: string | null;
 
   @ManyToOne(() => User)
   creator: User;

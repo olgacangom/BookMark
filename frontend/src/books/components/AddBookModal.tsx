@@ -133,7 +133,7 @@ export const AddBookModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, crea
                         </div>
                         <div>
                             <h2 className="text-xl font-bold text-slate-900 leading-none">
-                                {isEditing ? 'Editar Volumen' : 'Añadir a Biblioteca'}
+                                {isEditing ? 'Editar Libro' : 'Añadir a Biblioteca'}
                             </h2>
                             <p className="text-xs text-slate-400 font-medium mt-1">Colección Personal</p>
                         </div>

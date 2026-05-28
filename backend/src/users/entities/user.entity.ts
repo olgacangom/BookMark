@@ -40,6 +40,9 @@ export class User {
   @Column({ nullable: true })
   fullName: string;
 
+  @Column({ nullable: true })
+  province: string;
+
   @Column({
     type: 'enum',
     enum: UserRole,

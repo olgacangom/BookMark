@@ -22,7 +22,7 @@ export class ClubsService {
 
   async createClub(
     userId: string,
-    data: { name: string; description: string; coverUrl?: string },
+    data: { name: string; description: string; coverUrl?: string | null },
   ) {
     const creator = await this.userRepo.findOneBy({ id: userId });
     if (!creator) throw new NotFoundException('Usuario creador no encontrado');
@@ -34,6 +34,29 @@ export class ClubsService {
       creator: creator,
       members: [creator],
     });
+
+    return this.clubRepo.save(club);
+  }
+
+  async updateClub(
+    userId: string,
+    clubId: string,
+    data: { name: string; description: string; coverUrl?: string | null },
+  ) {
+    const club = await this.clubRepo.findOne({
+      where: { id: clubId },
+      relations: ['creator'],
+    });
+
+    if (!club) throw new NotFoundException('Club no encontrado');
+
+    if (club.creator.id !== userId) {
+      throw new ForbiddenException('Solo el creador puede editar este club');
+    }
+
+    club.name = data.name;
+    club.description = data.description;
+    club.coverUrl = data.coverUrl ?? null;
 
     return this.clubRepo.save(club);
   }

@@ -7,6 +7,7 @@ import api from '../../services/api';
 
 import { AddStoreBookModal } from './AddStoreBookModal';
 import { CreateStoreBookModal } from './CreateStoreBookModal';
+import { BookFormData } from '../../books/schemas/books.shema';
 
 const FeedbackModal = ({ isOpen, onClose, type, title, message }: any) => {
     if (!isOpen) return null;
@@ -104,23 +105,25 @@ export const LibreroCatalogView = () => {
         setIsDeleteModalOpen(true);
     };
 
-    const confirmAction = async (formData: { price: number; inStock: boolean }) => {
+    const confirmAction = async (formData: BookFormData) => {
         try {
+            const { price, inStock, ...bookData } = formData;
+
             if (isEditing) {
-                await api.patch(`/librero/inventory/${selectedItem.id}`, formData);
-                setFeedback({ isOpen: true, type: 'success', title: '¡Actualizado!', message: 'Los cambios se han guardado correctamente.' });
+                await api.patch(`/books/${selectedItem.book.id}`, bookData);
+                await api.patch(`/librero/inventory/${selectedItem.id}`, { price, inStock });
+
             } else {
-                await api.post(`/librero/inventory/${selectedItem.id}`, formData);
-                setFeedback({ isOpen: true, type: 'success', title: '¡Añadido!', message: 'El libro ya está disponible en tu catálogo.' });
+                await api.post(`/librero/inventory/${selectedItem.id}`, { price, inStock });
+                setFeedback({ isOpen: true, type: 'success', title: '¡Añadido!', message: 'El libro está en tu catálogo.' });
             }
+
             setIsAddStoreModalOpen(false);
             setSelectedItem(null);
-            setSearchTerm('');
-            setSearchResults([]);
             fetchInventory();
         } catch (error: any) {
             const msg = error.response?.data?.message || "No se ha podido procesar la solicitud.";
-            setFeedback({ isOpen: true, type: 'error', title: 'Error de inventario', message: Array.isArray(msg) ? msg[0] : msg });
+            setFeedback({ isOpen: true, type: 'error', title: 'Error', message: Array.isArray(msg) ? msg[0] : msg });
         }
     };
 
@@ -131,7 +134,6 @@ export const LibreroCatalogView = () => {
             setIsDeleteModalOpen(false);
             setItemToDelete(null);
             fetchInventory();
-            setFeedback({ isOpen: true, type: 'success', title: 'Retirado', message: 'El libro ha sido eliminado de tu catálogo.' });
         } catch {
             setFeedback({ isOpen: true, type: 'error', title: 'Error', message: 'No se pudo eliminar el ejemplar.' });
         }
@@ -198,18 +200,28 @@ export const LibreroCatalogView = () => {
                 {myStock.map((item) => (
                     <div
                         key={item.id}
-                        onClick={() => handleOpenEdit(item)}
-                        className="group bg-white p-3 md:p-5 rounded-[2rem] md:rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col hover:shadow-2xl hover:scale-[1.02] hover:border-teal-500/30 transition-all duration-300 relative overflow-hidden cursor-pointer"
+                        onClick={() => handleOpenEdit(item)} // Al pulsar aquí, abre el modal
+                        className="group bg-white p-3 md:p-5 rounded-[2rem] md:rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col hover:shadow-2xl hover:scale-[1.02] hover:border-teal-500/30 transition-all cursor-pointer"
                     >
                         <button
                             onClick={(e) => handleOpenDelete(e, item)}
-                            className="absolute top-4 right-4 z-20 p-2.5 bg-white/90 backdrop-blur-md text-rose-500 rounded-xl opacity-100 md:opacity-0 md:group-hover:opacity-100 hover:bg-rose-500 hover:text-white transition-all shadow-md border border-slate-100"
+                            className="absolute top-4 right-4 z-20 p-2.5 bg-white/90 text-rose-500 rounded-xl hover:bg-rose-500 hover:text-white transition-all shadow-md border border-slate-100"
                         >
                             <Trash2 size={18} />
                         </button>
 
                         <div className="relative w-full aspect-[2/3] rounded-2xl overflow-hidden shadow-sm bg-slate-50 mb-3 md:mb-4">
                             <img src={item.book.urlPortada} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt="" />
+
+                            {/* ETIQUETA DE GÉNERO */}
+                            {item.book.genre && item.book.genre !== 'Varios...' && item.book.genre !== 'Varios' && (
+                                <div className="absolute top-1 left-3 z-10">
+                                    <span className="px-2 py-1 bg-amber-600/90 backdrop-blur-sm text-amber-100 text-[9px] font-bold uppercase tracking-wider rounded-lg shadow-sm">
+                                        {item.book.genre}
+                                    </span>
+                                </div>
+                            )}
+
                             {!item.inStock && (
                                 <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px] flex items-center justify-center">
                                     <span className="bg-rose-500 text-white px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest shadow-lg">Agotado</span>
@@ -221,15 +233,14 @@ export const LibreroCatalogView = () => {
                             </div>
                         </div>
 
-                        <div className="flex-1 flex flex-col justify-between text-left">
-                            <div>
-                                <h4 className="font-black text-slate-900 leading-tight mb-0.5 uppercase text-[11px] md:text-sm break-words whitespace-normal group-hover:text-teal-600 transition-colors">
-                                    {item.book.title}
-                                </h4>
-                                <p className="text-[9px] md:text-[10px] text-slate-400 font-bold uppercase truncate">
-                                    {item.book.author}
-                                </p>
-                            </div>
+                        {/* Título y Autor */}
+                        <div className="flex-1 flex flex-col justify-between text-left px-1">
+                            <h4 className="font-black text-slate-900 leading-tight mb-0.5 uppercase text-[11px] md:text-sm break-words whitespace-normal group-hover:text-teal-600 transition-colors">
+                                {item.book.title}
+                            </h4>
+                            <p className="text-[9px] md:text-[10px] text-slate-400 font-bold uppercase truncate">
+                                {item.book.author}
+                            </p>
                         </div>
                     </div>
                 ))}

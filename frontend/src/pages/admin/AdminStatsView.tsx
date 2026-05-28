@@ -24,6 +24,7 @@ import {
   XAxis,
   YAxis,
   BarChart,
+  Sector,
 } from "recharts";
 
 const COLORS = ["#5B74E8", "#C89A33", "#5A9985", "#7B61FF", "#AAB4C5"];
@@ -31,6 +32,7 @@ const COLORS = ["#5B74E8", "#C89A33", "#5A9985", "#7B61FF", "#AAB4C5"];
 export const AdminStatsView = () => {
   const [stats, setStats] = useState<any>(null);
   const [monthlyData, setMonthlyData] = useState([]);
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -49,10 +51,19 @@ export const AdminStatsView = () => {
       </div>
     );
 
-  const chartData = stats.topGenres?.map((g: any) => ({
-    name: g.genre,
-    value: Number(g.count),
-  })) || [];
+  const genreMap = stats.topGenres.reduce((acc: any, g: any) => {
+    const name = (g.genre && g.genre.trim() !== "") ? g.genre : "Sin categoría";
+
+    acc[name] = (acc[name] || 0) + Number(g.count);
+    return acc;
+  }, {});
+
+  const chartData = Object.entries(genreMap).map(([name, value]) => ({
+    name,
+    value
+  }));
+
+  const total = chartData.reduce((acc: number, cur: any) => acc + cur.value, 0);
 
   return (
     <div className="p-5 lg:p-8">
@@ -65,7 +76,7 @@ export const AdminStatsView = () => {
       <div className="grid xl:grid-cols-[1fr_280px] gap-5 mb-6">
         <div className="rounded-[2rem] overflow-hidden border border-white/10 bg-white/80 backdrop-blur-md shadow-lg">
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-black/20">
-            <StatBlock title="Usuarios lectores" value={stats.totalUsers} sub="usuarios que leen" icon={<Users />} color="emerald"/>
+            <StatBlock title="Usuarios lectores" value={stats.totalUsers} sub="usuarios que leen" icon={<Users />} color="emerald" />
             <StatBlock title="Libreros" value={stats.totalLibreros} sub={`Pendientes: ${stats.pendingLibreros}`} icon={<Library />} color="amber" />
             <StatBlock title="Libros Totales" value={stats.totalBooks} sub="libros registrados" icon={<BookOpen />} color="blue" />
             <StatBlock title="Anuncios libros" value={stats.totalAvailableListings} sub={`actuales de ${stats.totalListings} registrados`} icon={<Megaphone />} color="amber" />
@@ -128,19 +139,67 @@ export const AdminStatsView = () => {
             color="amber" />
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 border-t border-black/20">
-          <SmallInfo
-            label="Interacciones"
-            value={stats.totalInteractions}
-          />
-          <SmallInfo
-            label="Ventas"
-            value={stats.totalSaleListings}
-          />
-          <SmallInfo
-            label="Préstamos"
-            value={stats.totalLoanListings}
-          />
+
+        <div className="mt-6 pt-5 border-t border-slate-300 px-5">
+          <div className="flex items-center justify-between mb-4">
+            <h4 className="flex-1 text-center text-[12px] font-black uppercase tracking-[0.2em] text-teal-700">
+              Marketplace
+            </h4>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-10 mb-6">
+
+            {/* Interacciones */}
+            <div className="relative bg-emerald-50 border border-emerald-200  rounded-2xl p-4 shadow-sm hover:shadow-md transition">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                    Interacciones
+                  </p>
+                  <p className="text-2xl font-black text-slate-900 mt-1">
+                    {stats.totalInteractions}
+                  </p>
+                </div>
+                <div className="w-10 h-10 rounded-xl bg-teal-50 flex items-center justify-center text-teal-600">
+                  💬
+                </div>
+              </div>
+            </div>
+
+            {/* Ventas */}
+            <div className="relative bg-emerald-50 border border-emerald-200  rounded-2xl p-4 shadow-sm hover:shadow-md transition">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                    Ventas
+                  </p>
+                  <p className="text-2xl font-black text-slate-900 mt-1">
+                    {stats.totalSaleListings}
+                  </p>
+                </div>
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600">
+                  💰
+                </div>
+              </div>
+            </div>
+
+            {/* Préstamos */}
+            <div className="relative bg-emerald-50 border border-emerald-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                    Préstamos
+                  </p>
+                  <p className="text-2xl font-black text-slate-900 mt-1">
+                    {stats.totalLoanListings}
+                  </p>
+                </div>
+                <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600">
+                  📦
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -148,66 +207,95 @@ export const AdminStatsView = () => {
       <div className="grid xl:grid-cols-2 gap-8 mb-6">
 
         <section className="rounded-[2rem] overflow-hidden border border-white/10 bg-white/80 backdrop-blur-md shadow-lg p-8 mb-6">
-          <h3 className="font-black uppercase text-xs text-slate-900 mb-5">
+          <h3 className="font-black uppercase text-xs text-slate-900 mb-6 tracking-widest">
             Géneros Populares
           </h3>
 
-          <div className="flex gap-3 mb-6">
-            <MetricPill label="Total" value={stats.totalBooks} />
+          {/* TOP METRICS */}
+          <div className="flex gap-3 mb-8">
+            <MetricPill label="Total libros" value={stats.totalBooks} />
             <MetricPill label="Géneros" value={chartData.length} />
           </div>
 
-          <div className="grid lg:grid-cols-[220px_1fr] gap-6 items-center">
-            <div className="relative h-56">
+          {/* GRÁFICO Y LEYENDA */}
+          <div className="grid lg:grid-cols-[300px_1fr] gap-10 items-center">
+            <div className="relative h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={chartData}
-                    innerRadius={55}
-                    outerRadius={85}
-                    dataKey="value"
+                    {...({
+                      data: chartData,
+                      dataKey: "value",
+                      nameKey: "name",
+                      innerRadius: 90,
+                      outerRadius: 130,
+                      paddingAngle: 6,
+                      activeIndex: activeIndex ?? undefined,
+                      activeShape: (props: any) => <Sector {...props} stroke="#fff" strokeWidth={3} />,
+                      onMouseEnter: (_: any, index: number) => setActiveIndex(index),
+                      onMouseLeave: () => setActiveIndex(null),
+                    } as any)}
                   >
-                    {chartData.map((_: any, i: number) => (
+                    {chartData.map((entry: any, i: number) => (
                       <Cell
-                        key={i}
+                        key={`cell-${i}`}
                         fill={COLORS[i % COLORS.length]}
+                        style={{ opacity: activeIndex === null || activeIndex === i ? 1 : 0.4 }}
                       />
                     ))}
                   </Pie>
+                  <Tooltip
+                    cursor={false}
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        const { name, value } = payload[0];
+                        const pct = Math.round(((value as number) / total) * 100);
+                        return (
+                          <div className="bg-white p-3 rounded-xl shadow-lg border border-slate-100 text-xs font-bold">
+                            <p className="text-slate-500 uppercase">{name}</p>
+                            <p className="text-slate-900 text-base">{value} libros ({pct}%)</p>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
                 </PieChart>
               </ResponsiveContainer>
 
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-5xl font-black text-slate-900">
-                  {stats.totalBooks}
-                </span>
+              {/* CENTRO DINÁMICO */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                  {activeIndex !== null ? chartData[activeIndex].name : "Total libros"}
+                </p>
+                <p className="text-4xl font-black text-slate-900">
+                  {activeIndex !== null ? chartData[activeIndex].value : stats.totalBooks}
+                </p>
               </div>
             </div>
 
-            <div className="space-y-4">
+            {/* LEYENDA MEJORADA */}
+            <div className="space-y-3">
               {chartData.map((g: any, i: number) => {
-                const total = chartData.reduce(
-                  (a: number, b: any) => a + b.value,
-                  0
-                );
-
                 const pct = Math.round((g.value / total) * 100);
-
+                const isActive = activeIndex === i;
                 return (
-                  <div key={i}>
-                    <div className="flex justify-between text-sm font-bold text-slate-800 mb-1">
-                      <span>{g.name}</span>
-                      <span>{pct}%</span>
+                  <div
+                    key={i}
+                    onMouseEnter={() => setActiveIndex(i)}
+                    onMouseLeave={() => setActiveIndex(null)}
+                    className={`p-3 rounded-xl transition-all cursor-pointer ${isActive ? "bg-slate-100" : "bg-transparent"}`}
+                  >
+                    <div className="flex justify-between items-center mb-1">
+                      <span className={`font-bold text-sm ${isActive ? "text-slate-900" : "text-slate-600"}`}>
+                        {g.name}
+                      </span>
+                      <span className="text-xs font-black text-slate-900">{pct}%</span>
                     </div>
-
-                    <div className="h-2 bg-slate-200 rounded-full">
+                    <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
                       <div
-                        className="h-full rounded-full"
-                        style={{
-                          width: `${pct}%`,
-                          backgroundColor:
-                            COLORS[i % COLORS.length],
-                        }}
+                        className="h-full rounded-full transition-all duration-300"
+                        style={{ width: `${pct}%`, backgroundColor: COLORS[i % COLORS.length] }}
                       />
                     </div>
                   </div>
@@ -343,16 +431,6 @@ const StatBlock = ({
   );
 };
 
-const SmallInfo = ({ label, value }: any) => (
-  <div className="p-4 text-center">
-    <p className="text-[12px] uppercase text-black/80">
-      {label}
-    </p>
-    <p className="text-lg font-black text-black/80">
-      {value}
-    </p>
-  </div>
-);
 
 const MetricPill = ({ label, value }: any) => (
   <div className="rounded-2xl bg-white/20 px-4 py-2">

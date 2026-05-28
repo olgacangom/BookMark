@@ -3,7 +3,7 @@ import api from '../../services/api';
 import {
     Clock, Users, Trash2, Plus,
     Loader2, AlertTriangle,
-    X, ChevronRight, Search
+    X, Search
 } from 'lucide-react';
 import { CreateEventModal } from './CreateEventModal';
 
@@ -179,20 +179,24 @@ export const LibreroEventsView = () => {
 
                 {filteredEvents.map(event => {
                     const percent = Math.min(100, Math.round((event.attendeesCount || 0) / (event.maxCapacity || 1) * 100));
-                    const eventImage = `https://picsum.photos/seed/${event.id}/800/500`;
 
                     return (
                         <div
                             key={event.id}
+                            onClick={() => {
+                                setSelectedEvent(event);
+                                setIsCreateModalOpen(true);
+                            }}
                             className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden group hover:shadow-xl transition cursor-pointer"
                         >
 
                             {/* IMAGE */}
                             <div className="relative h-44 overflow-hidden">
                                 <img
-                                    src={event.imageUrl || eventImage}
+                                    src={event.imageUrl || `https://picsum.photos/seed/${event.id}/800/500`}
                                     onError={(e: any) => e.target.src = FALLBACK_IMAGE}
                                     className="w-full h-full object-cover group-hover:scale-105 transition"
+                                    alt={event.title}
                                 />
 
                                 {/* ACTIONS (hover) */}
@@ -247,22 +251,6 @@ export const LibreroEventsView = () => {
                                         style={{ width: `${percent}%` }}
                                     />
                                 </div>
-
-                                {/* AVATARS */}
-                                <div className="flex items-center justify-between">
-                                    <div className="flex -space-x-2">
-                                        {[1, 2, 3].map(i => (
-                                            <img
-                                                key={i}
-                                                src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${event.id + i}`}
-                                                className="w-7 h-7 rounded-full border-2 border-white bg-slate-100"
-                                            />
-                                        ))}
-                                    </div>
-
-                                    <ChevronRight className="text-slate-300 group-hover:translate-x-1 transition" />
-                                </div>
-
                             </div>
                         </div>
                     )

@@ -233,9 +233,9 @@ export const MyProfileView = () => {
 
     const handleShare = async () => {
         if (navigator.share) {
-            try { 
-                await navigator.share({ title: `Perfil de ${profileData.fullName} en BookMark`, text: `Echa un vistazo a mi biblioteca.`, url: window.location.href }); 
-            } catch (error) { 
+            try {
+                await navigator.share({ title: `Perfil de ${profileData.fullName} en BookMark`, text: `Echa un vistazo a mi biblioteca.`, url: window.location.href });
+            } catch (error) {
                 console.error(error)
             }
         } else {
@@ -360,6 +360,13 @@ export const MyProfileView = () => {
                                         <h1 className="text-3xl md:text-4xl font-black tracking-tight">{profileData.fullName}</h1>
                                     )}
                                     <p className="text-teal-300 font-bold text-sm mt-1">@{profileData.email?.split('@')[0]}</p>
+
+                                    {profileData.province && (
+                                        <div className="flex items-center justify-center md:justify-start gap-1.5 mt-2 text-white/70 text-[11px] font-bold uppercase tracking-wider">
+                                            <MapPin size={12} />
+                                            <span>{profileData.province}</span>
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* RUEDA DE AJUSTES */}

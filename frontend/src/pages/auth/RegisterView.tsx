@@ -8,11 +8,22 @@ import {
     ArrowLeft
 } from 'lucide-react';
 
+const PROVINCIAS = [
+    "Álava", "Albacete", "Alicante", "Almería", "Asturias", "Ávila", "Badajoz", "Barcelona",
+    "Burgos", "Cáceres", "Cádiz", "Cantabria", "Castellón", "Ciudad Real", "Córdoba",
+    "Cuenca", "Girona", "Granada", "Guadalajara", "Gipuzkoa", "Huelva", "Huesca",
+    "Illes Balears", "Jaén", "La Rioja", "Las Palmas", "León", "Lleida", "Lugo", "Madrid",
+    "Málaga", "Murcia", "Navarra", "Ourense", "Palencia", "Pontevedra", "Salamanca",
+    "Santa Cruz de Tenerife", "Segovia", "Sevilla", "Soria", "Tarragona", "Teruel",
+    "Toledo", "Valencia", "Valladolid", "Bizkaia", "Zamora", "Zaragoza"
+];
+
 export const RegisterView = () => {
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [role, setRole] = useState('user');
+    const [province, setProvince] = useState('');
 
     const [libraryName, setLibraryName] = useState('');
     const [libraryAddress, setLibraryAddress] = useState('');
@@ -38,7 +49,7 @@ export const RegisterView = () => {
                 document: document,
             } : {};
 
-            await register(name, email, password, role, extraData);
+            await register(name, email, password, role, { ...extraData, province });
 
             if (role === 'librero_pendiente') {
                 setShowSuccessModal(true);
@@ -107,6 +118,24 @@ export const RegisterView = () => {
                                 <div className="relative group">
                                     <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
                                     <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:border-teal-500 text-sm font-semibold outline-none" placeholder="Tu nombre" required />
+                                </div>
+                            </div>
+
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-bold text-slate-400 uppercase ml-2">Provincia</label>
+                                <div className="relative group">
+                                    <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 z-10" />
+                                    <select
+                                        value={province}
+                                        onChange={(e) => setProvince(e.target.value)}
+                                        className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:border-teal-500 text-sm font-semibold outline-none appearance-none cursor-pointer"
+                                        required
+                                    >
+                                        <option value="" disabled>Selecciona tu provincia</option>
+                                        {PROVINCIAS.map((prov) => (
+                                            <option key={prov} value={prov}>{prov}</option>
+                                        ))}
+                                    </select>
                                 </div>
                             </div>
 
