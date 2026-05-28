@@ -146,15 +146,28 @@ export const AdminUserListView = () => {
                             <div><label className="text-[10px] font-black text-teal-600 uppercase tracking-widest mb-1 block ml-1">Ubicación</label><div className="flex items-start gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100 text-slate-700 font-medium italic"><MapPin size={18} className="text-slate-400 mt-0.5" />{infoUser.libraryAddress || 'Sin dirección'}</div></div>
                             <div className="pt-4 border-t border-slate-50">
                                 {infoUser.document ? (
-                                    <button onClick={() => window.open(`http://localhost:3000/${infoUser.document.replace(/\\/g, '/')}`, '_blank')} className="w-full group flex items-center justify-between p-5 bg-teal-600 rounded-3xl text-white hover:bg-teal-700 shadow-xl shadow-teal-600/20 transition-all">
+                                    <button
+                                        onClick={() => {
+                                            const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
+                                            const docPath = infoUser.document.replace(/\\/g, '/');
+                                            const fullUrl = `${baseUrl}/${docPath.replace(/^\/+/, '')}`;
+                                            window.open(fullUrl, '_blank');
+                                        }}
+                                        className="w-full group flex items-center justify-between p-5 bg-teal-600 rounded-3xl text-white hover:bg-teal-700 shadow-xl shadow-teal-600/20 transition-all"
+                                    >
                                         <div className="flex items-center gap-4">
                                             <div className="bg-white/20 p-2.5 rounded-xl"><FileText size={24} /></div>
-                                            <div className="text-left"><p className="font-semibold text-sm uppercase tracking-tight">Ver Licencia PDF</p><p className="text-teal-100 text-[10px] italic">Abrir en pestaña nueva</p></div>
+                                            <div className="text-left">
+                                                <p className="font-semibold text-sm uppercase tracking-tight">Ver Licencia PDF</p>
+                                                <p className="text-teal-100 text-[10px] italic">Abrir en pestaña nueva</p>
+                                            </div>
                                         </div>
                                         <ExternalLink size={20} className="opacity-50 group-hover:opacity-100" />
                                     </button>
                                 ) : (
-                                    <div className="p-8 bg-rose-50 rounded-3xl border border-dashed border-rose-200 text-center text-rose-600 font-bold text-xs uppercase">Sin documento adjunto</div>
+                                    <div className="p-8 bg-rose-50 rounded-3xl border border-dashed border-rose-200 text-center text-rose-600 font-bold text-xs uppercase">
+                                        Sin documento adjunto
+                                    </div>
                                 )}
                             </div>
                         </div>
@@ -267,7 +280,7 @@ export const AdminUserListView = () => {
             {/* --- TABLA PRINCIPAL --- */}
             <div className="bg-white/90 rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden">
                 <div className="overflow-x-auto">
-                    
+
                     <table className="w-full min-w-[900px]">
                         <thead className="bg-slate-200 border-b border-slate-300">
                             <tr>

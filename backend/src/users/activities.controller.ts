@@ -14,6 +14,9 @@ import { ActivitiesService } from './activities.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CreateActivityDto } from './dto/create-activity.dto';
 import { UpdateActivityDto } from './dto/update-activity.dto';
+import { UserRole } from './entities/user.entity';
+import { Roles } from './roles/roles.decorator';
+import { RolesGuard } from './roles/roles.guard';
 
 interface RequestWithUser {
   user: {
@@ -22,8 +25,9 @@ interface RequestWithUser {
   };
 }
 
-@UseGuards(JwtAuthGuard)
 @Controller('activities')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(UserRole.USER)
 export class ActivitiesController {
   constructor(private readonly activitiesService: ActivitiesService) {}
 

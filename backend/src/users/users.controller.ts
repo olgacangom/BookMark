@@ -21,7 +21,9 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
 import { RegisterDto } from 'src/auth/dto/register.dto';
-import { User } from './entities/user.entity';
+import { User, UserRole } from './entities/user.entity';
+import { Roles } from './roles/roles.decorator';
+import { RolesGuard } from './roles/roles.guard';
 
 interface RequestWithUser {
   user: {
@@ -36,13 +38,15 @@ interface GrowthData {
 }
 
 @Controller('users')
+@UseGuards(JwtAuthGuard, RolesGuard)
 @UseInterceptors(ClassSerializerInterceptor)
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   // RUTAS ESTÁTICAS
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.USER)
   @Get('follow/requests')
   async getRequests(@Request() req: RequestWithUser) {
     return this.usersService.getPendingRequests(req.user.id);
@@ -95,13 +99,12 @@ export class UsersController {
   }
 
   @Delete('avatar')
-  @UseGuards(JwtAuthGuard)
   async deleteAvatar(@Req() req: { user: User }) {
     return this.usersService.deleteAvatar(req.user.id);
   }
 
   @Patch('deactivate-me')
-  @UseGuards(JwtAuthGuard)
+  @Roles(UserRole.USER)
   async deactivateMyAccount(@Req() req: { user: User }) {
     return this.usersService.deactivateAccount(req.user.id);
   }
@@ -109,25 +112,25 @@ export class UsersController {
   // RUTAS DE ACCIÓN SOCIAL
 
   @Post('follow/:id')
-  @UseGuards(JwtAuthGuard)
+  @Roles(UserRole.USER)
   async follow(@Request() req: RequestWithUser, @Param('id') id: string) {
     return this.usersService.followUser(req.user.id, id);
   }
 
   @Post('unfollow/:id')
-  @UseGuards(JwtAuthGuard)
+  @Roles(UserRole.USER)
   async unfollow(@Request() req: RequestWithUser, @Param('id') id: string) {
     return this.usersService.unfollowUser(req.user.id, id);
   }
 
   @Post('follow/accept/:id')
-  @UseGuards(JwtAuthGuard)
+  @Roles(UserRole.USER)
   async acceptRequest(@Param('id') id: string) {
     return this.usersService.acceptFollowRequest(id);
   }
 
   @Delete('follow/decline/:id')
-  @UseGuards(JwtAuthGuard)
+  @Roles(UserRole.USER)
   async declineRequest(@Param('id') id: string) {
     return this.usersService.declineFollowRequest(id);
   }
@@ -135,27 +138,31 @@ export class UsersController {
   // RUTAS CON PARÁMETROS DINÁMICOS
 
   @Get('profile/:id')
-  @UseGuards(JwtAuthGuard)
+  @Roles(UserRole.USER)
   async getProfile(@Request() req: RequestWithUser, @Param('id') id: string) {
     return this.usersService.findOneProfile(id, req.user.id);
   }
 
   @Get()
+  @Roles(UserRole.USER)
   findAll() {
     return this.usersService.findAll();
   }
 
   @Get(':id')
+  @Roles(UserRole.USER)
   findOne(@Param('id') id: string) {
     return this.usersService.findOne(id);
   }
 
   @Patch(':id')
+  @Roles(UserRole.USER)
   update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
     return this.usersService.update(id, updateUserDto);
   }
 
   @Delete(':id')
+  @Roles(UserRole.USER)
   remove(@Param('id') id: string) {
     return this.usersService.remove(id);
   }

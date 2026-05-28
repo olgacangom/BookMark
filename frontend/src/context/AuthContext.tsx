@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import api from '../services/api';
 
 interface AuthContextType {
@@ -10,6 +10,7 @@ interface AuthContextType {
   logout: () => void;
   updateUser: (userData: any) => void;
   isAuthenticated: boolean;
+  loading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -20,6 +21,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const savedUser = localStorage.getItem('user');
     return savedUser ? JSON.parse(savedUser) : null;
   });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const savedUser = localStorage.getItem('user');
+    if (savedUser) {
+      setUser(JSON.parse(savedUser));
+    }
+    setLoading(false);
+  }, []);
 
   const register = async (name: string, email: string, password: string, role: string, extraData?: any) => {
     try {
@@ -88,8 +98,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login,
       logout,
       updateUser,
-      register, //
-      isAuthenticated
+      register,
+      isAuthenticated,
+      loading
     }}>
       {children}
     </AuthContext.Provider>

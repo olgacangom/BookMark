@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from 'react'; 
-import ReactQuill from 'react-quill-new'; 
+import { useState, useEffect, useCallback } from 'react';
+import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
 import { Trash2, Save, StickyNote, Loader2, X, Edit3, AlertTriangle } from 'lucide-react';
+import api from '../../services/api';
 
 interface Note {
   id: string;
@@ -14,7 +15,7 @@ export function BookNotes({ bookId }: { bookId: number }) {
   const [newNoteContent, setNewNoteContent] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [loading, setLoading] = useState(false);
-  
+
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState('');
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -31,33 +32,22 @@ export function BookNotes({ bookId }: { bookId: number }) {
   const fetchNotes = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch(`http://localhost:3000/notes/book/${bookId}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-      });
-      const data = await res.json();
-      setNotes(Array.isArray(data) ? data : []);
+      const res = await api.get(`/notes/book/${bookId}`);
+      setNotes(Array.isArray(res.data) ? res.data : []);
     } catch (e) {
       console.error(e);
     } finally {
       setLoading(false);
     }
-  }, [bookId]); 
+  }, [bookId]);
 
-  useEffect(() => { 
-    fetchNotes(); 
+  useEffect(() => {
+    fetchNotes();
   }, [fetchNotes]);
 
   const handleSave = async () => {
     if (!newNoteContent.trim() || newNoteContent === '<p><br></p>') return;
-
-    await fetch(`http://localhost:3000/notes/${bookId}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${localStorage.getItem('token')}`,
-      },
-      body: JSON.stringify({ content: newNoteContent }),
-    });
+    await api.post(`/notes/${bookId}`, { content: newNoteContent });
 
     setNewNoteContent('');
     setIsAdding(false);
@@ -66,26 +56,14 @@ export function BookNotes({ bookId }: { bookId: number }) {
 
   const handleUpdate = async (id: string) => {
     if (!editContent.trim() || editContent === '<p><br></p>') return;
-
-    await fetch(`http://localhost:3000/notes/${id}`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${localStorage.getItem('token')}`,
-      },
-      body: JSON.stringify({ content: editContent }),
-    });
-
+    await api.put(`/notes/${id}`, { content: editContent });
     setEditingNoteId(null);
     fetchNotes();
   };
 
   const handleDelete = async () => {
     if (!noteToDelete) return;
-    await fetch(`http://localhost:3000/notes/${noteToDelete}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-    });
+    await api.delete(`/notes/${noteToDelete}`);
     setIsDeleteModalOpen(false);
     setNoteToDelete(null);
     fetchNotes();
@@ -110,9 +88,9 @@ export function BookNotes({ bookId }: { bookId: number }) {
 
       {isAdding && (
         <div className="bg-white rounded-2xl border border-teal-100 overflow-hidden shadow-md animate-in zoom-in-95 duration-200">
-          <ReactQuill 
-            theme="snow" 
-            value={newNoteContent} 
+          <ReactQuill
+            theme="snow"
+            value={newNoteContent}
             onChange={setNewNoteContent}
             modules={modules}
             className="h-40 mb-12"
@@ -136,9 +114,9 @@ export function BookNotes({ bookId }: { bookId: number }) {
           <div key={note.id} className="relative group">
             {editingNoteId === note.id ? (
               <div className="bg-white rounded-2xl border-2 border-teal-500 overflow-hidden shadow-xl animate-in fade-in duration-200">
-                <ReactQuill 
-                  theme="snow" 
-                  value={editContent} 
+                <ReactQuill
+                  theme="snow"
+                  value={editContent}
                   onChange={setEditContent}
                   modules={modules}
                   className="h-32 mb-12"
@@ -151,7 +129,7 @@ export function BookNotes({ bookId }: { bookId: number }) {
                 </div>
               </div>
             ) : (
-              <div 
+              <div
                 onClick={() => {
                   setEditingNoteId(note.id);
                   setEditContent(note.content);
@@ -159,18 +137,18 @@ export function BookNotes({ bookId }: { bookId: number }) {
                 }}
                 className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:border-teal-200 hover:shadow-md transition-all cursor-pointer group/card flex flex-col h-full"
               >
-                <div 
+                <div
                   className="prose prose-sm text-slate-600 max-w-none mb-4 flex-1"
-                  dangerouslySetInnerHTML={{ __html: note.content }} 
+                  dangerouslySetInnerHTML={{ __html: note.content }}
                 />
-                
+
                 <div className="flex justify-between items-center text-[9px] text-slate-400 font-bold uppercase tracking-tighter pt-3 border-t border-slate-50">
                   <span>{new Date(note.createdAt).toLocaleDateString()}</span>
-                  
+
                   <div className="flex items-center gap-3">
                     <Edit3 size={14} className="text-teal-500 opacity-0 group-hover/card:opacity-100 transition-opacity" />
-                    
-                    <button 
+
+                    <button
                       onClick={(e) => {
                         e.stopPropagation();
                         setNoteToDelete(note.id);
@@ -188,7 +166,7 @@ export function BookNotes({ bookId }: { bookId: number }) {
         ))}
       </div>
 
-      <ConfirmDeleteModal 
+      <ConfirmDeleteModal
         isOpen={isDeleteModalOpen}
         onClose={() => { setIsDeleteModalOpen(false); setNoteToDelete(null); }}
         onConfirm={handleDelete}
@@ -198,22 +176,22 @@ export function BookNotes({ bookId }: { bookId: number }) {
 }
 
 const ConfirmDeleteModal = ({ isOpen, onClose, onConfirm }: { isOpen: boolean, onClose: () => void, onConfirm: () => void }) => {
-    if (!isOpen) return null;
-    return (
-        <div className="fixed inset-0 z-[250] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-in fade-in duration-300">
-            <div className="bg-white rounded-[2.5rem] p-8 max-w-sm w-full shadow-2xl border border-slate-100 text-center">
-                <div className="w-14 h-14 bg-rose-50 rounded-full flex items-center justify-center mx-auto mb-4 text-rose-500">
-                    <AlertTriangle size={24} />
-                </div>
-                <h3 className="text-xl font-bold text-slate-900 mb-2 tracking-tight">¿Eliminar nota?</h3>
-                <p className="text-slate-500 text-sm mb-8 leading-relaxed px-2">
-                    Esta nota se borrará permanentemente de tu diario de lectura. Esta acción no se puede deshacer.
-                </p>
-                <div className="flex gap-3">
-                    <button onClick={onClose} className="flex-1 py-3 font-bold text-slate-400 hover:text-slate-600 transition-colors uppercase text-[10px] tracking-widest">Cancelar</button>
-                    <button onClick={onConfirm} className="flex-1 py-3 bg-slate-900 text-white rounded-xl font-bold shadow-lg hover:bg-rose-600 transition-all uppercase text-[10px] tracking-widest">Eliminar</button>
-                </div>
-            </div>
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-[250] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-in fade-in duration-300">
+      <div className="bg-white rounded-[2.5rem] p-8 max-w-sm w-full shadow-2xl border border-slate-100 text-center">
+        <div className="w-14 h-14 bg-rose-50 rounded-full flex items-center justify-center mx-auto mb-4 text-rose-500">
+          <AlertTriangle size={24} />
         </div>
-    );
+        <h3 className="text-xl font-bold text-slate-900 mb-2 tracking-tight">¿Eliminar nota?</h3>
+        <p className="text-slate-500 text-sm mb-8 leading-relaxed px-2">
+          Esta nota se borrará permanentemente de tu diario de lectura. Esta acción no se puede deshacer.
+        </p>
+        <div className="flex gap-3">
+          <button onClick={onClose} className="flex-1 py-3 font-bold text-slate-400 hover:text-slate-600 transition-colors uppercase text-[10px] tracking-widest">Cancelar</button>
+          <button onClick={onConfirm} className="flex-1 py-3 bg-slate-900 text-white rounded-xl font-bold shadow-lg hover:bg-rose-600 transition-all uppercase text-[10px] tracking-widest">Eliminar</button>
+        </div>
+      </div>
+    </div>
+  );
 };

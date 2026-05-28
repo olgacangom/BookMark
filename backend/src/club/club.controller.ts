@@ -10,6 +10,9 @@ import {
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ClubsService } from './club.service';
+import { UserRole } from 'src/users/entities/user.entity';
+import { Roles } from 'src/users/roles/roles.decorator';
+import { RolesGuard } from 'src/users/roles/roles.guard';
 
 interface RequestWithUser {
   user: {
@@ -29,7 +32,8 @@ interface CreateThreadDto {
   relatedBookId?: number;
 }
 
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(UserRole.USER)
 @Controller('clubs')
 export class ClubsController {
   constructor(private readonly clubsService: ClubsService) {}

@@ -74,11 +74,13 @@ export class LibreroController {
 
   // OBTENER MI STOCK
   @Get('inventory')
+  @Roles(UserRole.LIBRERO)
   getMyInventory(@Req() req: { user: User }) {
     return this.librerosService.getMyInventory(req.user.id);
   }
 
   @Post('inventory/:bookId')
+  @Roles(UserRole.LIBRERO)
   addBook(
     @Param('bookId') bookId: string,
     @Body() data: { price: number; inStock: boolean },
@@ -88,6 +90,7 @@ export class LibreroController {
   }
 
   @Patch('inventory/:inventoryId')
+  @Roles(UserRole.LIBRERO)
   updateInventory(
     @Param('inventoryId') inventoryId: string,
     @Body() data: { price: number; inStock: boolean },
@@ -101,6 +104,7 @@ export class LibreroController {
   }
 
   @Delete('inventory/:inventoryId')
+  @Roles(UserRole.LIBRERO)
   removeBook(
     @Param('inventoryId') inventoryId: string,
     @Req() req: { user: User },
@@ -109,11 +113,13 @@ export class LibreroController {
   }
 
   @Post('catalog')
+  @Roles(UserRole.LIBRERO)
   updateCatalog() {
     return { message: 'Lógica de catálogo masivo pendiente' };
   }
 
   @Get('stats')
+  @Roles(UserRole.LIBRERO)
   getStats(@Req() req: { user: User }) {
     return this.librerosService.getStats(req.user.id);
   }
@@ -127,23 +133,26 @@ export class LibreroController {
   }
 
   @Get('find-stores/:bookId')
-  @Roles(UserRole.USER, UserRole.LIBRERO, UserRole.ADMIN)
+  @Roles(UserRole.USER)
   findStores(@Param('bookId') bookId: string) {
     return this.librerosService.findStoresByBook(bookId);
   }
 
   // Eventos/Quedadas físicas
   @Get('events')
+  @Roles(UserRole.LIBRERO)
   getMyEvents(@Req() req: { user: User }) {
     return this.librerosService.getMyEvents(req.user.id);
   }
 
   @Post('events')
+  @Roles(UserRole.LIBRERO)
   createEvent(@Req() req: { user: User }, @Body() data: Partial<LibraryEvent>) {
     return this.librerosService.createEvent(req.user.id, data);
   }
 
   @Patch('events/:id')
+  @Roles(UserRole.LIBRERO)
   updateEvent(
     @Req() req: { user: User },
     @Param('id') id: string,
@@ -153,18 +162,19 @@ export class LibreroController {
   }
 
   @Delete('events/:id')
+  @Roles(UserRole.LIBRERO)
   deleteEvent(@Req() req: { user: User }, @Param('id') id: string) {
     return this.librerosService.deleteEvent(req.user.id, id);
   }
 
   @Get('events/all')
-  @Roles(UserRole.USER, UserRole.LIBRERO, UserRole.ADMIN)
+  @Roles(UserRole.USER)
   async getAllEvents() {
     return this.librerosService.getAllFutureEvents();
   }
 
   @Post('events/:id/join')
-  @Roles(UserRole.USER, UserRole.LIBRERO, UserRole.ADMIN)
+  @Roles(UserRole.USER)
   async joinEvent(@Param('id') eventId: string, @Req() req: { user: User }) {
     return this.librerosService.joinEvent(req.user.id, eventId);
   }

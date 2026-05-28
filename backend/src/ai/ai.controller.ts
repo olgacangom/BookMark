@@ -4,13 +4,15 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Request } from 'express';
-import { User } from '../users/entities/user.entity';
+import { User, UserRole } from '../users/entities/user.entity';
 import { Book } from '../books/entities/book.entity';
 import { LibraryEvent } from '../users/entities/library-event.entity';
 import { Activity } from 'src/users/entities/activity.entity';
 import { Club } from '../club/entities/club.entity';
 import { BookListing } from 'src/users/entities/book-listing.entity';
 import { AdminService } from 'src/users/roles/admin.service';
+import { RolesGuard } from 'src/users/roles/roles.guard';
+import { Roles } from 'src/users/roles/roles.decorator';
 
 interface RequestWithUser extends Request {
   user: { id: string; role: string };
@@ -28,7 +30,7 @@ interface BookAggregationResult {
 }
 
 @Controller('ai')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class AIController {
   constructor(
     private readonly aiService: AIService,
@@ -45,6 +47,7 @@ export class AIController {
   ) {}
 
   @Post('chat')
+  @Roles(UserRole.USER, UserRole.LIBRERO, UserRole.ADMIN)
   async chat(
     @Req() req: RequestWithUser,
     @Body() body: { prompt: string; history: unknown[] },

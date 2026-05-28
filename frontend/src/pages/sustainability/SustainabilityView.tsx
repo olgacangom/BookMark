@@ -227,7 +227,7 @@ export const SustainabilityView = () => {
                         onClick={() => { setListingToEdit(null); setIsCreateOpen(true); }}
                         className="bg-slate-900 text-white px-4.5 py-3.5 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-teal-600 transition-all shadow-xl active:scale-95 flex items-center gap-2"
                     >
-                        <Plus size={16} strokeWidth={3} /> Publicar club
+                        <Plus size={16} strokeWidth={3} /> Publicar Libro
                     </button>
                 </header>
 

@@ -9,6 +9,7 @@ import { useAuth } from "../context/AuthContext";
 import { useEffect, useState, useCallback } from "react";
 import { io } from "socket.io-client";
 import { BibliosChat } from "../ai/components/BibliosChat";
+import api from "../services/api";
 
 export function MainLayout() {
     const location = useLocation();
@@ -29,20 +30,14 @@ export function MainLayout() {
             if (!token) return;
 
             const [chatRes, followRes, bookRes] = await Promise.all([
-                fetch("http://localhost:3000/chat/conversations", {
-                    headers: { Authorization: `Bearer ${token}` }
-                }),
-                fetch("http://localhost:3000/users/follow/requests", {
-                    headers: { Authorization: `Bearer ${token}` }
-                }),
-                fetch("http://localhost:3000/sustainability/requests/me", {
-                    headers: { Authorization: `Bearer ${token}` }
-                })
+                api.get("chat/conversations"),
+                api.get("users/follow/requests"),
+                api.get("sustainability/requests/me"),
             ]);
 
-            const chats = await chatRes.json();
-            const follows = await followRes.json();
-            const books = await bookRes.json();
+            const chats = await chatRes.data;
+            const follows = await followRes.data;
+            const books = await bookRes.data;
 
             if (Array.isArray(chats)) {
                 setTotalUnread(
@@ -87,7 +82,8 @@ export function MainLayout() {
 
 
     useEffect(() => {
-        const socket = io("http://localhost:3000");
+        const socketUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
+        const socket = io(socketUrl);
 
         socket.on("new_message", (msg) => {
             if (msg.senderId !== user?.id) {

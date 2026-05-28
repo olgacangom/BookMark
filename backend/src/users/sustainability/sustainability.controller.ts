@@ -20,6 +20,9 @@ import {
   UpdateListingDto,
 } from './sustainability.service';
 import { ListingType } from '../entities/book-listing.entity';
+import { RolesGuard } from '../roles/roles.guard';
+import { UserRole } from '../entities/user.entity';
+import { Roles } from '../roles/roles.decorator';
 
 interface RequestWithUser extends Request {
   user: {
@@ -29,7 +32,8 @@ interface RequestWithUser extends Request {
 }
 
 @Controller('sustainability')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(UserRole.USER)
 export class SustainabilityController {
   constructor(private readonly sustainabilityService: SustainabilityService) {}
 

@@ -14,6 +14,9 @@ import { BooksService } from './books.service';
 import { CreateBookDto } from './dto/create-book.dto';
 import { UpdateBookDto } from './dto/update-book.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from 'src/users/roles/roles.guard';
+import { UserRole } from 'src/users/entities/user.entity';
+import { Roles } from 'src/users/roles/roles.decorator';
 
 export interface RequestWithUser {
   user: {
@@ -22,7 +25,8 @@ export interface RequestWithUser {
 }
 
 @Controller('books')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(UserRole.USER)
 export class BooksController {
   constructor(private readonly booksService: BooksService) {}
 

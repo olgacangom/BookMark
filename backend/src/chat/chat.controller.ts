@@ -9,6 +9,9 @@ import {
 } from '@nestjs/common';
 import { ChatService } from './chat.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { UserRole } from 'src/users/entities/user.entity';
+import { Roles } from 'src/users/roles/roles.decorator';
+import { RolesGuard } from 'src/users/roles/roles.guard';
 
 interface RequestWithUser {
   user: {
@@ -18,7 +21,8 @@ interface RequestWithUser {
 }
 
 @Controller('chat')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(UserRole.USER)
 export class ChatController {
   constructor(private readonly chatService: ChatService) {}
 

@@ -66,8 +66,10 @@ export const BookstoresMapView = () => {
                     hasStock: true
                 }));
             } else {
-                const response = await fetch(`http://localhost:3000/bookstores/nearby?lat=${lat}&lon=${lon}`);
-                data = await response.json();
+                const res = await api.get(`/bookstores/nearby`, {
+                    params: { lat, lon }
+                });
+                data = res.data;
             }
             setBookstores(data);
         } catch (error) {
@@ -153,8 +155,8 @@ export const BookstoresMapView = () => {
             <header className="mb-4 flex flex-col xl:flex-row justify-between items-start xl:items-end gap-4 relative shrink-0">
                 <div>
                     <h1 className="text-2xl md:text-3xl font-black tracking-tighter text-slate-900 italic uppercase">
-                            Encuentra <span className="text-teal-600 font-serif">Librerías</span>
-                        </h1>
+                        Encuentra <span className="text-teal-600 font-serif">Librerías</span>
+                    </h1>
                     <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-1">
                         {loading ? "Actualizando mapa..." : `Explorando ${bookstores.length} puntos de venta`}
                     </p>

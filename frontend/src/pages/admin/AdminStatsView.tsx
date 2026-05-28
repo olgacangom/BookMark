@@ -113,7 +113,7 @@ export const AdminStatsView = () => {
           />
 
           <StatBlock
-            title="Registros"
+            title="Registros en Eventos"
             value={stats.totalRegistrations}
             sub={`Media: ${stats.avgRegistrationsPerEvent}`}
             icon={<ClipboardList />}

@@ -41,14 +41,18 @@ export const RequestsView = () => {
 
         window.dispatchEvent(new Event('reset_requests'));
 
-        const socket = io('http://localhost:3000');
+        const socketUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+        const socket = io(socketUrl);
+
         socket.on('notification', (payload: { message: string }) => {
             setLiveNotifications(prev => [payload.message, ...prev]);
             setTimeout(() => setLiveNotifications(prev => prev.slice(0, -1)), 6000);
             window.dispatchEvent(new Event('refresh_badges'));
         });
 
-        return () => { socket.disconnect(); };
+        return () => {
+            socket.disconnect();
+        };
     }, [fetchData]);
 
     const handleFollowAction = async (requestId: string, action: 'accept' | 'decline') => {
@@ -198,8 +202,8 @@ export const RequestsView = () => {
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {receivedAcceptedLoans.map((req) => (
-                                <div key={req.id} className="bg-slate-50/50 p-5 rounded-[2rem] border border-slate-100 flex items-center justify-between group hover:bg-white hover:shadow-md transition-all">
-                                    <div className="flex items-center gap-4">
+                                <div className="bg-slate-50/50 p-5 rounded-[2rem] border border-slate-100 flex flex-col md:flex-row items-center justify-between group hover:bg-white hover:shadow-md transition-all">
+                                    <div className="flex items-center gap-4 mb-4 md:mb-0">
                                         <div className="relative shrink-0 cursor-pointer" onClick={() => navigate(`/book/${req.listing.book.isbn}`)}>
                                             <img src={req.listing.book.urlPortada} className="w-12 h-16 object-cover rounded-xl shadow-sm" alt="" />
                                             <div className="absolute -bottom-2 -right-2 w-6 h-6 bg-emerald-600 rounded-full border-2 border-white flex items-center justify-center text-white">
@@ -211,8 +215,12 @@ export const RequestsView = () => {
                                             <h4 className="font-bold text-slate-900 text-xs line-clamp-1 uppercase tracking-tight">{req.listing.book.title}</h4>
                                         </div>
                                     </div>
-                                    <div className="flex gap-2">
-                                        <button disabled={!!actionId} onClick={() => handleMarkReturned(req.id)} className="p-3 bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 transition-all shadow-sm disabled:opacity-50">
+                                    <div className="mt-2 md:mt-0 w-full md:w-auto flex justify-end">
+                                        <button
+                                            disabled={!!actionId}
+                                            onClick={() => handleMarkReturned(req.id)}
+                                            className="w-full md:w-auto px-4 py-2 bg-emerald-500 text-white text-xs font-bold rounded-xl hover:bg-emerald-600 transition-all shadow-sm disabled:opacity-50"
+                                        >
                                             {actionId === req.id ? <Loader2 size={16} className="animate-spin" /> : 'Marcar devuelto'}
                                         </button>
                                     </div>

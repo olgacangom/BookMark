@@ -12,6 +12,9 @@ import {
 } from '@nestjs/common';
 import { BooksService } from './books.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { UserRole } from 'src/users/entities/user.entity';
+import { Roles } from 'src/users/roles/roles.decorator';
+import { RolesGuard } from 'src/users/roles/roles.guard';
 
 interface RequestWithUser {
   user: {
@@ -21,7 +24,8 @@ interface RequestWithUser {
 }
 
 @Controller('notes')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(UserRole.USER)
 export class NotesController {
   constructor(private readonly booksService: BooksService) {}
 
