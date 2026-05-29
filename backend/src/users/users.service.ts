@@ -296,9 +296,11 @@ export class UsersService implements OnModuleInit {
     });
     if (!targetUser) throw new NotFoundException('Usuario no encontrado');
 
-    let follow = await this.followRepository.findOne({
-      where: { follower: { id: followerId }, following: { id: targetUserId } },
-    });
+    let follow = await this.followRepository
+      .createQueryBuilder('follow')
+      .where('follow.followerId = :followerId', { followerId })
+      .andWhere('follow.followingId = :targetUserId', { targetUserId })
+      .getOne();
 
     if (follow) return follow;
 
@@ -314,9 +316,13 @@ export class UsersService implements OnModuleInit {
   }
 
   async unfollowUser(followerId: string, targetUserId: string) {
-    const follow = await this.followRepository.findOne({
-      where: { follower: { id: followerId }, following: { id: targetUserId } },
-    });
+    const follow = await this.followRepository
+      .createQueryBuilder('follow')
+      .leftJoin('follow.follower', 'follower')
+      .leftJoin('follow.following', 'following')
+      .where('follower.id = :followerId', { followerId })
+      .andWhere('following.id = :targetUserId', { targetUserId })
+      .getOne();
 
     if (!follow) return { message: 'No había relación previa' };
 

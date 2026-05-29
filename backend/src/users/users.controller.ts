@@ -111,12 +111,14 @@ export class UsersController {
 
   // RUTAS DE ACCIÓN SOCIAL
 
+  @UseGuards(JwtAuthGuard)
   @Post('follow/:id')
   @Roles(UserRole.USER)
   async follow(@Request() req: RequestWithUser, @Param('id') id: string) {
     return this.usersService.followUser(req.user.id, id);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Post('unfollow/:id')
   @Roles(UserRole.USER)
   async unfollow(@Request() req: RequestWithUser, @Param('id') id: string) {

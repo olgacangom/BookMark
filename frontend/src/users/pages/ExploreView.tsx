@@ -6,7 +6,7 @@ import {
     Search, Loader2, Bookmark, MapPin, Store, X,
     ShoppingBag, CheckCircle2,
     Clock, ChevronRight, Leaf, Tag, HandHelping, Check,
-    Flame, LayoutGrid, MessageCircle
+    Flame, LayoutGrid
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -167,21 +167,6 @@ export const ExploreView = () => {
     const [mySentRequestIds, setMySentRequestIds] = useState<string[]>([]);
     const [feedback, setFeedback] = useState<{ isOpen: boolean, type: 'success' | 'cancel' }>({ isOpen: false, type: 'success' });
 
-    const handleStartChat = async (targetUserId: string) => {
-        try {
-            const { data } = await api.post(`/chat/conversation/${targetUserId}`);
-            if (data) {
-                navigate('/chat');
-            }
-        } catch (error: any) {
-            if (error.response?.status === 403) {
-                alert("No puedes iniciar un chat con este usuario (posiblemente no os seguís).");
-            } else {
-                alert("Error al iniciar chat.");
-            }
-        }
-    };
-
     const loadExploreData = useCallback(async () => {
         if (!currentUser) return;
         setLoading(true);
@@ -199,15 +184,23 @@ export const ExploreView = () => {
                 const lectores = usersRes.value.data
                     .filter((u: any) => u.id !== currentUser.id && u.role === 'user')
                     .map((u: any) => {
-                        const myRel = u.followerRelations?.find((f: any) =>
-                            (f.followerId === currentUser.id || f.follower?.id === currentUser.id)
-                        );
-                        const iFollowThem = myRel?.status === 'accepted';
-                        const theyFollowMe = u.followingRelations?.some((f: any) =>
-                            (f.followingId === currentUser.id || f.following?.id === currentUser.id) && f.status === 'accepted'
+                        const myRel = u.followerRelations?.find(
+                            (f: any) => f.follower?.id === currentUser.id
                         );
 
-                        return { ...u, followStatus: myRel ? myRel.status : null, isReciprocal: iFollowThem && theyFollowMe };
+                        const iFollowThem = myRel?.status === 'ACCEPTED';
+
+                        const theyFollowMe = u.followingRelations?.some(
+                            (f: any) =>
+                                f.following?.id === currentUser.id &&
+                                f.status === 'ACCEPTED'
+                        );
+
+                        return {
+                            ...u,
+                            followStatus: myRel ? myRel.status : null,
+                            isReciprocal: iFollowThem && theyFollowMe,
+                        };
                     });
                 setUsers(lectores);
             }
@@ -218,7 +211,7 @@ export const ExploreView = () => {
             if (myBooksRes.status === 'fulfilled') setMyBookKeys(myBooksRes.value.map(b => `${b.title}-${b.author}`.toLowerCase()));
             if (eventsRes.status === 'fulfilled') setEvents(eventsRes.value.data);
             if (reqRes.status === 'fulfilled') {
-                const sent = reqRes.value.data.filter((r: any) => !r.isOwner && r.status === 'pending');
+                const sent = reqRes.value.data.filter((r: any) => !r.isOwner && r.status === 'PENDING');
                 setMySentRequestIds(sent.map((r: any) => r.listing.id));
             }
             if (clubsRes.status === 'fulfilled') {
@@ -293,30 +286,27 @@ export const ExploreView = () => {
 
     return (
         <div className="min-h-screen font-sans pb-20 animate-in fade-in duration-500 text-left">
-
-
-            <div className="max-w-[1400px] mx-auto px-8 pt-8 flex flex-col lg:flex-row gap-8">
+            <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 lg:pt-8 flex flex-col xl:flex-row gap-6 lg:gap-8">
                 <div className="flex-1 space-y-10 min-w-0">
                     {!searchTerm && (
                         <header className="text-left">
-                            <h1 className="text-4xl font-black text-slate-800 tracking-tight">¡Hola,
+                            <h1 className="text-3xl sm:text-3xl lg:text-4xl font-black text-slate-800 tracking-tight leading-tight">¡Hola,
                                 <span className="text-teal-600 font-serif">{currentUser?.fullName?.split(' ')[0]}!</span>
                             </h1>
                             <p className="text-slate-500 text-sm mt-1 font-medium">Explora, conecta y comparte tu pasión por la lectura.</p>
                         </header>
                     )}
 
-                    <div className="max-w-[1400px] mx-auto flex justify-between items-center gap-8">
-                        <div className="relative flex-1 max-w-2xl">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                            <input
-                                type="text"
-                                placeholder="Busca libros, autores, usuarios o clubes..."
-                                className="w-full bg-white border border-slate-200 rounded-2xl py-4 pl-14 pr-6 text-sm shadow-sm focus:ring-4 focus:ring-teal-500/5 focus:border-teal-500/20 transition-all outline-none font-medium placeholder:text-slate-400"
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
-                        </div>
+                    <div className="w-full flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4">                        <div className="relative flex-1 max-w-2xl">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                        <input
+                            type="text"
+                            placeholder="Busca libros, autores, usuarios o clubes..."
+                            className="w-full text-sm sm:text-base bg-white border border-slate-200 rounded-2xl py-3 sm:py-4 pl-12 sm:pl-14 pr-4 sm:pr-6 shadow-sm focus:ring-4 focus:ring-teal-500/5 focus:border-teal-500/20 transition-all outline-none font-medium placeholder:text-slate-400"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
                     </div>
 
                     {searchTerm && bookResults.length > 0 && (
@@ -338,8 +328,9 @@ export const ExploreView = () => {
                     )}
 
                     {!searchTerm && featuredBook && (
-                        <section className="bg-white rounded-[2.5rem] p-8 md:p-10 shadow-sm border border-slate-100 flex flex-col md:flex-row gap-8 items-center md:items-start group hover:shadow-md transition-all">
-                            <div className="relative w-48 h-72 md:w-56 md:h-80 shrink-0"><img src={featuredBook.urlPortada} className="w-full h-full object-cover rounded-2xl shadow-xl group-hover:scale-105 transition-transform duration-700" alt="" /></div>
+                        <section className="bg-white rounded-[2rem] sm:rounded-[2.5rem] p-4 sm:p-6 lg:p-10 shadow-sm border hover:border-teal-300  focus-within:border-slate-500 focus-within:shadow-[0_0_0_4px_rgba(100,116,139,0.15)] transition-all duration-300 flex flex-col lg:flex-row gap-6 lg:gap-8 items-center lg:items-start group hover:shadow-md cursor-pointer active:scale-[0.99]">
+                            <div className="relative w-36 h-56 sm:w-44 sm:h-64 md:w-52 md:h-72 lg:w-56 lg:h-80 shrink-0">
+                                <img src={featuredBook.urlPortada} className="w-full h-full object-cover rounded-2xl shadow-xl group-hover:scale-105 transition-transform duration-700" alt="" /></div>
                             <div className="text-left flex-1 flex flex-col justify-center h-full pt-2">
                                 <div className="flex gap-2 mb-4">
                                     <span className="px-3 py-1 bg-teal-600 text-white rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm">Recomendado</span>
@@ -358,28 +349,21 @@ export const ExploreView = () => {
 
                     <section>
                         <div className="flex justify-between items-end mb-6 text-left">
-                            <h3 className="text-xl font-black flex items-center gap-2 tracking-tight text-slate-900"><LayoutGrid size={20} className="text-slate-400" /> Explorar comunidad</h3>
+                            <h3 className="text-xl font-black flex items-center gap-2 tracking-tight text-slate-900">
+                                <LayoutGrid size={20} className="text-slate-400" />
+                                Explorar comunidad
+                            </h3>
                         </div>
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                            {users.filter(u => u.fullName?.toLowerCase().includes(searchTerm.toLowerCase())).map((u) => (
-                                <div key={u.id} className="relative group">
-                                    <UserCard user={u} />
-                                    {u.isReciprocal && (
-                                        <div className="absolute bottom-6 right-6 z-20">
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleStartChat(u.id);
-                                                }}
-                                                className="p-3 bg-teal-50 text-teal-600 rounded-2xl hover:bg-teal-600 hover:text-white transition-all shadow-sm border border-teal-100"
-                                                title="Enviar mensaje"
-                                            >
-                                                <MessageCircle size={18} />
-                                            </button>
-                                        </div>
-                                    )}
-                                </div>
-                            ))}
+
+                        <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+                            {users
+                                .filter(u => u.fullName?.toLowerCase().includes(searchTerm.toLowerCase()))
+                                .map((u) => (
+                                    <UserCard
+                                        key={u.id}
+                                        user={u}
+                                    />
+                                ))}
                         </div>
                     </section>
 
@@ -391,7 +375,9 @@ export const ExploreView = () => {
                             </div>
                             <div className="grid grid-cols-1 gap-4">
                                 {events.slice(0, 2).map((event) => (
-                                    <div key={event.id} onClick={() => setSelectedEvent(event)} className="bg-white rounded-[2rem] p-4 shadow-sm border border-slate-100 flex flex-col sm:flex-row items-center gap-6 cursor-pointer hover:shadow-md hover:border-teal-100 transition-all group">
+                                    <div
+                                        key={event.id} onClick={() => setSelectedEvent(event)}
+                                        className="bg-white rounded-[2rem] p-4 shadow-sm border border-slate-100 flex flex-col sm:flex-row items-center gap-6 cursor-pointer hover:shadow-md hover:border-teal-100 transition-all group">
                                         <div className="w-full sm:w-40 h-40 sm:h-28 rounded-[1.5rem] overflow-hidden shrink-0">
                                             <img
                                                 src={event.imageUrl && event.imageUrl.trim().length > 0
@@ -428,8 +414,8 @@ export const ExploreView = () => {
                     )}
                 </div>
 
-                <aside className="w-full lg:w-80 space-y-6 shrink-0 pb-10">
-                    <section className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-100 text-left">
+                <aside className="w-full xl:w-80 space-y-6 shrink-0 pb-10">
+                    <section className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-100 text-left hover:border-teal-300  focus-within:border-slate-500">
                         <div className="flex justify-between items-center mb-6">
                             <h4 className="font-black text-sm tracking-tight text-slate-900">Mi actividad</h4>
                             <button onClick={() => navigate('/myprofile')} className="text-[10px] font-bold text-teal-600 hover:underline flex items-center">Ver todo <ChevronRight size={12} /></button>
@@ -453,7 +439,7 @@ export const ExploreView = () => {
                         </div>
                     </section>
 
-                    <section className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-100 text-left">
+                    <section className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-100 text-left hover:border-teal-300  focus-within:border-slate-500">
                         <div className="flex justify-between items-center mb-6">
                             <h4 className="font-black text-sm tracking-tight text-slate-900">
                                 Tus Clubes
@@ -510,7 +496,7 @@ export const ExploreView = () => {
                         </div>
                     </section>
                 </aside>
-            </div>
+            </div >
 
             <button onClick={() => navigate('/bookstore')} className="fixed bottom-8 right-8 w-14 h-14 bg-teal-600 text-white rounded-full shadow-[0_10px_25px_-5px_rgba(13,148,136,0.5)] flex items-center justify-center hover:bg-teal-700 hover:scale-110 transition-all z-[100] active:scale-95" title="Explorar Mapa">
                 <MapPin size={24} strokeWidth={3} />
@@ -519,6 +505,6 @@ export const ExploreView = () => {
             <AvailabilityModal isOpen={isAvailabilityOpen} onClose={() => setIsAvailabilityOpen(false)} stores={availableStores} listings={availableListings} bookTitle={selectedBookForStores} onRequest={handleToggleRequest} myRequests={mySentRequestIds} />
             <FeedbackModal isOpen={feedback.isOpen} onClose={() => setFeedback({ ...feedback, isOpen: false })} type={feedback.type} />
             <JoinEventModal isOpen={!!selectedEvent} event={selectedEvent} onClose={() => setSelectedEvent(null)} onStatusChange={loadExploreData} />
-        </div>
+        </div >
     );
 };
