@@ -169,7 +169,6 @@ export class LibrerosService {
     libreroId: string,
     data: Partial<LibraryEvent>,
   ): Promise<LibraryEvent> {
-    // Validación de seguridad en el backend
     if (data.title && data.title.length > 50) {
       throw new BadRequestException(
         'El título no puede superar los 50 caracteres',

@@ -18,6 +18,9 @@ import { ActivityType } from './entities/activity.entity';
 import { UserStats } from './entities/user-stats.entity';
 import { Badge } from './badge.entity';
 import { RegisterDto } from 'src/auth/dto/register.dto';
+import { LibraryEvent } from './entities/library-event.entity';
+import { Book } from 'src/books/entities/book.entity';
+import { EventRegistration } from 'src/bookstore/entities/event-registration.entity';
 
 interface GrowthData {
   month: string;
@@ -37,6 +40,12 @@ export class UsersService implements OnModuleInit {
     private readonly badgeRepository: Repository<Badge>,
     private readonly activitiesService: ActivitiesService,
     private readonly configService: ConfigService,
+    @InjectRepository(LibraryEvent)
+    private readonly eventRepository: Repository<LibraryEvent>,
+    @InjectRepository(Book)
+    private readonly bookRepository: Repository<Book>,
+    @InjectRepository(EventRegistration)
+    private readonly registrationRepository: Repository<EventRegistration>,
   ) {}
 
   async onModuleInit() {
@@ -172,6 +181,7 @@ export class UsersService implements OnModuleInit {
    * y calculando estados de seguimiento para el usuario solicitante.
    */
   async findOneProfile(id: string, requesterId: string) {
+    const newDate = new Date();
     const user = await this.usersRepository.findOne({
       where: { id },
       relations: [
@@ -184,13 +194,22 @@ export class UsersService implements OnModuleInit {
         'clubs',
         'clubs.creator',
         'clubs.members',
-        'registrations',
-        'registrations.event',
-        'registrations.event.organizer',
       ],
     });
 
     if (!user) throw new NotFoundException('Usuario no encontrado');
+
+    const [events, books, registrations] = await Promise.all([
+      this.eventRepository.find({
+        where: { organizer: { id } },
+        relations: ['registrations', 'organizer'],
+      }),
+      this.bookRepository.find({ where: { user: { id } } }),
+      this.registrationRepository.find({
+        where: { user: { id } },
+        relations: ['event', 'event.organizer'],
+      }),
+    ]);
 
     const isFollowing = user.followerRelations.some(
       (f) =>
@@ -201,25 +220,44 @@ export class UsersService implements OnModuleInit {
       (f) => f.follower.id === requesterId && f.status === FollowStatus.PENDING,
     );
 
-    // Verificamos privacidad: si es privado y no soy yo ni le sigo, Forbidden
+    // Verificamos privacidad: si es privado y no soy yo ni le sigo
     if (!user.isPublic && user.id !== requesterId && !isFollowing) {
       throw new ForbiddenException('Este perfil es privado');
     }
 
-    const attendedEvents =
-      user.registrations?.map((reg) => ({
+    const organizedEvents = await this.eventRepository.find({
+      where: { organizer: { id } },
+      relations: {
+        registrations: true,
+        organizer: true,
+      },
+    });
+
+    const attendedEvents = registrations
+      .filter((reg) => new Date(reg.event.eventDate) >= newDate)
+      .map((reg) => ({
         ...reg.event,
         registrationId: reg.id,
-      })) || [];
+      }));
 
-    const userInstance = user as Partial<User>;
-    delete userInstance.password;
+    const userWithClubs = await this.usersRepository.findOne({
+      where: { id },
+      relations: ['clubs', 'clubs.creator', 'clubs.members'],
+    });
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password, ...userWithoutPassword } = user;
 
     return {
-      ...userInstance,
+      ...userWithoutPassword,
       isFollowing,
       hasPendingRequest,
-      events: attendedEvents,
+      books,
+      events: events,
+      libreroEvents: events,
+      organizedEvents,
+      attendedEvents,
+      clubs: userWithClubs?.clubs,
     };
   }
 

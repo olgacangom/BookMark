@@ -99,13 +99,13 @@ export class UsersController {
   }
 
   @Delete('avatar')
-  async deleteAvatar(@Req() req: { user: User }) {
+  async deleteAvatar(@Req() req: { user: User }): Promise<User> {
     return this.usersService.deleteAvatar(req.user.id);
   }
 
   @Patch('deactivate-me')
   @Roles(UserRole.USER)
-  async deactivateMyAccount(@Req() req: { user: User }) {
+  async deactivateMyAccount(@Req() req: { user: User }): Promise<User> {
     return this.usersService.deactivateAccount(req.user.id);
   }
 
@@ -139,7 +139,11 @@ export class UsersController {
 
   @Get('profile/:id')
   @Roles(UserRole.USER, UserRole.LIBRERO, UserRole.ADMIN)
-  async getProfile(@Request() req: RequestWithUser, @Param('id') id: string) {
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  async getProfile(
+    @Request() req: RequestWithUser,
+    @Param('id') id: string,
+  ): Promise<any> {
     return this.usersService.findOneProfile(id, req.user.id);
   }
 
@@ -151,29 +155,33 @@ export class UsersController {
 
   @Get(':id')
   @Roles(UserRole.USER)
-  findOne(@Param('id') id: string) {
+  findOne(@Param('id') id: string): Promise<User> {
     return this.usersService.findOne(id);
   }
 
   @Patch(':id')
   @Roles(UserRole.USER)
-  update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
+  update(
+    @Param('id') id: string,
+    @Body() updateUserDto: UpdateUserDto,
+  ): Promise<User> {
     return this.usersService.update(id, updateUserDto);
   }
 
   @Delete(':id')
   @Roles(UserRole.USER)
-  remove(@Param('id') id: string) {
+  remove(@Param('id') id: string): Promise<User> {
     return this.usersService.remove(id);
   }
 
   @Post()
-  create(@Body() registerDto: RegisterDto) {
+  create(@Body() registerDto: RegisterDto): Promise<User> {
     return this.usersService.create(registerDto);
   }
 
   @Get('stats/growth')
   @Roles(UserRole.USER, UserRole.LIBRERO)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   async getGrowth(@Req() req: RequestWithUser): Promise<GrowthData[]> {
     return this.usersService.getBooksGrowth(req.user.id);
   }

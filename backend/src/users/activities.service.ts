@@ -166,6 +166,7 @@ export class ActivitiesService {
       where: { user: { id: userId } },
       relations: ['activity'],
     });
+
     const ignoredIds = ignoredRecords.map((rec) => rec.activity.id);
 
     const activities = await this.activityRepository.find({
@@ -184,35 +185,33 @@ export class ActivitiesService {
       take: 20,
     });
 
-    return Promise.all(
-      activities.map(async (activity) => {
-        const likes = await this.likesRepository.find({
-          where: { user: { id: userId } },
-          relations: ['activity'],
-        });
+    const likes = await this.likesRepository.find({
+      where: { user: { id: userId } },
+      relations: ['activity'],
+    });
 
-        const likedSet = new Set(likes.map((l) => l.activity.id));
+    const likedSet = new Set(likes.map((l) => l.activity.id));
 
-        let hasVoted = false;
-        if (activity.poll) {
-          const vote = await this.pollVoteRepository.findOne({
-            where: { user: { id: userId }, activity: { id: activity.id } },
-          });
-          hasVoted = !!vote;
-        }
-        return {
-          ...activity,
-          hasVoted,
-          isLiked: likedSet.has(activity.id),
-          likesCount: Number(activity.likesCount) || 0,
-          commentsCount: Number(activity.commentsCount) || 0,
-          comments:
-            activity.comments?.sort(
-              (a, b) => a.createdAt.getTime() - b.createdAt.getTime(),
-            ) || [],
-        };
-      }),
-    );
+    const votes = await this.pollVoteRepository.find({
+      where: {
+        user: { id: userId },
+      },
+      relations: ['activity'],
+    });
+
+    const votedSet = new Set(votes.map((v) => v.activity.id));
+
+    return activities.map((activity) => ({
+      ...activity,
+      hasVoted: votedSet.has(activity.id),
+      isLiked: likedSet.has(activity.id),
+      likesCount: Number(activity.likesCount) || 0,
+      commentsCount: Number(activity.commentsCount) || 0,
+      comments:
+        activity.comments?.sort(
+          (a, b) => a.createdAt.getTime() - b.createdAt.getTime(),
+        ) || [],
+    }));
   }
 
   async toggleLike(userId: string, activityId: string) {

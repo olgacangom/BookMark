@@ -29,34 +29,28 @@ export function MainLayout() {
             const token = localStorage.getItem("token");
             if (!token) return;
 
-            const [chatRes, followRes, bookRes] = await Promise.all([
-                api.get("chat/conversations"),
-                api.get("users/follow/requests"),
-                api.get("sustainability/requests/me"),
-            ]);
+            // Solo hacemos peticiones si el rol es 'user'
+            if (user?.role === 'user') {
+                const [chatRes, followRes, bookRes] = await Promise.all([
+                    api.get("chat/conversations"),
+                    api.get("users/follow/requests"),
+                    api.get("sustainability/requests/me"),
+                ]);
 
-            const chats = await chatRes.data;
-            const follows = await followRes.data;
-            const books = await bookRes.data;
+                const chats = chatRes.data;
+                const follows = followRes.data;
+                const books = bookRes.data;
 
-            if (Array.isArray(chats)) {
-                setTotalUnread(
-                    chats.reduce((acc, c) => acc + (c.unreadCount || 0), 0)
-                );
+                setTotalUnread(chats.reduce((acc: number, c: any) => acc + (c.unreadCount || 0), 0));
+                const followCount = Array.isArray(follows) ? follows.length : 0;
+                const bookCount = Array.isArray(books) ? books.filter((r: any) => r.isOwner && r.status === "pending").length : 0;
+
+                setTotalRequests(followCount + bookCount);
             }
-
-            const followCount = Array.isArray(follows) ? follows.length : 0;
-
-            const bookCount = Array.isArray(books)
-                ? books.filter((r) => r.isOwner && r.status === "pending").length
-                : 0;
-
-            setTotalRequests(followCount + bookCount);
-
         } catch (e) {
-            console.error(e);
+            console.warn("No se pudieron cargar los badges (posible 403 esperado para libreros):", e);
         }
-    }, []);
+    }, [user]);
 
     useEffect(() => {
         if (location.pathname === "/requests") {

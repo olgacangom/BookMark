@@ -4,7 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import {
     Camera, Loader2, Sparkles, BookOpen, Award, MapPin, Calendar,
     Share2, ChevronRight, Star, Trash2, User as UserIcon,
-    MessageCircle, Check, Settings, LogOut, UserMinus, Globe, Lock
+    MessageCircle, Check, Settings, LogOut, UserMinus, Globe, Lock,
+    Store
 } from 'lucide-react';
 import api from '../../services/api';
 import { bookService, Book } from '../../books/services/book.service';
@@ -116,7 +117,7 @@ const FollowModal = ({ isOpen, onClose, activeTab, setActiveTab, data, onStartCh
                     <button onClick={() => setActiveTab('followers')} className={`flex-1 py-5 text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'followers' ? 'text-teal-600 bg-teal-50/30' : 'text-slate-400 hover:text-slate-600'}`}>Seguidores ({data?.followerRelations?.length || 0})</button>
                     <button onClick={() => setActiveTab('following')} className={`flex-1 py-5 text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'following' ? 'text-teal-600 bg-teal-50/30' : 'text-slate-400 hover:text-slate-600'}`}>Siguiendo ({data?.followingRelations?.length || 0})</button>
                 </div>
-                <div className="flex-1 overflow-y-auto p-6 space-y-3 bg-white custom-scrollbar">
+                <div className="flex-1 overflow-y-auto p-6 space-y-3  custom-scrollbar">
                     {list.length > 0 ? list.map((u: any) => (
                         <div key={u.id} className="flex items-center justify-between p-4 rounded-[1.5rem] hover:bg-slate-50 transition-all group border border-transparent hover:border-slate-100">
                             <div className="flex items-center gap-4">
@@ -155,7 +156,6 @@ const FollowModal = ({ isOpen, onClose, activeTab, setActiveTab, data, onStartCh
 
 export const MyProfileView = () => {
     const { user, updateUser, logout } = useAuth();
-    const navigate = useNavigate();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -182,30 +182,51 @@ export const MyProfileView = () => {
     const [activeTab, setActiveTab] = useState<'followers' | 'following'>('followers');
     const [activeProfileTab, setActiveProfileTab] = useState('Actividad');
     const isReader = user?.role === 'user';
+    const [myStock, setMyStock] = useState<any[]>([]);
+    const navigate = useNavigate();
+
     const canTogglePrivacy = isReader;
+
+    const fetchInventory = useCallback(async () => {
+        try {
+            const res = await api.get('/librero/inventory');
+            setMyStock(res.data);
+        } catch { console.error("Error al cargar inventario"); }
+        finally { setIsLoading(false); }
+    }, []);
 
     const fetchAllData = useCallback(async () => {
         if (!user?.id) return;
+        setIsLoading(true);
+
         try {
-            setIsLoading(true);
-            const [profileRes, booksRes, statsRes] = await Promise.all([
-                api.get(`/users/profile/${user.id}`),
-                bookService.getMyBooks(),
-                api.get('/users/stats/growth')
-            ]);
+            const profileRes = await api.get(`/users/profile/${user.id}`);
+            console.log("--- PERFIL RECIBIDO DEL BACKEND ---");
+            console.log("Nombre Librería:", profileRes.data.libraryName);
+            console.log("Eventos:", profileRes.data.events);
+            console.log("Libros:", profileRes.data.books);
             setProfileData(profileRes.data);
-            setBooks(booksRes);
-            setGrowthData(statsRes.data);
+
+            bookService.getMyBooks().then(setBooks).catch(() => console.warn("Libros no accesibles"));
+            api.get('/users/stats/growth').then(res => setGrowthData(res.data)).catch(() => console.warn("Stats no accesibles"));
+
             setFormData({ name: profileRes.data.fullName || '', bio: profileRes.data.bio || '' });
-            setIsPublic(profileRes.data.isPublic ?? true);
         } catch (error) {
-            console.error(error);
+            console.error("Error cargando perfil", error);
         } finally {
             setIsLoading(false);
         }
     }, [user?.id]);
 
-    useEffect(() => { fetchAllData(); }, [fetchAllData]);
+    useEffect(() => {
+        const promises: Promise<any>[] = [fetchAllData()];
+
+        if (!isReader) {
+            promises.push(fetchInventory());
+        }
+
+        Promise.all(promises);
+    }, [fetchAllData, fetchInventory, isReader]);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -520,7 +541,7 @@ export const MyProfileView = () => {
 
                     {/* IZQUIERDA: CONTENIDO PRINCIPAL */}
                     {isReader && (
-                        <div className="lg:col-span-8 space-y-8">
+                        <div className="lg:col-span-8 space-y-8 min-w-0">
                             {activeProfileTab === 'Actividad' && (
                                 <div className="bg-white rounded-[2.5rem] p-8 md:p-10 shadow-sm border border-slate-100">
                                     <div className="flex items-center justify-between mb-8">
@@ -561,7 +582,10 @@ export const MyProfileView = () => {
                                                 <div className="flex gap-5 items-start">
                                                     <div className="w-16 h-16 bg-white rounded-2xl overflow-hidden shrink-0 border border-slate-100 flex items-center justify-center text-slate-200 font-black text-[9px] uppercase relative shadow-sm">
                                                         {club.coverUrl ? (
-                                                            <img src={club.coverUrl} className="w-full h-full object-cover" alt={club.name} />
+                                                            <img
+                                                                src={club.coverUrl}
+                                                                className="w-full h-full object-cover"
+                                                                alt={club.name} />
                                                         ) : (
                                                             <span className="text-2xl">{club.name?.charAt(0)}</span>
                                                         )}
@@ -595,33 +619,62 @@ export const MyProfileView = () => {
                                     <div className="flex items-center justify-between mb-8">
                                         <h2 className="text-xl font-black text-slate-900 uppercase italic tracking-tighter">Mis Eventos</h2>
                                         <div className="flex items-center gap-2 bg-teal-50 px-4 py-1.5 rounded-full text-teal-600 font-bold text-[9px] uppercase tracking-widest border border-teal-100/50">
-                                            <Sparkles size={12} fill="currentColor" /> {profileData.events?.length || 0} eventos
+                                            <Sparkles size={12} fill="currentColor" /> {profileData.attendedEvents?.length || 0} eventos
                                         </div>
                                     </div>
 
                                     <div className="space-y-4">
-                                        {profileData.events && profileData.events.length > 0 ? profileData.events.map((event: any, i: number) => (
-                                            <div key={i} className="p-6 bg-slate-50/40 rounded-[2rem] border border-slate-100 transition-all hover:bg-white hover:shadow-xl group">
-                                                <div className="flex gap-5 items-start">
-                                                    <div className="w-16 h-16 bg-teal-50 rounded-2xl overflow-hidden shrink-0 border border-teal-100 flex items-center justify-center text-teal-600">
-                                                        <Calendar size={28} />
-                                                    </div>
-                                                    <div className="flex-1 mt-1">
-                                                        <p className="text-sm font-black text-slate-800 uppercase mb-1">{event.title}</p>
-                                                        <p className="text-[12px] text-slate-500 font-medium leading-relaxed">{event.description || "Sin descripción"}</p>
-                                                        <div className="flex items-center gap-4 mt-3">
-                                                            <span className="text-[10px] text-slate-400 font-bold uppercase flex items-center gap-1">
-                                                                <Calendar size={12} /> {event.eventDate ? new Date(event.eventDate).toLocaleDateString('es-ES', { day: 'numeric', month: 'long' }) : 'Fecha pendiente'}
-                                                            </span>
-                                                            <span className="text-[10px] text-slate-400 font-bold uppercase flex items-center gap-1">
-                                                                <MapPin size={12} /> {event.organizer?.libraryName || 'Librería local'}
-                                                            </span>
+                                        {profileData.attendedEvents && profileData.attendedEvents.length > 0 ? profileData.attendedEvents.map((event: any, i: number) => {
+
+                                            const hasValidImage = event.imageUrl && event.imageUrl.trim().length > 0;
+
+                                            const eventImage = hasValidImage
+                                                ? event.imageUrl
+                                                : `https://picsum.photos/seed/${event.id}/600/400`;
+
+                                            return (
+                                                <div
+                                                    key={i}
+                                                    onClick={() => navigate('/events', { state: { initialTab: 'mine' } })}
+                                                    className="p-6 bg-slate-50/40 rounded-[2rem] border border-slate-100 transition-all hover:bg-white hover:shadow-xl group cursor-pointer"
+                                                >
+                                                    <div className="flex gap-5 items-start">
+
+                                                        <div className="w-16 h-16 bg-white rounded-2xl overflow-hidden shrink-0 border border-slate-100 flex items-center justify-center text-slate-200 font-black text-[9px] uppercase relative shadow-sm">
+                                                            <img
+                                                                src={eventImage}
+                                                                className="w-full h-full object-cover"
+                                                                alt="event"
+                                                                onError={(e: any) => {
+                                                                    e.target.src = `https://picsum.photos/seed/${event.id}/600/400`;
+                                                                }}
+                                                            />
                                                         </div>
+
+                                                        <div className="flex-1 mt-1">
+                                                            <p className="text-sm font-black text-slate-800 uppercase mb-1">
+                                                                {event.title}
+                                                            </p>
+
+                                                            <div className="flex items-center gap-4 mt-3">
+                                                                <span className="text-[10px] text-slate-400 font-bold uppercase flex items-center gap-1">
+                                                                    <Calendar size={12} />
+                                                                    {event.eventDate
+                                                                        ? new Date(event.eventDate).toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })
+                                                                        : 'Fecha pendiente'}
+                                                                </span>
+                                                                <span className="text-[10px] text-slate-400 font-bold uppercase flex items-center gap-1">
+                                                                    <MapPin size={12} className='text-rose-500 shrink-0' />
+                                                                    {event.organizer?.libraryAddress}, {event.organizer?.province}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+
+                                                        <ChevronRight className="text-slate-300 group-hover:text-teal-600 transition-colors" size={20} />
                                                     </div>
-                                                    <ChevronRight className="text-slate-300 group-hover:text-teal-600 transition-colors" size={20} />
                                                 </div>
-                                            </div>
-                                        )) : (
+                                            );
+                                        }) : (
                                             <div className="text-center py-12">
                                                 <Calendar className="mx-auto text-slate-200 mb-4" size={48} />
                                                 <p className="text-slate-400 font-medium">No te has apuntado a ningún evento.</p>
@@ -636,10 +689,12 @@ export const MyProfileView = () => {
                         </div>
                     )}
 
+                    {/* SIDEBAR LECTOR */}
                     {isReader && (
-                        <div className="space-y-6 lg:col-span-4">
+                        <div className="space-y-6 lg:col-span-4 min-w-0">
                             <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-100">
                                 <h3 className="text-sm font-black text-slate-900 mb-6">Sobre mí</h3>
+
                                 <div className="text-sm text-slate-500 font-medium leading-relaxed mb-8 min-h-[40px]">
                                     {isEditing ? (
                                         <textarea
@@ -654,25 +709,62 @@ export const MyProfileView = () => {
                                     )}
                                 </div>
 
-                                <h3 className="text-[10px] font-bold text-slate-400 uppercase mb-4">Géneros en mi biblioteca</h3>
+                                <h3 className="text-[10px] font-bold text-slate-400 uppercase mb-4">
+                                    Géneros en mi biblioteca
+                                </h3>
+
                                 <div className="flex flex-wrap gap-2.5">
-                                    {Array.from(new Set(books.map(b => b.genre).filter(Boolean))).slice(0, 5).map((g, i) => (
-                                        <span key={i} className="px-4 py-1.5 bg-amber-50 border border-amber-200 rounded-xl text-[10px] font-bold text-amber-700 shadow-sm">{g as React.ReactNode}</span>
-                                    ))}
-                                    {Array.from(new Set(books.map(b => b.genre).filter(Boolean))).length === 0 && <span className="text-xs text-slate-300 italic">No hay géneros definidos</span>}
+                                    {Array.from(new Set(books.map(b => b.genre).filter(Boolean)))
+                                        .slice(0, 5)
+                                        .map((g, i) => (
+                                            <span
+                                                key={i}
+                                                className="px-4 py-1.5 bg-amber-50 border border-amber-200 rounded-xl text-[10px] font-bold text-amber-700 shadow-sm"
+                                            >
+                                                {g as React.ReactNode}
+                                            </span>
+                                        ))}
+
+                                    {Array.from(new Set(books.map(b => b.genre).filter(Boolean))).length === 0 && (
+                                        <span className="text-xs text-slate-300 italic">
+                                            No hay géneros definidos
+                                        </span>
+                                    )}
                                 </div>
                             </div>
 
                             <div className="bg-[#0F172A] rounded-[2.5rem] p-8 text-white relative overflow-hidden shadow-xl mt-6">
                                 <Award className="text-teal-300 mb-4" size={24} />
-                                <h4 className="font-black text-lg uppercase tracking-tight leading-none mb-4">Rango Lector</h4>
-                                <div className="text-4xl mb-4">{getRank(stats.totalPages).icon}</div>
-                                <p className="text-white/60 text-[9px] font-bold uppercase tracking-widest">{stats.totalPages.toLocaleString()} páginas devoradas</p>
+
+                                <h4 className="font-black text-lg uppercase tracking-tight leading-none mb-4">
+                                    Rango Lector
+                                </h4>
+
+                                <div className="text-4xl mb-4">
+                                    {getRank(stats.totalPages).icon}
+                                </div>
+
+                                <p className="text-white/60 text-[9px] font-bold uppercase tracking-widest">
+                                    {stats.totalPages.toLocaleString()} páginas devoradas
+                                </p>
+
                                 <Sparkles className="absolute -right-4 -top-4 w-24 h-24 text-white/5 rotate-12" />
                             </div>
                         </div>
                     )}
                 </div>
+                {!isReader && profileData && (
+                    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
+                        <LibreroStatsCard
+                            profileData={{
+                                ...profileData,
+                                books: myStock,
+                                events: profileData.organizedEvents
+                            }}
+                            navigate={navigate}
+                        />
+                    </div>
+                )}
             </div>
 
             {/* MODALES RECOPILADOS */}
@@ -723,3 +815,95 @@ const ActivityItem = ({ book }: { book: Book }) => (
         </div>
     </div>
 );
+
+const LibreroStatsCard = ({ profileData, navigate }: { profileData: any, navigate: any }) => {
+    const now = new Date();
+    const upcomingEvents = profileData.organizedEvents?.filter((ev: any) => new Date(ev.eventDate) >= now) || [];
+    const pastEvents = profileData.organizedEvents?.filter((ev: any) => new Date(ev.eventDate) < now) || [];
+
+    return (
+        <div className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-[0_20px_50px_rgba(0,0,0,0.05)] relative overflow-hidden transition-all duration-300 hover:border-teal-300 hover:shadow-xl hover:shadow-teal-100/50">
+            <div className="absolute top-0 right-0 w-80 h-80 bg-teal-50/50 rounded-full blur-[100px] -mr-20 -mt-20 pointer-events-none"></div>
+
+            <div className="relative z-10">
+                {/* Header */}
+                <div className="flex items-center gap-4 mb-8">
+                    <div className="w-14 h-14 bg-slate-900 rounded-3xl flex items-center justify-center text-white shadow-xl shadow-slate-200">
+                        <Store size={24} />
+                    </div>
+                    <div>
+                        <h3 className="font-black text-slate-900 uppercase tracking-tight text-xl">Mi Librería</h3>
+                        <p className="text-[10px] font-black text-teal-600 uppercase tracking-[0.2em] mt-0.5">
+                            {profileData.libraryName || 'Gestión de Inventario'}
+                        </p>
+                    </div>
+                </div>
+
+                {/* Stats Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
+                    {/* Card Ubicación */}
+                    <div className="p-6 bg-slate-50 rounded-3xl border border-teal-200 flex items-center gap-4 transition-transform">
+                        <div className="p-4 bg-white rounded-2xl text-teal-600 shadow-sm"><MapPin size={20} /></div>
+                        <div className="min-w-0">
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Ubicación</p>
+                            <p className="font-bold text-slate-800 text-sm truncate">{profileData.libraryAddress || 'No especificada'}, {profileData.province}</p>
+                        </div>
+                    </div>
+
+                    {/* Card Libros */}
+                    <div
+                        onClick={() => navigate('/librero/catalog')}
+                        className="p-6 bg-slate-900 rounded-3xl flex items-center gap-4 shadow-xl text-white cursor-pointer hover:bg-slate-800 transition-all hover:scale-[1.02]"
+                    >
+                        <div className="p-4 bg-white/10 rounded-2xl text-teal-400"><BookOpen size={20} /></div>
+                        <div>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Libros registrados</p>
+                            <p className="font-black text-2xl">{profileData.books?.length || 0}</p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Eventos */}
+                <div className="grid md:grid-cols-2 gap-8">
+                    {/* Próximos */}
+                    <div>
+                        <p className="text-[10px] font-black text-teal-600 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                            <Calendar size={12} /> Próximos: {upcomingEvents.length}
+                        </p>
+                        {upcomingEvents.length > 0 ? (
+                            <div className="space-y-3">
+                                {upcomingEvents.map((ev: any) => (
+                                    <div key={ev.id} className="group p-4 bg-white border border-slate-100 rounded-2xl hover:border-teal-200 hover:shadow-md transition-all">
+                                        <p className="font-black text-xs text-slate-800 mb-1 group-hover:text-teal-700">{ev.title}</p>
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-[9px] font-bold text-slate-400 uppercase">{new Date(ev.eventDate).toLocaleDateString()} · {new Date(ev.eventDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                            <span className="text-[9px] font-black bg-teal-50 text-teal-700 px-2 py-0.5 rounded-lg">{ev.registrations?.length || 0} inscritos</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : <p className="text-xs text-slate-400 italic">Sin eventos próximos.</p>}
+                    </div>
+
+                    {/* Pasados */}
+                    <div>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Eventos pasados</p>
+                        {pastEvents.length > 0 ? (
+                            <div className="space-y-2">
+                                {pastEvents.map((ev: any) => (
+                                    <div key={ev.id} className="p-3 bg-slate-50 rounded-xl border border-slate-100 opacity-60">
+                                        <span className="font-bold text-[11px] text-slate-500 line-through">{ev.title}</span>
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-[9px] font-bold text-slate-400 uppercase">{new Date(ev.eventDate).toLocaleDateString()} · {new Date(ev.eventDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                            <span className="text-[9px] font-black bg-teal-50 text-teal-700 px-2 py-0.5 rounded-lg">{ev.registrations?.length || 0} inscritos</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : <p className="text-xs text-slate-400 italic">Sin historial.</p>}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};

@@ -202,7 +202,9 @@ export const RequestsView = () => {
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {receivedAcceptedLoans.map((req) => (
-                                <div className="bg-slate-50/50 p-5 rounded-[2rem] border border-slate-100 flex flex-col md:flex-row items-center justify-between group hover:bg-white hover:shadow-md transition-all">
+                                <div
+                                    key = {req.id}
+                                    className="bg-slate-50/50 p-5 rounded-[2rem] border border-slate-100 flex flex-col md:flex-row items-center justify-between group hover:bg-white hover:shadow-md transition-all">
                                     <div className="flex items-center gap-4 mb-4 md:mb-0">
                                         <div className="relative shrink-0 cursor-pointer" onClick={() => navigate(`/book/${req.listing.book.isbn}`)}>
                                             <img src={req.listing.book.urlPortada} className="w-12 h-16 object-cover rounded-xl shadow-sm" alt="" />

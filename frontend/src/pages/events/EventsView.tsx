@@ -6,17 +6,22 @@ import {
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { JoinEventModal } from '../../users/pages/JoinEventModal';
+import { useLocation } from 'react-router-dom';
 
 const FALLBACK_EVENT_IMAGE = "https://images.unsplash.com/photo-1512820663732-2d1410f44bb1?q=80&w=600";
 
 export const EventsView = () => {
     const { user } = useAuth();
+    const location = useLocation();
     const [events, setEvents] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<'upcoming' | 'mine'>('upcoming');
+    const [activeTab, setActiveTab] = useState<'upcoming' | 'mine'>(
+        location.state?.initialTab || 'upcoming'
+    );
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
     const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
+
 
     const fetchEvents = useCallback(async () => {
         setLoading(true);
@@ -196,7 +201,7 @@ const EventCard = ({ event, onOpenJoin, currentUser }: any) => {
             <div className="flex-1 min-w-0 text-left">
                 <div className="mb-2">
                     <h3 className="text-base font-black text-slate-900 uppercase tracking-tight leading-tight line-clamp-1 group-hover:text-teal-600 transition-colors">{event.title}</h3>
-                    <span className="text-[8px] font-black text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-md uppercase mt-1 inline-block tracking-widest border border-indigo-100/50">{event.category || 'CLUB DE LECTURA'}</span>
+                    <span className="text-[9px] font-black text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-md uppercase mt-1 inline-block tracking-widest border border-indigo-100/50">{event.organizer?.libraryName}</span>
                 </div>
 
                 <p className="text-slate-400 text-[10px] font-medium italic mb-4 line-clamp-2 leading-relaxed">"{event.description}"</p>
@@ -206,9 +211,8 @@ const EventCard = ({ event, onOpenJoin, currentUser }: any) => {
                         <Clock size={12} className="text-teal-600" />
                         <span className="text-[10px] font-bold text-slate-700 uppercase">{date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}H</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <MapPin size={12} className="text-rose-500" />
-                        <span className="text-[10px] font-bold text-slate-700 truncate max-w-[120px] uppercase">{event.organizer?.libraryName || 'Búho Sabio'}</span>
+                    <div className="flex items-center text-[11.5px] gap-2">
+                        <MapPin size={12} className="text-rose-500 shrink-0" /> {event.organizer?.libraryAddress || 'Local'}, {event.organizer?.province}
                     </div>
                 </div>
             </div>

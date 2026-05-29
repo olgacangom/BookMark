@@ -100,7 +100,7 @@ const AvailabilityModal = ({ isOpen, onClose, stores, listings, bookTitle, onReq
                                                         <span className="text-[10px] uppercase tracking-tight">Tiempo: {item.maxLoanDays} días</span>
                                                     </div>
                                                 )}
-                                                {item.description && <p className="text-[10px] text-slate-400 font-medium italic truncate max-w-[150px] ml-2">"{item.description}"</p>}
+                                                {item.description && <p className="text-[10px] text-slate-400 font-medium italic max-w-[150px] ml-2">"{item.description}"</p>}
                                             </div>
                                         </div>
                                     );
@@ -121,8 +121,8 @@ const AvailabilityModal = ({ isOpen, onClose, stores, listings, bookTitle, onReq
                                 stores.map((item: any) => (
                                     <div key={item.inventoryId} className="bg-slate-50/50 p-4 rounded-[2rem] flex justify-between items-center border border-slate-100/50">
                                         <div className="text-left flex-1 min-w-0 px-2">
-                                            <p className="font-black text-slate-700 text-[11px] uppercase tracking-tight truncate">{item.store.libraryName}</p>
-                                            <p className="text-[9px] text-slate-400 flex items-center gap-1 truncate"><MapPin size={10} /> {item.store.libraryAddress}</p>
+                                            <p className="font-black text-slate-700 text-[11px] uppercase tracking-tight">{item.store.libraryName}</p>
+                                            <p className="text-[9px] text-slate-400 flex items-center gap-1"><MapPin size={10} /> {item.store.libraryAddress}</p>
                                         </div>
                                         <div className="text-right pl-4 border-l border-slate-200 ml-4 shrink-0">
                                             <p className="text-base font-black text-teal-600 tracking-tighter">{Number(item.price).toFixed(2)}€</p>
@@ -327,8 +327,8 @@ export const ExploreView = () => {
                                     <div key={book.id} className="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm flex items-center gap-5 hover:shadow-md transition-all group">
                                         <div className="w-16 h-24 rounded-xl overflow-hidden shadow-sm shrink-0 group-hover:scale-105 transition-transform duration-500 border border-slate-50"><img src={book.urlPortada} className="w-full h-full object-cover" alt="" /></div>
                                         <div className="flex-1 min-w-0 text-left">
-                                            <p className="font-black text-slate-800 text-sm uppercase truncate mb-0.5">{book.title}</p>
-                                            <p className="text-[10px] text-slate-400 font-bold uppercase mb-4 truncate">{book.author}</p>
+                                            <p className="font-black text-slate-800 text-sm uppercase mb-0.5">{book.title}</p>
+                                            <p className="text-[10px] text-slate-400 font-bold uppercase mb-4">{book.author}</p>
                                             <button onClick={() => checkAvailability(book)} className="px-4 py-2 bg-teal-50 text-teal-600 rounded-xl font-black text-[9px] uppercase border border-teal-100 hover:bg-teal-600 hover:text-white transition-all shadow-sm active:scale-95">Ver disponibilidad</button>
                                         </div>
                                     </div>
@@ -408,13 +408,17 @@ export const ExploreView = () => {
                                                 <span className="text-[10px] font-black text-teal-600 bg-teal-50 px-2 py-1 rounded-lg border border-teal-100/50">{new Date(event.eventDate).toLocaleDateString([], { day: '2-digit', month: 'short' }).toUpperCase()}</span>
                                                 <h4 className="font-black text-slate-900 text-base leading-tight line-clamp-1 group-hover:text-teal-600 transition-colors uppercase tracking-tight">{event.title}</h4>
                                             </div>
-                                            <p className="text-[11px] text-slate-500 mb-4 italic truncate">Organizado por {event.organizer?.libraryName || 'Búho Sabio'}</p>
+                                            <p className="text-[11px] text-slate-500 mb-4 italic">Organizado por {event.organizer?.libraryName || 'Búho Sabio'}</p>
                                             <div className="flex flex-wrap items-center justify-between gap-4">
-                                                <div className="flex items-center gap-5 text-[11px] text-slate-500 font-bold uppercase tracking-widest">
-                                                    <span className="flex items-center gap-1.5"><Clock size={12} className="text-teal-600" /> {new Date(event.eventDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}h</span>
-                                                    <span className="flex items-center gap-1.5 truncate max-w-[150px]"><MapPin size={12} className="text-rose-500" /> {event.organizer?.libraryAddress?.split(',')[0] || 'Local'}</span>
+                                                <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[11px] text-slate-500 font-bold uppercase tracking-widest">
+                                                    <span className="flex items-center gap-1.5 whitespace-nowrap">
+                                                        <Clock size={12} className="text-teal-600" /> {new Date(event.eventDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}h
+                                                    </span>
+                                                    <span className="flex items-center gap-1.5 whitespace-nowrap overflow-hidden text-ellipsis">
+                                                        <MapPin size={12} className="text-rose-500 shrink-0" /> {event.organizer?.libraryAddress || 'Local'}, {event.organizer?.province}
+                                                    </span>
                                                 </div>
-                                                <button className="px-5 py-2.5 bg-slate-50 text-slate-600 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-slate-900 hover:text-white transition-colors">Ver Detalles</button>
+                                                <button className="px-5 py-2.5 bg-slate-50 text-slate-600 rounded-xl border border-teal-200 text-[9px] font-black uppercase tracking-widest hover:bg-teal-700 hover:text-white transition-colors">Ver Detalles</button>
                                             </div>
                                         </div>
                                     </div>
@@ -487,7 +491,7 @@ export const ExploreView = () => {
                                         </div>
 
                                         <div className="min-w-0 flex-1">
-                                            <p className="text-[11px] font-black text-slate-800 uppercase tracking-tight truncate group-hover:text-teal-600 transition-colors">
+                                            <p className="text-[11px] font-black text-slate-800 uppercase tracking-tight group-hover:text-teal-600 transition-colors">
                                                 {club.name}
                                             </p>
                                             <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
