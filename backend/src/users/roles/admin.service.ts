@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  forwardRef,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User, UserRole } from '../entities/user.entity';
@@ -8,6 +13,7 @@ import { LibraryEvent } from '../entities/library-event.entity';
 import { EventRegistration } from 'src/bookstore/entities/event-registration.entity';
 import { SustainabilityRequest } from '../entities/sustainability-request.entity';
 import { Club } from 'src/club/entities/club.entity';
+import { AuthService } from 'src/auth/auth.service';
 
 interface RawCreatedAt {
   createdAt: string | Date;
@@ -42,6 +48,8 @@ export class AdminService {
     private readonly requestRepository: Repository<SustainabilityRequest>,
     @InjectRepository(Club)
     private readonly clubRepository: Repository<Club>,
+    @Inject(forwardRef(() => AuthService))
+    private readonly authService: AuthService,
   ) {}
 
   // Cambiar el estado de un usuario registrado
@@ -51,6 +59,14 @@ export class AdminService {
 
     user.isActive = !user.isActive;
     await this.userRepository.save(user);
+
+    // Enviar email
+    const statusText = user.isActive ? 'reactivada' : 'suspendida';
+    await this.authService['sendNotificationEmail'](
+      user.email,
+      'Actualización de tu cuenta en BookMark',
+      `Tu cuenta de usuario ha sido ${statusText}.`,
+    );
 
     return {
       message: `Usuario ${user.isActive ? 'activado' : 'suspendido'} con éxito`,
@@ -259,6 +275,12 @@ export class AdminService {
     user.isActive = true;
     await this.userRepository.save(user);
 
+    await this.authService['sendNotificationEmail'](
+      user.email,
+      'Solicitud aceptada - BookMark',
+      '¡Enhorabuena! Tu solicitud de registro en BookMark ha sido aceptada.',
+    );
+
     return { message: `El usuario ${user.fullName} ahora es Librero oficial.` };
   }
 
@@ -266,8 +288,15 @@ export class AdminService {
     const user = await this.userRepository.findOne({ where: { id } });
     if (!user) throw new NotFoundException('Usuario no encontrado');
 
-    // Si lo rechazamos, borramos la cuenta
+    const email = user.email; // Guardamos el email antes de borrar
     await this.userRepository.remove(user);
+
+    await this.authService['sendNotificationEmail'](
+      email,
+      'Solicitud rechazada - BookMark',
+      'Lo sentimos, tu solicitud de registro en BookMark ha sido rechazada.',
+    );
+
     return {
       message: `Solicitud de '${user.fullName}' rechazada y eliminada.`,
     };

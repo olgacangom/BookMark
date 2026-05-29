@@ -19,6 +19,10 @@ import { AIModule } from './ai/ai.module';
     ClubsModule,
     BookstoreModule,
     ChatModule,
+    AuthModule,
+    UsersModule,
+    BooksModule,
+    AIModule,
 
     TypeOrmModule.forRoot({
       type: 'postgres',
@@ -32,12 +36,6 @@ import { AIModule } from './ai/ai.module';
       },
       poolSize: 10,
     }),
-
-    UsersModule,
-
-    AuthModule,
-    BooksModule,
-    AIModule,
   ],
   controllers: [AppController],
   providers: [AppService],

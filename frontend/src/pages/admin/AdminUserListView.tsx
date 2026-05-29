@@ -226,7 +226,7 @@ export const AdminUserListView = () => {
             <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-4">
                 {/* Buscador */}
                 <div className="sm:col-span-2 lg:col-span-5 relative group">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-teal-500 transition-colors" size={20} />
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-teal-500 transition-colors" size={18} />
                     <input
                         type="text"
                         placeholder="Buscar por nombre, email o librería..."

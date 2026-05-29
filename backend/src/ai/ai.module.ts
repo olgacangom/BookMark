@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AIService } from './ai.service';
 import { AIController } from './ai.controller';
@@ -9,8 +9,8 @@ import { Club } from 'src/club/entities/club.entity';
 import { User } from 'src/users/entities/user.entity';
 import { Activity } from 'src/users/entities/activity.entity';
 import { EventRegistration } from 'src/bookstore/entities/event-registration.entity';
-import { AdminService } from 'src/users/roles/admin.service';
 import { SustainabilityRequest } from 'src/users/entities/sustainability-request.entity';
+import { UsersModule } from 'src/users/users.module';
 
 @Module({
   imports: [
@@ -24,9 +24,9 @@ import { SustainabilityRequest } from 'src/users/entities/sustainability-request
       Club,
       SustainabilityRequest,
     ]),
+    forwardRef(() => UsersModule),
   ],
   controllers: [AIController],
-  providers: [AIService, AdminService],
-  exports: [AdminService],
+  providers: [AIService],
 })
 export class AIModule {}

@@ -181,6 +181,7 @@ export const MyProfileView = () => {
 
     const [activeTab, setActiveTab] = useState<'followers' | 'following'>('followers');
     const [activeProfileTab, setActiveProfileTab] = useState('Actividad');
+    const isLibrero = user?.role === 'librero';
     const isReader = user?.role === 'user';
     const [myStock, setMyStock] = useState<any[]>([]);
     const navigate = useNavigate();
@@ -188,12 +189,17 @@ export const MyProfileView = () => {
     const canTogglePrivacy = isReader;
 
     const fetchInventory = useCallback(async () => {
+        if (user?.role !== 'librero') return;
+
         try {
             const res = await api.get('/librero/inventory');
             setMyStock(res.data);
-        } catch { console.error("Error al cargar inventario"); }
-        finally { setIsLoading(false); }
-    }, []);
+        } catch (error) {
+            console.error("Error al cargar inventario", error);
+        } finally {
+            setIsLoading(false);
+        }
+    }, [user?.role]);
 
     const fetchAllData = useCallback(async () => {
         if (!user?.id) return;
@@ -201,14 +207,15 @@ export const MyProfileView = () => {
 
         try {
             const profileRes = await api.get(`/users/profile/${user.id}`);
-            console.log("--- PERFIL RECIBIDO DEL BACKEND ---");
-            console.log("Nombre Librería:", profileRes.data.libraryName);
-            console.log("Eventos:", profileRes.data.events);
-            console.log("Libros:", profileRes.data.books);
             setProfileData(profileRes.data);
 
-            bookService.getMyBooks().then(setBooks).catch(() => console.warn("Libros no accesibles"));
-            api.get('/users/stats/growth').then(res => setGrowthData(res.data)).catch(() => console.warn("Stats no accesibles"));
+            if (isReader || isLibrero) {
+                bookService.getMyBooks().then(setBooks).catch(() => { });
+            }
+
+            if (isReader) {
+                api.get('/users/stats/growth').then(res => setGrowthData(res.data)).catch(() => { });
+            }
 
             setFormData({ name: profileRes.data.fullName || '', bio: profileRes.data.bio || '' });
         } catch (error) {
@@ -216,17 +223,15 @@ export const MyProfileView = () => {
         } finally {
             setIsLoading(false);
         }
-    }, [user?.id]);
+    }, [user?.id, isReader, isLibrero]);
 
     useEffect(() => {
-        const promises: Promise<any>[] = [fetchAllData()];
+        fetchAllData();
 
-        if (!isReader) {
-            promises.push(fetchInventory());
+        if (isLibrero) {
+            fetchInventory();
         }
-
-        Promise.all(promises);
-    }, [fetchAllData, fetchInventory, isReader]);
+    }, [fetchAllData, fetchInventory, isLibrero]);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -753,7 +758,7 @@ export const MyProfileView = () => {
                         </div>
                     )}
                 </div>
-                {!isReader && profileData && (
+                {user?.role === 'librero' && profileData && (
                     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
                         <LibreroStatsCard
                             profileData={{

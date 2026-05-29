@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UsersService } from './users.service';
 import { UsersController } from './users.controller';
@@ -27,6 +27,7 @@ import { SustainabilityService } from './sustainability/sustainability.service';
 import { SustainabilityController } from './sustainability/sustainability.controller';
 import { SustainabilityRequest } from './entities/sustainability-request.entity';
 import { PollVote } from './entities/poll-vote.entity';
+import { AuthModule } from 'src/auth/auth.module';
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { PollVote } from './entities/poll-vote.entity';
       SustainabilityRequest,
       PollVote,
     ]),
+    forwardRef(() => AuthModule),
   ],
   controllers: [
     UsersController,
@@ -65,6 +67,6 @@ import { PollVote } from './entities/poll-vote.entity';
     LibrerosService,
     SustainabilityService,
   ],
-  exports: [UsersService, ActivitiesService],
+  exports: [UsersService, ActivitiesService, AdminService],
 })
 export class UsersModule {}
