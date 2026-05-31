@@ -258,6 +258,7 @@ export const ExploreView = () => {
         try {
             if (isRequested) {
                 await api.delete(`/sustainability/requests/cancel/${listingId}`);
+
                 setMySentRequestIds(prev => prev.filter(id => id !== listingId));
                 setFeedback({ isOpen: true, type: 'cancel' });
             } else {
@@ -265,7 +266,9 @@ export const ExploreView = () => {
                 setMySentRequestIds(prev => [...prev, listingId]);
                 setFeedback({ isOpen: true, type: 'success' });
             }
-        } catch (e: any) { console.error("Error en toggle request", e); }
+        } catch (e: any) {
+            console.error("Error en toggle request", e);
+        }
     };
 
     const isAlreadyInLibrary = (book: any) => myBookKeys.includes(`${book.title}-${book.author}`.toLowerCase());
@@ -355,9 +358,13 @@ export const ExploreView = () => {
                             </h3>
                         </div>
 
-                        <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+                        <div
+                            className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4 sm:gap-6"
+                        >
                             {users
-                                .filter(u => u.fullName?.toLowerCase().includes(searchTerm.toLowerCase()))
+                                .filter(u =>
+                                    u.fullName?.toLowerCase().includes(searchTerm.toLowerCase())
+                                )
                                 .map((u) => (
                                     <UserCard
                                         key={u.id}

@@ -22,8 +22,17 @@ export const FollowButton = ({ targetUserId, initialStatus, className = "" }: Pr
     }
 
     setIsLoading(true);
+
     try {
+      if (status === 'PENDING') {
+        await api.post(`/users/unfollow/${targetUserId}`);
+
+        setStatus(null);
+        return;
+      }
+
       const { data } = await api.post(`/users/follow/${targetUserId}`);
+
       setStatus(data.status);
     } catch (error) {
       console.error(error);

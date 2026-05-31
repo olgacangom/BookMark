@@ -172,7 +172,7 @@ export const MyProfileView = () => {
     const [actionLoading, setActionLoading] = useState(false);
 
     const [formData, setFormData] = useState({ name: '', bio: '' });
-    const [isPublic, setIsPublic] = useState(true);
+    const [isPublic, setIsPublic] = useState<boolean>(true);
 
     const [isFollowModalOpen, setIsFollowModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -208,6 +208,8 @@ export const MyProfileView = () => {
         try {
             const profileRes = await api.get(`/users/profile/${user.id}`);
             setProfileData(profileRes.data);
+
+            setIsPublic(profileRes.data.isPublic);
 
             if (isReader || isLibrero) {
                 bookService.getMyBooks().then(setBooks).catch(() => { });
