@@ -5,10 +5,13 @@ import {
     Search, Clock, CheckCircle, Plus,
     BookMarked, Edit2, Trash2, AlertTriangle, Sparkles, Star,
     BookOpen, StickyNote, LayoutGrid, List, SlidersHorizontal,
-    ChevronDown, X
+    ChevronDown, X,
+    AlertCircle,
+    Check
 } from 'lucide-react';
 import { BookFormData } from '../../books/schemas/books.shema';
 import { BookNotes } from './BooksNotes';
+
 
 export const LibraryView = () => {
     const [books, setBooks] = useState<Book[]>([]);
@@ -23,6 +26,9 @@ export const LibraryView = () => {
     const [selectedBook, setSelectedBook] = useState<Book | null>(null);
     const [isNotesOpen, setIsNotesOpen] = useState(false);
     const [isFilterOpen, setIsFilterOpen] = useState(false);
+
+    const [feedback, setFeedback] = useState({ isOpen: false, type: 'success', title: '', message: '' });
+
 
     const loadData = useCallback(async () => {
         setLoading(true);
@@ -58,6 +64,31 @@ export const LibraryView = () => {
             <div className="w-12 h-12 border-4 border-teal-100 border-t-teal-600 rounded-full animate-spin" />
         </div>
     );
+
+    const FeedbackModal = ({ isOpen, onClose, type, title, message }: any) => {
+        if (!isOpen) return null;
+        const isSuccess = type === 'success';
+
+        return (
+            <div className="fixed inset-0 z-[400] flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4 animate-in fade-in duration-300 text-center">
+                <div className="bg-white rounded-[2rem] md:rounded-[3rem] p-6 md:p-10 max-w-sm w-full shadow-2xl border-4 md:border-8 border-white animate-in zoom-in-95 relative">
+                    <button onClick={onClose} className="absolute top-6 right-6 text-slate-300 hover:text-slate-500 transition-colors">
+                        <X size={20} />
+                    </button>
+                    <div className={`w-16 h-16 md:w-20 md:h-20 rounded-[1.5rem] md:rounded-[2rem] flex items-center justify-center mx-auto mb-6 shadow-lg ${isSuccess ? 'bg-teal-500 shadow-teal-100' : 'bg-rose-500 shadow-rose-100'}`}>
+                        {isSuccess ? <Check size={32} className="text-white" strokeWidth={3} /> : <AlertCircle size={32} className="text-white" strokeWidth={3} />}
+                    </div>
+                    <h3 className={`text-xl md:text-2xl font-black mb-2 uppercase tracking-tighter leading-none ${isSuccess ? 'text-slate-900' : 'text-rose-600'}`}>
+                        {title}
+                    </h3>
+                    <p className="text-slate-500 text-xs md:text-sm mb-8 font-medium leading-relaxed">{message}</p>
+                    <button onClick={onClose} className={`w-full py-4 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-xl transition-all active:scale-95 ${isSuccess ? 'bg-slate-900 hover:bg-teal-600' : 'bg-teal-600 hover:bg-rose-700'}`}>
+                        Entendido
+                    </button>
+                </div>
+            </div>
+        );
+    };
 
     return (
         <div className="font-sans text-slate-900 pb-6 md:pb-10">
@@ -157,7 +188,7 @@ export const LibraryView = () => {
 
                 {/* GRID DE LIBROS */}
                 {filteredBooks.length > 0 ? (
-                    <div className={`grid gap-x-6 gap-y-10 ${gridCols === 6 ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-6' : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4'}`}>
+                    <div className={`grid gap-x-6 gap-y-10 ${gridCols === 6 ? 'grid-cols-3 md:grid-cols-5 lg:grid-cols-6' : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4'}`}>
                         {filteredBooks.map((book) => (
                             <BookCard
                                 key={book.id}
@@ -186,9 +217,20 @@ export const LibraryView = () => {
                 onClose={() => { setIsModalOpen(false); setSelectedBook(null); }}
                 onSuccess={loadData}
                 createBook={async (data: BookFormData) => {
-                    if (selectedBook) return await bookService.update(selectedBook.id, data as any);
+                    if (selectedBook) {
+                        return await bookService.update(selectedBook.id, data as any);
+                    }
+
                     return await bookService.create(data as any);
                 }}
+                onError={(message) =>
+                    setFeedback({
+                        isOpen: true,
+                        type: 'error',
+                        title: 'Libro duplicado',
+                        message
+                    })
+                }
             />
 
             <ConfirmDeleteModal
@@ -202,6 +244,14 @@ export const LibraryView = () => {
                         loadData();
                     }
                 }}
+            />
+
+            <FeedbackModal
+                isOpen={feedback.isOpen}
+                onClose={() => setFeedback({ ...feedback, isOpen: false })}
+                type={feedback.type}
+                title={feedback.title}
+                message={feedback.message}
             />
 
             {isNotesOpen && selectedBook && (
@@ -259,12 +309,21 @@ const BookCard = ({ book, onEdit, onDelete, onOpenNotes }: {
                     {book.status === "Want to Read" && <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center border-2 border-white shadow-lg"><Sparkles size={14} className="text-white" /></div>}
                 </div>
 
-                <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col justify-end p-5 gap-2.5">
-                    <div className="flex gap-2">
-                        <button onClick={onEdit} className="flex-1 bg-white text-slate-900 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-tighter hover:bg-teal-50 transition-all flex items-center justify-center gap-1.5"><Edit2 size={12} /> Editar</button>
-                        <button onClick={() => onOpenNotes(book)} className="flex-1 bg-[#1A535C] text-white py-2.5 rounded-xl text-[10px] font-black uppercase tracking-tighter hover:bg-[#14424a] flex items-center justify-center gap-1.5"><StickyNote size={12} /> Notas</button>
+                <div
+                    className="absolute inset-0 bg-slate-900/25 backdrop-blur-[0px] flex flex-col justify-end p-4 gap-2.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all duration-300"
+                >
+                    <div className="flex gap-3">
+                        <button onClick={onEdit} className="w-8 h-8 bg-white rounded-full flex items-center justify-center shadow">
+                            <Edit2 size={14} />
+                        </button>
+                        <button onClick={() => onOpenNotes(book)} className="w-8 h-8 bg-teal-600 text-white rounded-full flex items-center justify-center shadow">
+                            <StickyNote size={14} />
+                        </button>
+                        <button onClick={onDelete} className="w-8 h-8 bg-rose-500 text-white rounded-full flex items-center justify-center shadow">
+                            <Trash2 size={14} />
+                        </button>
                     </div>
-                    <button onClick={onDelete} className="w-full bg-rose-500 text-white py-2.5 rounded-xl text-[10px] font-black uppercase tracking-tighter hover:bg-rose-600 transition-all flex items-center justify-center gap-1.5"><Trash2 size={12} /> Eliminar</button>
+
                 </div>
             </div>
 
@@ -281,6 +340,8 @@ const BookCard = ({ book, onEdit, onDelete, onOpenNotes }: {
                 </div>
             </div>
         </div>
+
+
     );
 };
 
@@ -300,5 +361,7 @@ const ConfirmDeleteModal = ({ isOpen, title, onClose, onConfirm }: { isOpen: boo
                 </div>
             </div>
         </div>
+
     );
 };
+

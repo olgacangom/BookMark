@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import api from '../../services/api';
 import { bookService } from '../../books/services/book.service';
 import { UserCard } from '../components/UserCard';
@@ -122,7 +122,7 @@ const AvailabilityModal = ({ isOpen, onClose, stores, listings, bookTitle, onReq
                                     <div key={item.inventoryId} className="bg-slate-50/50 p-4 rounded-[2rem] flex justify-between items-center border border-slate-100/50">
                                         <div className="text-left flex-1 min-w-0 px-2">
                                             <p className="font-black text-slate-700 text-[11px] uppercase tracking-tight">{item.store.libraryName}</p>
-                                            <p className="text-[9px] text-slate-400 flex items-center gap-1"><MapPin size={10} /> {item.store.libraryAddress}</p>
+                                            <p className="text-[9px] text-slate-400 flex items-center gap-1"><MapPin size={10} /> {item.store.libraryAddress}, {item.store.province}</p>
                                         </div>
                                         <div className="text-right pl-4 border-l border-slate-200 ml-4 shrink-0">
                                             <p className="text-base font-black text-teal-600 tracking-tighter">{Number(item.price).toFixed(2)}€</p>
@@ -166,6 +166,27 @@ export const ExploreView = () => {
     const [selectedBookForStores, setSelectedBookForStores] = useState<string>('');
     const [mySentRequestIds, setMySentRequestIds] = useState<string[]>([]);
     const [feedback, setFeedback] = useState<{ isOpen: boolean, type: 'success' | 'cancel' }>({ isOpen: false, type: 'success' });
+    const [selectedProvince, setSelectedProvince] = useState('Todas');
+
+    const availableProvinces = useMemo(() => {
+        const provinces = new Set(users.map(u => u.province).filter(Boolean));
+        events.forEach(e => { if (e.organizer?.province) provinces.add(e.organizer.province); });
+        return ['Todas', ...Array.from(provinces)];
+    }, [users, events]);
+
+    const getProximityScore = (entityProvince: string, userProvince: string) => {
+        if (!entityProvince || !userProvince) return 0;
+
+        if (entityProvince === userProvince) return 100;
+
+        const sameRegion =
+            entityProvince.includes("Andalucía") &&
+            userProvince.includes("Andalucía");
+
+        if (sameRegion) return 60;
+
+        return 10;
+    };
 
     const loadExploreData = useCallback(async () => {
         if (!currentUser) return;
@@ -187,21 +208,20 @@ export const ExploreView = () => {
                         const myRel = u.followerRelations?.find(
                             (f: any) => f.follower?.id === currentUser.id
                         );
-
                         const iFollowThem = myRel?.status === 'ACCEPTED';
-
                         const theyFollowMe = u.followingRelations?.some(
-                            (f: any) =>
-                                f.following?.id === currentUser.id &&
-                                f.status === 'ACCEPTED'
+                            (f: any) => f.following?.id === currentUser.id && f.status === 'ACCEPTED'
                         );
 
                         return {
                             ...u,
                             followStatus: myRel ? myRel.status : null,
                             isReciprocal: iFollowThem && theyFollowMe,
+                            proximityScore: getProximityScore(u.province, currentUser.province)
                         };
                     });
+
+                lectores.sort((a: any, b: any) => b.proximityScore - a.proximityScore);
                 setUsers(lectores);
             }
             if (booksRes.status === 'fulfilled' && booksRes.value.data.length > 0) {
@@ -209,7 +229,14 @@ export const ExploreView = () => {
                 setFeaturedBook(found || booksRes.value.data[0]);
             }
             if (myBooksRes.status === 'fulfilled') setMyBookKeys(myBooksRes.value.map(b => `${b.title}-${b.author}`.toLowerCase()));
-            if (eventsRes.status === 'fulfilled') setEvents(eventsRes.value.data);
+            if (eventsRes.status === 'fulfilled') {
+                const sortedEvents = eventsRes.value.data.sort((a: any, b: any) => {
+                    const scoreA = getProximityScore(a.organizer?.province, currentUser.province);
+                    const scoreB = getProximityScore(b.organizer?.province, currentUser.province);
+                    return scoreB - scoreA;
+                });
+                setEvents(sortedEvents);
+            }
             if (reqRes.status === 'fulfilled') {
                 const sent = reqRes.value.data.filter((r: any) => !r.isOwner && r.status === 'PENDING');
                 setMySentRequestIds(sent.map((r: any) => r.listing.id));
@@ -247,11 +274,26 @@ export const ExploreView = () => {
                 api.get(`/librero/find-stores/${book.id}`),
                 api.get(`/sustainability/listings/book/${book.id}`)
             ]);
-            setAvailableStores(storesRes.data);
+
+            // Filtramos por provincia seleccionada (si no es 'Todas')
+            const filteredStores = selectedProvince === 'Todas'
+                ? storesRes.data
+                : storesRes.data.filter((item: any) => item.store.province === selectedProvince);
+
+            // Ordenamos por proximidad
+            const sortedStores = filteredStores.sort((a: any, b: any) => {
+                const scoreA = getProximityScore(a.store.province, currentUser?.province);
+                const scoreB = getProximityScore(b.store.province, currentUser?.province);
+                return scoreB - scoreA;
+            });
+
+            setAvailableStores(sortedStores);
             setAvailableListings(listingsRes.data.filter((l: any) => l.user.id !== currentUser?.id));
             setSelectedBookForStores(book.title);
             setIsAvailabilityOpen(true);
-        } catch { console.error("Error disponibilidad"); }
+        } catch (error) {
+            console.error("Error disponibilidad", error);
+        }
     };
 
     const handleToggleRequest = async (listingId: string, isRequested: boolean) => {
@@ -304,12 +346,21 @@ export const ExploreView = () => {
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                         <input
                             type="text"
-                            placeholder="Busca libros, autores, usuarios o clubes..."
+                            placeholder="Busca libros, autores o usuarios"
                             className="w-full text-sm sm:text-base bg-white border border-slate-200 rounded-2xl py-3 sm:py-4 pl-12 sm:pl-14 pr-4 sm:pr-6 shadow-sm focus:ring-4 focus:ring-teal-500/5 focus:border-teal-500/20 transition-all outline-none font-medium placeholder:text-slate-400"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
+                        <select
+                            value={selectedProvince}
+                            onChange={(e) => setSelectedProvince(e.target.value)}
+                            className="bg-white border border-slate-200 rounded-2xl py-3 sm:py-4 px-6 text-[10px] font-black uppercase tracking-widest text-slate-600 shadow-sm outline-none focus:border-teal-500 cursor-pointer"
+                        >
+                            {availableProvinces.map(prov => (
+                                <option key={prov} value={prov}>{prov === 'Todas' ? 'Todas las provincias' : prov}</option>
+                            ))}
+                        </select>
                     </div>
 
                     {searchTerm && bookResults.length > 0 && (
@@ -358,13 +409,18 @@ export const ExploreView = () => {
                             </h3>
                         </div>
 
-                        <div
-                            className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4 sm:gap-6"
-                        >
+                        <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4 sm:gap-6">
                             {users
-                                .filter(u =>
-                                    u.fullName?.toLowerCase().includes(searchTerm.toLowerCase())
-                                )
+                                .filter(u => {
+                                    const matchesSearch = searchTerm === '' ||
+                                        u.fullName?.toLowerCase().includes(searchTerm.toLowerCase());
+
+                                    const matchesProvince = selectedProvince === 'Todas' ||
+                                        u.province === selectedProvince;
+
+                                    return matchesSearch && matchesProvince;
+                                })
+                                .sort((a: any, b: any) => b.proximityScore - a.proximityScore)
                                 .map((u) => (
                                     <UserCard
                                         key={u.id}

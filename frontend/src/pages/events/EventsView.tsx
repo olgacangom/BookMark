@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import {
     Search, Clock, MapPin,
     ChevronRight, Check, Sparkles, Loader2, Calendar, Users
@@ -22,13 +22,25 @@ export const EventsView = () => {
     const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
     const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
 
+    const [selectedProvince, setSelectedProvince] = useState('Todas');
+
+    const provinces = useMemo(() => {
+        const unique = Array.from(new Set(events.map(e => e.organizer?.province).filter(Boolean)));
+        return ['Todas', ...unique];
+    }, [events]);
 
     const fetchEvents = useCallback(async () => {
         setLoading(true);
         try {
             const res = await api.get('/librero/events/all');
             let data = res.data;
-            data.sort((a: any, b: any) => new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime());
+
+            // Lógica de proximidad: los eventos de tu provincia primero
+            data.sort((a: any, b: any) => {
+                const scoreA = (a.organizer?.province === user?.province) ? 1 : 0;
+                const scoreB = (b.organizer?.province === user?.province) ? 1 : 0;
+                return scoreB - scoreA;
+            });
 
             if (activeTab === 'mine') {
                 data = data.filter((e: any) =>
@@ -41,14 +53,18 @@ export const EventsView = () => {
         } finally {
             setLoading(false);
         }
-    }, [activeTab, user?.id]);
+    }, [activeTab, user?.id, user?.province]);
 
     useEffect(() => { fetchEvents(); }, [fetchEvents]);
 
-    const filteredEvents = events.filter(e =>
-        e.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        e.description.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredEvents = events.filter(e => {
+        const matchesSearch = e.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            e.description.toLowerCase().includes(searchTerm.toLowerCase());
+        const eventProvince = e.organizer?.province || 'Desconocida';
+        const matchesProvince = selectedProvince === 'Todas' || eventProvince === selectedProvince;
+
+        return matchesSearch && matchesProvince;
+    });
 
     return (
         <div className="min-h-screen font-sans text-slate-900 pb-20 text-left">
@@ -67,16 +83,30 @@ export const EventsView = () => {
 
                 <div className="grid lg:grid-cols-12 gap-10">
                     <div className="lg:col-span-8 space-y-6">
-                        {/* Buscador */}
-                        <div className="relative group">
-                            <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-teal-600 transition-colors" size={18} />
-                            <input
-                                type="text"
-                                placeholder="Buscar eventos, librerías o temas..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full bg-white border border-slate-200 rounded-2xl py-4 pl-14 pr-6 text-sm shadow-sm focus:ring-4 focus:ring-teal-500/5 focus:border-teal-500/20 transition-all outline-none font-medium placeholder:text-slate-400"
-                            />
+                        {/* Buscador y Filtro */}
+                        <div className="flex flex-col sm:flex-row gap-4 mb-8">
+                            <div className="relative group flex-1">
+                                <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-teal-600 transition-colors" size={18} />
+                                <input
+                                    type="text"
+                                    placeholder="Buscar eventos, librerías o temas..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="w-full bg-white border border-slate-200 rounded-2xl py-4 pl-14 pr-6 text-sm shadow-sm focus:ring-4 focus:ring-teal-500/5 focus:border-teal-500/20 transition-all outline-none font-medium placeholder:text-slate-400"
+                                />
+                            </div>
+
+                            <select
+                                value={selectedProvince}
+                                onChange={(e) => setSelectedProvince(e.target.value)}
+                                className="bg-white border border-slate-200 rounded-2xl py-4 px-6 text-[10px] font-black uppercase tracking-widest text-slate-600 shadow-sm outline-none focus:border-teal-500"
+                            >
+                                {provinces.map(prov => (
+                                    <option key={prov} value={prov}>
+                                        {prov === 'Todas' ? 'Todas las provincias' : prov}
+                                    </option>
+                                ))}
+                            </select>
                         </div>
 
                         {/* TABS REFINADAS */}

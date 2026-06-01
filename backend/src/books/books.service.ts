@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -10,7 +11,6 @@ import { CreateBookDto } from './dto/create-book.dto';
 import { UpdateBookDto } from './dto/update-book.dto';
 import { GoogleBooksService } from './google-books/google-books.service';
 import { ActivitiesService } from 'src/users/activities.service';
-import { ActivityType } from 'src/users/entities/activity.entity';
 import { BookStatus } from './enum/book-status.enum';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Note } from './entities/note.entity';
@@ -41,25 +41,31 @@ export class BooksService {
   }
 
   async create(createBookDto: CreateBookDto, userId: string) {
-    const newBook = this.bookRepository.create({
-      ...createBookDto,
-      userId: userId,
+    const duplicate = await this.bookRepository.findOne({
+      where: [
+        // mismo usuario + mismo título + autor
+        {
+          userId,
+          title: createBookDto.title,
+          author: createBookDto.author,
+        },
+        // mismo ISBN si existe
+        ...(createBookDto.isbn ? [{ userId, isbn: createBookDto.isbn }] : []),
+      ],
     });
 
-    const savedBook = await this.bookRepository.save(newBook);
-
-    try {
-      await this.activitiesService.create(
-        userId,
-        ActivityType.BOOK_ADDED,
-        savedBook.id.toString(),
+    if (duplicate) {
+      throw new ConflictException(
+        `Ya tienes este libro en tu biblioteca (${duplicate.title})`,
       );
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : String(error);
-      console.error('Error al registrar actividad:', message);
     }
 
-    return savedBook;
+    const newBook = this.bookRepository.create({
+      ...createBookDto,
+      userId,
+    });
+
+    return this.bookRepository.save(newBook);
   }
 
   async findAll(userId: string) {

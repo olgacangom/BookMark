@@ -22,8 +22,8 @@ export const bookSchema = z.object({
   rating: z.number().min(0).max(5).optional().nullable(),
   review: z.string().optional().nullable(),
   //Campos solo de librero
-  price: z.coerce.number().min(0, "El precio debe ser positivo"),
-  inStock: z.boolean().default(true),
+  price: z.coerce.number().min(0, "El precio debe ser positivo").optional(),
+  inStock: z.boolean().default(true).optional(),
 });
 
 export type BookFormData = z.infer<typeof bookSchema>;

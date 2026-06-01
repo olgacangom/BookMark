@@ -1,17 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { X, BookPlus, Loader2, Sparkles, Check, Tag } from 'lucide-react';
+import { X, BookPlus, Loader2, Sparkles, Check, Tag, Camera } from 'lucide-react';
 import api from '../../services/api';
 import { BookFormData, bookSchema, BOOK_GENRES } from '../../books/schemas/books.shema';
+import { ScannerModal } from '../../books/components/ScannerModal';
 
 interface Props {
     isOpen: boolean;
     onClose: () => void;
     onSuccess: () => void;
+    onError: (message: string) => void;
 }
 
-export const CreateStoreBookModal: React.FC<Props> = ({ isOpen, onClose, onSuccess }) => {
+export const CreateStoreBookModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, onError }) => {
     const [isSearching, setIsSearching] = useState(false);
     const [isbn, setIsbn] = useState('');
     const [searchError, setSearchError] = useState<string | null>(null);
@@ -28,6 +30,9 @@ export const CreateStoreBookModal: React.FC<Props> = ({ isOpen, onClose, onSucce
     });
 
     const currentPortada = watch('urlPortada');
+
+    const [isScannerOpen, setIsScannerOpen] = useState(false);
+
 
     useEffect(() => {
         if (isOpen) {
@@ -68,7 +73,10 @@ export const CreateStoreBookModal: React.FC<Props> = ({ isOpen, onClose, onSucce
             await api.post(`/librero/inventory/${bookRes.data.id}`, { price, inStock });
             onSuccess();
             onClose();
-        } catch (error) { console.log("Error al registrar el libro", error); }
+        } catch (error: any) {
+            const msg = error.response?.data?.message || "No se pudo registrar el libro";
+            onError(Array.isArray(msg) ? msg[0] : msg);
+        }
     };
 
     if (!isOpen) return null;
@@ -84,13 +92,19 @@ export const CreateStoreBookModal: React.FC<Props> = ({ isOpen, onClose, onSucce
                 </header>
 
                 <form onSubmit={handleSubmit(handleOnSubmit)} className="p-8 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
-
                     {/* ISBN */}
                     <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex gap-2 items-end">
                         <div className="flex-1">
                             <label className="flex items-center gap-2 text-[10px] font-black text-teal-600 uppercase mb-2"><Sparkles size={14} /> ISBN</label>
                             <input type="text" value={isbn} onChange={(e) => setIsbn(e.target.value)} placeholder="978..." className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm font-bold shadow-sm outline-none" />
                         </div>
+                        <button
+                            type="button"
+                            onClick={() => setIsScannerOpen(true)}
+                            className="p-2 bg-white border border-slate-200 rounded-xl"
+                        >
+                            <Camera size={18} />
+                        </button>
                         <button type="button" onClick={() => triggerIsbnSearch(isbn)} className="h-10 px-6 bg-slate-900 text-white rounded-xl font-black text-xs uppercase hover:bg-teal-600">
                             {isSearching ? <Loader2 size={16} className="animate-spin" /> : "BUSCAR"}
                         </button>
@@ -137,7 +151,18 @@ export const CreateStoreBookModal: React.FC<Props> = ({ isOpen, onClose, onSucce
                         <Check size={18} /> Publicar y añadir al catálogo
                     </button>
                 </form>
+                <ScannerModal
+                    isOpen={isScannerOpen}
+                    onClose={() => setIsScannerOpen(false)}
+                    onScanSuccess={(code) => {
+                        setIsbn(code);
+                        triggerIsbnSearch(code);
+                        setIsScannerOpen(false);
+                    }}
+                />
             </div>
         </div>
+
+
     );
 };

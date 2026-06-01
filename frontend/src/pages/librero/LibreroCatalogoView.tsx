@@ -26,7 +26,7 @@ const FeedbackModal = ({ isOpen, onClose, type, title, message }: any) => {
                     {title}
                 </h3>
                 <p className="text-slate-500 text-xs md:text-sm mb-8 font-medium leading-relaxed">{message}</p>
-                <button onClick={onClose} className={`w-full py-4 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-xl transition-all active:scale-95 ${isSuccess ? 'bg-slate-900 hover:bg-teal-600' : 'bg-rose-600 hover:bg-rose-700'}`}>
+                <button onClick={onClose} className={`w-full py-4 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-xl transition-all active:scale-95 ${isSuccess ? 'bg-slate-900 hover:bg-teal-600' : 'bg-teal-600 hover:bg-rose-700'}`}>
                     Entendido
                 </button>
             </div>
@@ -247,7 +247,19 @@ export const LibreroCatalogView = () => {
             </div>
 
             <AddStoreBookModal isOpen={isAddStoreModalOpen} onClose={() => setIsAddStoreModalOpen(false)} book={selectedItem} onConfirm={confirmAction} isEditing={isEditing} />
-            <CreateStoreBookModal isOpen={isCreateNewModalOpen} onClose={() => setIsCreateNewModalOpen(false)} onSuccess={fetchInventory} />
+            <CreateStoreBookModal
+                isOpen={isCreateNewModalOpen}
+                onClose={() => setIsCreateNewModalOpen(false)}
+                onSuccess={fetchInventory}
+                onError={(message) =>
+                    setFeedback({
+                        isOpen: true,
+                        type: 'error',
+                        title: 'Libro duplicado',
+                        message
+                    })
+                }
+            />
             <ConfirmDeleteStoreModal isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)} onConfirm={confirmDelete} title={itemToDelete?.book?.title || ''} />
 
             <FeedbackModal

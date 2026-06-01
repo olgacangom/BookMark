@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ConflictException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DeepPartial, MoreThan, Repository } from 'typeorm';
@@ -57,7 +58,7 @@ export class LibrerosService {
     });
 
     if (duplicate) {
-      throw new BadRequestException(
+      throw new ConflictException(
         `Ya tienes este libro en tu catálogo (registrado como: ${duplicate.book.title})`,
       );
     }

@@ -74,6 +74,10 @@ const SocialDetailsModal = ({ isOpen, onClose, listing, onToggleRequest, isReque
                             </div>
                         </div>
                         <div className="flex justify-between items-center py-2 border-b border-slate-100/50">
+                            <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Provincia</span>
+                            <span className="text-[10px] font-bold text-slate-700">{listing.user?.province}</span>
+                        </div>
+                        <div className="flex justify-between items-center py-2 border-b border-slate-100/50">
                             <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">{isSale ? 'Precio' : 'Días Préstamo'}</span>
                             <span className="text-[10px] font-bold text-slate-700">{isSale ? `${listing.price}€` : `${listing.maxLoanDays || 15} días`}</span>
                         </div>
@@ -133,6 +137,18 @@ export const SustainabilityView = () => {
     const [feedback, setFeedback] = useState<{ isOpen: boolean, type: 'success' | 'cancel' }>({ isOpen: false, type: 'success' });
     const [socialModalData, setSocialModalData] = useState<any>(null);
     const [actionModal, setActionModal] = useState({ isOpen: false, type: '', data: null as any });
+    const [selectedProvince, setSelectedProvince] = useState('Todas');
+
+    const socialProvinces = useMemo(() => {
+        const provinces = new Set(socialListings.map(l => l.user?.province).filter(Boolean));
+        return ['Todas', ...Array.from(provinces)];
+    }, [socialListings]);
+
+    const filteredSocialListings = useMemo(() => {
+        return socialListings.filter(l =>
+            selectedProvince === 'Todas' || l.user?.province === selectedProvince
+        );
+    }, [socialListings, selectedProvince]);
 
     const loadData = useCallback(async () => {
         setLoading(true);
@@ -255,7 +271,29 @@ export const SustainabilityView = () => {
                         <main>
                             {activeTab === 'market' && <MarketplaceSection listings={listings} onEdit={(item: any) => { setListingToEdit(item); setIsCreateOpen(true); }} loadData={loadData} onAction={(type: string, item: any) => setActionModal({ isOpen: true, type, data: item })} />}
                             {activeTab === 'history' && <HistorySection items={history} userId={user?.id} onReturnSuccess={loadData} />}
-                            {activeTab === 'social' && <SocialSection listings={socialListings} onOpenDetails={(item: any) => setSocialModalData(item)} myRequests={mySentRequestIds} />}
+                            {activeTab === 'social' && (
+                                <div className="mt-6 mb-8">
+                                    <select
+                                        value={selectedProvince}
+                                        onChange={(e) => setSelectedProvince(e.target.value)}
+                                        className="bg-white border border-slate-200 rounded-2xl py-4 px-6 text-[10px] font-black uppercase tracking-widest text-slate-600 shadow-sm outline-none focus:border-teal-500 cursor-pointer"
+                                    >
+                                        {socialProvinces.map(prov => (
+                                            <option key={prov} value={prov}>
+                                                {prov === 'Todas' ? 'Todas las provincias' : prov}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+
+                            {activeTab === 'social' && (
+                                <SocialSection
+                                    listings={filteredSocialListings}
+                                    onOpenDetails={(item: any) => setSocialModalData(item)}
+                                    myRequests={mySentRequestIds}
+                                />
+                            )}
                         </main>
                     </div>
 
@@ -321,13 +359,14 @@ const MarketplaceSection = ({ listings, onEdit, onAction }: any) => {
 
     const filtered = useMemo(() => listings.filter((l: any) => {
         const matchesSearch = l.book?.title.toLowerCase().includes(search.toLowerCase());
-        const matchesStatus = statusFilter === 'Todos' || (statusFilter === 'Venta' ? l.type === 'sale' : l.type === 'loan');
-        return matchesSearch && matchesStatus;
+        const matchesStatus =
+            statusFilter === 'Todos' ||
+            l.type?.toLowerCase() === statusFilter; return matchesSearch && matchesStatus;
     }), [listings, search, statusFilter]);
 
     return (
-        <div className="space-y-8 animate-in fade-in">
-            <div className="flex flex-col md:flex-row gap-3">
+        <div className="space-y-8 mt-8 animate-in fade-in">
+            <div className="flex flex-col md:flex-row gap-3 items-end mt-6">
                 <div className="relative flex-1 group">
                     <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
                     <input
@@ -335,10 +374,14 @@ const MarketplaceSection = ({ listings, onEdit, onAction }: any) => {
                         placeholder="Buscar por libro..."
                         value={search}
                         onChange={e => setSearch(e.target.value)}
-                        className="w-full bg-white border border-slate-200 rounded-2xl py-4 pl-14 pr-6 text-sm shadow-sm focus:ring-4 focus:ring-teal-500/5 focus:border-teal-500/20 transition-all outline-none font-medium placeholder:text-slate-400"
+                        className="w-full h-14 bg-white border border-slate-200 rounded-2xl pl-14 pr-6 text-sm shadow-sm focus:ring-4 focus:ring-teal-500/5 focus:border-teal-500/20 transition-all outline-none font-medium placeholder:text-slate-400"
                     />
                 </div>
-                <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="px-6 py-4 bg-white border border-slate-100 rounded-2xl text-[10px] font-black uppercase text-slate-500 outline-none cursor-pointer shadow-sm">
+                <select
+                    value={statusFilter}
+                    onChange={e => setStatusFilter(e.target.value)}
+                    className="h-[56px] appearance-none px-6 bg-white border border-slate-100 rounded-2xl text-[10px] font-black uppercase text-slate-500 outline-none cursor-pointer shadow-sm"
+                >
                     <option value="Todos">TODOS LOS ESTADOS</option>
                     <option value="Venta">VENTA</option>
                     <option value="Prestamo">PRÉSTAMO</option>
@@ -346,41 +389,77 @@ const MarketplaceSection = ({ listings, onEdit, onAction }: any) => {
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4">
-                {filtered.map((item: any) => (
-                    <div key={item.id} className="bg-white rounded-[2rem] p-4 shadow-sm border border-slate-100 hover:shadow-xl transition-all duration-500 flex flex-col group relative">
-                        <div className="relative aspect-[3/4] rounded-[1.5rem] overflow-hidden mb-4 bg-slate-50">
-                            {item.book?.urlPortada && <img src={item.book.urlPortada} className="w-full h-full object-cover" alt="" />}
-                            <div className="absolute top-0 left-0 right-0 p-3 flex flex-col items-center gap-1.5">
-                                <div className={`px-4 py-1.5 ${item.type === 'sale' ? 'bg-[#407B75]' : 'bg-[#5B6BF9]'} text-white text-[8px] font-black uppercase tracking-widest rounded-full shadow-md`}>
-                                    {item.type === 'sale' ? `${item.price}€` : 'PRÉSTAMO'}
-                                </div>
-                                {item.type === 'loan' && (
-                                    <div className="px-3 py-1 bg-white/90 backdrop-blur-sm text-blue-600 text-[7px] font-black uppercase rounded-full border border-blue-100/50 flex items-center gap-1 shadow-sm">
-                                        <Clock size={8} /> {item.maxLoanDays || 15} DÍAS
-                                    </div>
+                {filtered.map((item: any) => {
+                    return (
+                        <div
+                            key={item.id}
+                            className="bg-white rounded-[2rem] p-4 shadow-sm border border-slate-100 hover:shadow-xl transition-all duration-500 flex flex-col group relative"
+                        >
+                            <div className="relative aspect-[3/4] rounded-[1.5rem] overflow-hidden mb-4 bg-slate-50">
+                                {item.book?.urlPortada && (
+                                    <img
+                                        src={item.book.urlPortada}
+                                        className="w-full h-full object-cover"
+                                        alt=""
+                                    />
                                 )}
-                            </div>
-                            <div className="absolute top-3 right-3 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0">
-                                <button onClick={() => onEdit(item)} className="p-2 bg-white text-[#407B75] rounded-lg shadow-xl hover:bg-[#407B75] hover:text-white transition-all"><Edit3 size={14} /></button>
-                                <button onClick={() => onAction('delete', item)} className="p-2 bg-white text-rose-500 rounded-lg shadow-xl hover:bg-rose-500 hover:text-white transition-all"><Trash2 size={14} /></button>
-                            </div>
-                        </div>
-                        <div className="text-left flex-1 flex flex-col px-1">
-                            <h3 className="font-black text-[#1E293B] text-[12px] mb-1 uppercase tracking-tight line-clamp-1 leading-none">{item.book?.title}</h3>
-                            <p className="text-[#94A3B8] font-bold text-[8px] mb-4 uppercase tracking-widest">{item.book?.author}</p>
-                            <div className="mt-auto space-y-3">
-                                <div className="flex justify-center">
-                                    <div className={`inline-flex px-3 py-1 rounded-full text-[6px] font-black uppercase tracking-widest ${item.isAvailable ? 'bg-[#F0FDF4] text-[#407B75]' : 'bg-amber-50 text-amber-600'}`}>
-                                        • {item.isAvailable ? 'DISPONIBLE' : 'OCUPADO'}
+
+                                <div className="absolute top-3 left-3 flex flex-col gap-2 z-10">
+                                    <div className={`px-3 py-1 ${item.type?.toLowerCase() === 'sale' ? 'bg-[#940e77]' : 'bg-[#5B6BF9]'} text-white text-[9px] font-bold uppercase tracking-widest rounded-full shadow-md`}>
+                                        {item.type?.toLowerCase() === 'sale'
+                                            ? (item.price && item.price > 0 ? `${item.price}€` : 'VENTA')
+                                            : 'PRÉSTAMO'
+                                        }
                                     </div>
+
+                                    {item.type?.toLowerCase() === 'loan' && (
+                                        <div className="px-3 py-1 bg-white/90 backdrop-blur-sm text-blue-600 text-[9px] font-black uppercase rounded-full border border-blue-100/50 flex items-center gap-1 shadow-sm">
+                                            <Clock size={8} /> {item.maxLoanDays || 15} DÍAS
+                                        </div>
+                                    )}
                                 </div>
-                                <button onClick={() => onAction('donate', item)} className="w-full py-3.5 bg-amber-50 text-amber-600 rounded-2xl text-[8px] font-black uppercase tracking-widest hover:bg-amber-100 transition-all shadow-sm border border-amber-200/30 flex items-center justify-center gap-2">
-                                    <Heart size={14} /> MARCAR DONADO
-                                </button>
+
+                                <div className="absolute top-3 right-3 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0">
+                                    <button onClick={() => onEdit(item)} className="p-2 bg-white text-[#407B75] rounded-lg shadow-xl hover:bg-[#407B75] hover:text-white transition-all">
+                                        <Edit3 size={14} />
+                                    </button>
+                                    <button onClick={() => onAction('delete', item)} className="p-2 bg-white text-rose-500 rounded-lg shadow-xl hover:bg-rose-500 hover:text-white transition-all">
+                                        <Trash2 size={14} />
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="text-left flex-1 flex flex-col px-1">
+                                <h3 className="font-black text-[#1E293B] text-[12px] mb-1 uppercase tracking-tight line-clamp-1 leading-none">
+                                    {item.book?.title}
+                                </h3>
+                                <p className="text-[#94A3B8] font-bold text-[8px] mb-4 uppercase tracking-widest">
+                                    {item.book?.author}
+                                </p>
+
+                                <div className="mt-auto space-y-3">
+                                    <div className="flex justify-center">
+                                        <div className={`inline-flex items-center px-4 py-1.5 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-widest shadow-sm border transition-all
+                            ${item.isAvailable
+                                                ? 'bg-[#F0FDF4] text-[#407B75] border-[#D1FAE5]'
+                                                : 'bg-amber-50 text-amber-600 border-amber-200'
+                                            }`}
+                                        >
+                                            {item.isAvailable ? 'DISPONIBLE' : 'OCUPADO'}
+                                        </div>
+                                    </div>
+
+                                    <button
+                                        onClick={() => onAction('donate', item)}
+                                        className="w-full py-3.5 bg-amber-50 text-amber-600 rounded-2xl text-[8px] font-black uppercase tracking-widest hover:bg-amber-100 transition-all shadow-sm border border-amber-200/30 flex items-center justify-center gap-2"
+                                    >
+                                        <Heart size={14} /> MARCAR DONADO
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                ))}
+                    );
+                })}
             </div>
         </div>
     );
@@ -443,8 +522,8 @@ const HistorySection = ({ items, userId, onReturnSuccess }: any) => {
                     const canMarkReturn = item.status === 'accepted' && item.listing?.type === 'loan' && isOwner;
 
                     return (
-                        <div key={item.id} className="bg-white p-5 rounded-[2rem] border border-slate-100 flex flex-col md:flex-row md:items-center md:justify-between gap-4 shadow-sm hover:shadow-md transition-all group">
-                            <div className="flex items-center gap-4 md:gap-6 flex-1">
+                        <div key={item.id} className="bg-white p-5 rounded-[2rem] border border-slate-100 flex flex-col md:flex-row md:items-center md:justify-between gap-4 mt-4 shadow-sm hover:shadow-md transition-all group">
+                            <div className="flex items-center gap-4 md:gap-6 flex-1 ">
                                 <img src={bookData?.urlPortada} className="w-16 h-24 object-cover rounded-xl shadow-sm grayscale-[0.3]" alt="" />
                                 <div>
                                     <h4 className="font-black text-[#1E293B] text-[14px] uppercase tracking-tight mb-1">{bookData?.title}</h4>
@@ -478,11 +557,22 @@ const SocialSection = ({ listings, error, onOpenDetails, myRequests }: any) => {
 
     return (
         <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-6">
                 {listings.map((item: any) => (
                     <div key={item.id} className="bg-white rounded-[2rem] p-5 shadow-sm border border-slate-100 hover:shadow-xl transition-all duration-500 flex flex-col group">
                         <div className="relative aspect-[3/4.5] rounded-[1.5rem] overflow-hidden mb-5 bg-slate-50">
                             <img src={item.book?.urlPortada} className="w-full h-full object-cover" alt="" />
+                            <div className="absolute top-3 left-3 flex flex-col gap-2 z-10">
+                                <div className={`px-3 py-1 ${item.type === 'sale' ? 'bg-[#940e77]' : 'bg-[#5B6BF9]'} text-white text-[9px] font-bold uppercase tracking-widest rounded-full shadow-md`}>
+                                    {item.type === 'sale' ? (item.price ? `${item.price}€` : 'VENTA') : 'PRÉSTAMO'}
+                                </div>
+
+                                {item.type === 'loan' && (
+                                    <div className="px-3 py-1 bg-white/90 backdrop-blur-sm text-blue-600 text-[9px] font-black uppercase rounded-full border border-blue-100/50 flex items-center gap-1 shadow-sm">
+                                        <Clock size={8} /> {item.maxLoanDays || 15} DÍAS
+                                    </div>
+                                )}
+                            </div>
                             <div className="absolute bottom-4 left-0 right-0 flex justify-center">
                                 <div className="flex overflow-x-auto no-scrollbar gap-2 bg-white p-2 rounded-2xl w-full">
                                     <img src={item.user?.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${item.user?.email}`} className="w-5 h-5 rounded-full object-cover" alt="" />

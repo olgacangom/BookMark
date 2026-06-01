@@ -43,18 +43,17 @@ export const AddStoreBookModal: React.FC<Props> = ({ isOpen, onClose, book, onCo
     return (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-in fade-in duration-300 text-left">
             <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-2xl overflow-hidden border border-slate-200 animate-in zoom-in-95">
-                
+
                 <header className="px-8 py-6 border-b border-slate-50 flex justify-between items-center bg-teal-600 text-white">
                     <h2 className="text-xl font-black uppercase tracking-tight flex items-center gap-3">
                         {isEditing ? <Check size={24} /> : <BookPlus size={24} />}
                         {isEditing ? 'Editar Inventario' : 'Añadir al Inventario'}
                     </h2>
-                    <button onClick={onClose} className="p-2 hover:bg-white/20 rounded-full transition-colors"><X size={20}/></button>
+                    <button onClick={onClose} className="p-2 hover:bg-white/20 rounded-full transition-colors"><X size={20} /></button>
                 </header>
 
                 <form onSubmit={handleSubmit(onConfirm)} className="p-8 space-y-6 max-h-[75vh] overflow-y-auto custom-scrollbar">
-                    
-                    {/* TODOS LOS CAMPOS SON AHORA EDITABLES AQUÍ */}
+
                     <div className="flex gap-6">
                         <div className="w-24 aspect-[2/3] bg-slate-100 rounded-xl border border-slate-200 overflow-hidden shadow-inner shrink-0">
                             {currentPortada ? <img src={currentPortada} className="w-full h-full object-cover" alt="portada" /> : <div className="h-full flex items-center justify-center text-[8px] font-black text-slate-300">SIN FOTO</div>}
@@ -62,11 +61,11 @@ export const AddStoreBookModal: React.FC<Props> = ({ isOpen, onClose, book, onCo
                         <div className="flex-1 space-y-4">
                             <div className="space-y-1">
                                 <label className="text-[10px] font-bold text-slate-400 uppercase">Título</label>
-                                <input {...register('title')} className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-2 text-sm font-bold" />
+                                <input {...register('title')} required className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-2 text-sm font-bold" />
                             </div>
                             <div className="space-y-1">
                                 <label className="text-[10px] font-bold text-slate-400 uppercase">Autor</label>
-                                <input {...register('author')} className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-2 text-sm font-bold" />
+                                <input {...register('author')} required className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-2 text-sm font-bold" />
                             </div>
                         </div>
                     </div>
@@ -99,7 +98,7 @@ export const AddStoreBookModal: React.FC<Props> = ({ isOpen, onClose, book, onCo
                     <div className="grid grid-cols-2 gap-4">
                         <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-100">
                             <label className="text-[10px] font-black text-emerald-700 uppercase block mb-1"><Tag size={12} className="inline" /> Precio (€)</label>
-                            <input type="number" step="0.01" {...register('price', { valueAsNumber: true })} className="w-full bg-white border border-emerald-200 rounded-xl px-4 py-2 font-black" />
+                            <input type="number" step="0.01" {...register('price', { valueAsNumber: true })} required className="w-full bg-white border border-emerald-200 rounded-xl px-4 py-2 font-black" />
                         </div>
                         <div className="p-4 bg-teal-50 rounded-2xl border border-teal-100 flex items-center justify-between">
                             <span className="text-[10px] font-black text-teal-700 uppercase">En Stock</span>

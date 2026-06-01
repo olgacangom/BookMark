@@ -11,6 +11,15 @@ import api from '../../services/api';
 import { bookService, Book } from '../../books/services/book.service';
 import { BooksGrowthChart } from '../../components/stats/BooksGrowthChart';
 
+const PROVINCIAS = [
+    "Álava", "Albacete", "Alicante", "Almería", "Asturias", "Ávila", "Badajoz", "Barcelona",
+    "Burgos", "Cáceres", "Cádiz", "Cantabria", "Castellón", "Ciudad Real", "Córdoba",
+    "Cuenca", "Girona", "Granada", "Guadalajara", "Gipuzkoa", "Huelva", "Huesca",
+    "Illes Balears", "Jaén", "La Rioja", "Las Palmas", "León", "Lleida", "Lugo", "Madrid",
+    "Málaga", "Murcia", "Navarra", "Ourense", "Palencia", "Pontevedra", "Salamanca",
+    "Santa Cruz de Tenerife", "Segovia", "Sevilla", "Soria", "Tarragona", "Teruel",
+    "Toledo", "Valencia", "Valladolid", "Bizkaia", "Zamora", "Zaragoza"
+];
 
 const ConfirmDeleteAvatarModal = ({ isOpen, onClose, onConfirm }: any) => {
     if (!isOpen) return null;
@@ -171,7 +180,7 @@ export const MyProfileView = () => {
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [actionLoading, setActionLoading] = useState(false);
 
-    const [formData, setFormData] = useState({ name: '', bio: '' });
+    const [formData, setFormData] = useState({ name: '', bio: '', province: '' });
     const [isPublic, setIsPublic] = useState<boolean>(true);
 
     const [isFollowModalOpen, setIsFollowModalOpen] = useState(false);
@@ -218,8 +227,11 @@ export const MyProfileView = () => {
             if (isReader) {
                 api.get('/users/stats/growth').then(res => setGrowthData(res.data)).catch(() => { });
             }
-
-            setFormData({ name: profileRes.data.fullName || '', bio: profileRes.data.bio || '' });
+            setFormData({
+                name: profileRes.data.fullName || '',
+                bio: profileRes.data.bio || '',
+                province: profileRes.data.province || ''
+            });
         } catch (error) {
             console.error("Error cargando perfil", error);
         } finally {
@@ -296,7 +308,7 @@ export const MyProfileView = () => {
     const handleSaveProfile = async () => {
         setIsSaving(true);
         try {
-            const { data } = await api.patch('/users/profile', { fullName: formData.name, bio: formData.bio });
+            const { data } = await api.patch('/users/profile', { fullName: formData.name, bio: formData.bio, province: formData.province });
             updateUser(data);
             setIsEditing(false);
             fetchAllData();
@@ -389,12 +401,50 @@ export const MyProfileView = () => {
                                     )}
                                     <p className="text-teal-300 font-bold text-sm mt-1">@{profileData.email?.split('@')[0]}</p>
 
-                                    {profileData.province && (
-                                        <div className="flex items-center justify-center md:justify-start gap-1.5 mt-2 text-white/70 text-[11px] font-bold uppercase tracking-wider">
-                                            <MapPin size={12} />
-                                            <span>{profileData.province}</span>
-                                        </div>
-                                    )}
+                                    <div className="mt-2">
+                                        {isEditing ? (
+                                            <div className="mt-3 max-w-xs">
+                                                <div className="relative">
+                                                    <MapPin
+                                                        size={14}
+                                                        className="absolute left-3 top-1/2 -translate-y-1/2 text-white/60 z-10"
+                                                    />
+
+                                                    <select
+                                                        value={formData.province}
+                                                        onChange={(e) =>
+                                                            setFormData({
+                                                                ...formData,
+                                                                province: e.target.value
+                                                            })
+                                                        }
+                                                        className="w-full pl-10 pr-4 py-2 bg-white/10 border border-white/20 rounded-xl text-white text-sm outline-none appearance-none focus:border-teal-400"
+                                                    >
+                                                        <option value="" className="text-slate-900">
+                                                            Selecciona provincia
+                                                        </option>
+
+                                                        {PROVINCIAS.map((prov) => (
+                                                            <option
+                                                                key={prov}
+                                                                value={prov}
+                                                                className="text-slate-900"
+                                                            >
+                                                                {prov}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            profileData.province && (
+                                                <div className="flex items-center justify-center md:justify-start gap-1.5 mt-2 text-white/70 text-[11px] font-bold uppercase tracking-wider">
+                                                    <MapPin size={12} />
+                                                    <span>{profileData.province}</span>
+                                                </div>
+                                            )
+                                        )}
+                                    </div>
                                 </div>
 
                                 {/* RUEDA DE AJUSTES */}
