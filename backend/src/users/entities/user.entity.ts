@@ -40,6 +40,9 @@ export class User {
   @Column({ nullable: true })
   fullName: string;
 
+  @Column({ nullable: true })
+  province: string;
+
   @Column({
     type: 'enum',
     enum: UserRole,
@@ -102,7 +105,7 @@ export class User {
   @OneToMany(() => EventRegistration, (registration) => registration.user)
   registrations: EventRegistration[];
 
-  @ManyToMany(() => LibraryEvent, (event) => event.registrations)
+  @ManyToMany(() => LibraryEvent, (event) => event.organizer)
   @JoinTable()
   events: LibraryEvent[];
 

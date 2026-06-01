@@ -154,4 +154,31 @@ export class AuthService {
 
     return { message: 'Contraseña actualizada con éxito' };
   }
+
+  // Notificaciones cambio de estado peticiones/cuentas
+  public async sendNotificationEmail(
+    email: string,
+    subject: string,
+    message: string,
+  ) {
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: this.configService.get<string>('EMAIL_USER'),
+        pass: this.configService.get<string>('EMAIL_PASS'),
+      },
+    });
+
+    await transporter.sendMail({
+      from: '"BookMark Team" <noreply@bookmark.com>',
+      to: email,
+      subject: subject,
+      html: `
+      <div style="font-family: sans-serif; color: #333;">
+        <h2>Notificación de BookMark</h2>
+        <p>${message}</p>
+      </div>
+    `,
+    });
+  }
 }

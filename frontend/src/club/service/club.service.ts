@@ -6,7 +6,7 @@ export interface Club {
     description: string;
     coverUrl?: string;
     createdAt: string;
-    creator: { id: string; fullName: string, avatarUrl?: string, email?: string};
+    creator: { id: string; fullName: string, avatarUrl?: string, email?: string };
     members: { id: string; fullName?: string; avatarUrl?: string; email?: string }[];
     _count?: { threads: number };
 }
@@ -41,6 +41,16 @@ export const clubsService = {
         return response.data;
     },
 
+    updateClub: async (id: string, data: { name: string; description: string; coverUrl?: string | null }) => {
+        const res = await api.patch(`/clubs/${id}`, data);
+        return res.data;
+    },
+
+    deleteClub: async (id: string) => {
+        const response = await api.delete(`/clubs/${id}`);
+        return response.data;
+    },
+    
     getClubs: async () => {
         const { data } = await api.get<Club[]>('/clubs');
         return data;
@@ -56,7 +66,7 @@ export const clubsService = {
         return data;
     },
 
-    createThread: async(clubId: string, title: string, relatedBookId?: number) => {
+    createThread: async (clubId: string, title: string, relatedBookId?: number) => {
         const { data } = await api.post<Thread>(`/clubs/${clubId}/threads`, {
             title,
             relatedBookId
@@ -87,8 +97,4 @@ export const clubsService = {
         return data;
     },
 
-    deleteClub: async (id: string) => {
-        const response = await api.delete(`/clubs/${id}`);
-        return response.data;
-    },
 };

@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import {
     Search, Clock, MapPin,
     ChevronRight, Check, Sparkles, Loader2, Calendar, Users
@@ -6,24 +6,41 @@ import {
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { JoinEventModal } from '../../users/pages/JoinEventModal';
+import { useLocation } from 'react-router-dom';
 
 const FALLBACK_EVENT_IMAGE = "https://images.unsplash.com/photo-1512820663732-2d1410f44bb1?q=80&w=600";
 
 export const EventsView = () => {
     const { user } = useAuth();
+    const location = useLocation();
     const [events, setEvents] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<'upcoming' | 'mine'>('upcoming');
+    const [activeTab, setActiveTab] = useState<'upcoming' | 'mine'>(
+        location.state?.initialTab || 'upcoming'
+    );
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
     const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
+
+    const [selectedProvince, setSelectedProvince] = useState('Todas');
+
+    const provinces = useMemo(() => {
+        const unique = Array.from(new Set(events.map(e => e.organizer?.province).filter(Boolean)));
+        return ['Todas', ...unique];
+    }, [events]);
 
     const fetchEvents = useCallback(async () => {
         setLoading(true);
         try {
             const res = await api.get('/librero/events/all');
             let data = res.data;
-            data.sort((a: any, b: any) => new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime());
+
+            // Lógica de proximidad: los eventos de tu provincia primero
+            data.sort((a: any, b: any) => {
+                const scoreA = (a.organizer?.province === user?.province) ? 1 : 0;
+                const scoreB = (b.organizer?.province === user?.province) ? 1 : 0;
+                return scoreB - scoreA;
+            });
 
             if (activeTab === 'mine') {
                 data = data.filter((e: any) =>
@@ -36,41 +53,60 @@ export const EventsView = () => {
         } finally {
             setLoading(false);
         }
-    }, [activeTab, user?.id]);
+    }, [activeTab, user?.id, user?.province]);
 
     useEffect(() => { fetchEvents(); }, [fetchEvents]);
 
-    const filteredEvents = events.filter(e =>
-        e.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        e.description.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredEvents = events.filter(e => {
+        const matchesSearch = e.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            e.description.toLowerCase().includes(searchTerm.toLowerCase());
+        const eventProvince = e.organizer?.province || 'Desconocida';
+        const matchesProvince = selectedProvince === 'Todas' || eventProvince === selectedProvince;
+
+        return matchesSearch && matchesProvince;
+    });
 
     return (
-        <div className="min-h-screen bg-[#F8FAFB] font-sans text-slate-900 pb-20 text-left">
+        <div className="min-h-screen font-sans text-slate-900 pb-20 text-left">
             <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10 py-8">
 
                 {/* HEADER */}
-                <header className="flex justify-between items-start mb-8">
+                <header className="flex justify-between items-start mb-4">
                     <div className="flex items-center gap-5">
                         <div>
-                            <h1 className="text-3xl font-black text-slate-900 uppercase tracking-tighter italic leading-none">Eventos</h1>
-                            <p className="text-slate-400 text-[10px] font-bold mt-2 uppercase tracking-[0.2em]">Gestión de quedadas físicas en librerías</p>
+                            <h1 className="text-2xl md:text-3xl font-black tracking-tighter text-slate-900 italic uppercase">
+                                Eventos <span className="text-teal-600 font-serif">en Librerías</span>
+                            </h1>
                         </div>
                     </div>
                 </header>
 
                 <div className="grid lg:grid-cols-12 gap-10">
                     <div className="lg:col-span-8 space-y-6">
-                        {/* Buscador */}
-                        <div className="relative group">
-                            <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-teal-600 transition-colors" size={18} />
-                            <input
-                                type="text"
-                                placeholder="Buscar eventos, librerías o temas..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pl-16 pr-6 py-4 bg-white border border-slate-100 rounded-[1.5rem] shadow-sm outline-none focus:ring-4 focus:ring-teal-500/5 transition-all font-medium text-sm"
-                            />
+                        {/* Buscador y Filtro */}
+                        <div className="flex flex-col sm:flex-row gap-4 mb-8">
+                            <div className="relative group flex-1">
+                                <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-teal-600 transition-colors" size={18} />
+                                <input
+                                    type="text"
+                                    placeholder="Buscar eventos, librerías o temas..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="w-full bg-white border border-slate-200 rounded-2xl py-4 pl-14 pr-6 text-sm shadow-sm focus:ring-4 focus:ring-teal-500/5 focus:border-teal-500/20 transition-all outline-none font-medium placeholder:text-slate-400"
+                                />
+                            </div>
+
+                            <select
+                                value={selectedProvince}
+                                onChange={(e) => setSelectedProvince(e.target.value)}
+                                className="bg-white border border-slate-200 rounded-2xl py-4 px-6 text-[10px] font-black uppercase tracking-widest text-slate-600 shadow-sm outline-none focus:border-teal-500"
+                            >
+                                {provinces.map(prov => (
+                                    <option key={prov} value={prov}>
+                                        {prov === 'Todas' ? 'Todas las provincias' : prov}
+                                    </option>
+                                ))}
+                            </select>
                         </div>
 
                         {/* TABS REFINADAS */}
@@ -188,14 +224,14 @@ const EventCard = ({ event, onOpenJoin, currentUser }: any) => {
                     src={eventImage}
                     className="w-full h-full object-cover rounded-[1.8rem] group-hover:scale-110 transition-transform duration-700"
                     alt="event"
-                    onError={(e: any) => { e.target.src = FALLBACK_EVENT_IMAGE }} 
+                    onError={(e: any) => { e.target.src = FALLBACK_EVENT_IMAGE }}
                 />
             </div>
 
             <div className="flex-1 min-w-0 text-left">
                 <div className="mb-2">
                     <h3 className="text-base font-black text-slate-900 uppercase tracking-tight leading-tight line-clamp-1 group-hover:text-teal-600 transition-colors">{event.title}</h3>
-                    <span className="text-[8px] font-black text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-md uppercase mt-1 inline-block tracking-widest border border-indigo-100/50">{event.category || 'CLUB DE LECTURA'}</span>
+                    <span className="text-[9px] font-black text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-md uppercase mt-1 inline-block tracking-widest border border-indigo-100/50">{event.organizer?.libraryName}</span>
                 </div>
 
                 <p className="text-slate-400 text-[10px] font-medium italic mb-4 line-clamp-2 leading-relaxed">"{event.description}"</p>
@@ -205,9 +241,8 @@ const EventCard = ({ event, onOpenJoin, currentUser }: any) => {
                         <Clock size={12} className="text-teal-600" />
                         <span className="text-[10px] font-bold text-slate-700 uppercase">{date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}H</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <MapPin size={12} className="text-rose-500" />
-                        <span className="text-[10px] font-bold text-slate-700 truncate max-w-[120px] uppercase">{event.organizer?.libraryName || 'Búho Sabio'}</span>
+                    <div className="flex items-center text-[11.5px] gap-2">
+                        <MapPin size={12} className="text-rose-500 shrink-0" /> {event.organizer?.libraryAddress || 'Local'}, {event.organizer?.province}
                     </div>
                 </div>
             </div>

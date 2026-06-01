@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-    Heart, MessageCircle, MoreHorizontal, Check, Plus, Send,
+    Heart, MessageCircle, MoreHorizontal, Check, Send,
     Target, BookOpen, Users, BookText, Loader2, EyeOff, UserCircle, X, BookHeart,
     BookIcon, Edit2, Trash2, BarChart2, AlertTriangle
 } from 'lucide-react';
@@ -23,8 +23,9 @@ interface ActivityCardProps {
     onLike: (activityId: string) => void;
     onIgnore: (activityId: string) => void;
     onComment: (activityId: string, newComment: Comment) => void;
-    onUpdate: (activityId: string, updatedActivity: Activity) => void; 
+    onUpdate: (activityId: string, updatedActivity: Activity) => void;
     onDelete: (activityId: string) => void;
+    onVote?: (index: number) => void;
 }
 
 const ActivityBadge: React.FC<{ type: ActivityType }> = ({ type }) => {
@@ -38,7 +39,7 @@ const ActivityBadge: React.FC<{ type: ActivityType }> = ({ type }) => {
     );
 };
 
-export const ActivityCard: React.FC<ActivityCardProps> = ({ activity, onLike, onIgnore, onComment, onUpdate, onDelete }) => {
+export const ActivityCard: React.FC<ActivityCardProps> = ({ activity, onLike, onIgnore, onComment, onUpdate, onDelete, onVote }) => {
     const { user } = useAuth();
     const navigate = useNavigate();
     const [commentText, setCommentText] = useState('');
@@ -49,7 +50,7 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({ activity, onLike, on
     const [isEditing, setIsEditing] = useState(false);
     const [editContent, setEditContent] = useState(activity.content || '');
     const [editImageUrl, setEditImageUrl] = useState<string | null>(activity.imageUrl || null);
-    const [editPollOptions, setEditPollOptions] = useState<string[]>(activity.pollOptions || []);
+    const [editPollOptions, setEditPollOptions] = useState<string[]>(activity.poll?.options?.map(o => o.text) ?? []);
     const [editTargetBook, setEditTargetBook] = useState(activity.targetBook || null);
     const [isUpdating, setIsUpdating] = useState(false);
     const [imageError, setImageError] = useState(false);
@@ -262,14 +263,29 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({ activity, onLike, on
                                 </div>
                             </div>
                         )}
-                        {activity.pollOptions && activity.pollOptions.length > 0 && (
-                            <div className="pt-2 space-y-2">
-                                {activity.pollOptions.map((option, idx) => (
-                                    <button key={idx} className="w-full text-left p-3 bg-white border border-slate-100 rounded-xl hover:border-teal-500 transition-all flex items-center justify-between group text-sm font-bold text-slate-700">
-                                        <span>{option}</span>
-                                        <Plus size={14} className="text-slate-300 group-hover:text-teal-500" />
-                                    </button>
-                                ))}
+                        {activity.poll && Array.isArray(activity.poll.options) && activity.poll.options.length > 0 && (
+                            <div className="space-y-2 mt-4">
+                                {activity.poll.options.map((option, i) => {
+                                    const totalVotes = activity.poll?.options.reduce((sum, o) => sum + o.votes, 0) || 1;
+                                    const percentage = Math.round((option.votes / totalVotes) * 100);
+
+                                    return (
+                                        <button
+                                            key={i}
+                                            onClick={() => onVote?.(i)}
+                                            className="w-full relative bg-white border border-slate-200 rounded-xl p-3 overflow-hidden hover:border-teal-500 transition-all"
+                                        >
+                                            <div
+                                                className="absolute left-0 top-0 h-full bg-teal-100"
+                                                style={{ width: `${percentage}%` }}
+                                            />
+                                            <div className="relative flex justify-between text-xs font-bold uppercase">
+                                                <span>{option.text}</span>
+                                                <span>{percentage}%</span>
+                                            </div>
+                                        </button>
+                                    );
+                                })}
                             </div>
                         )}
                     </div>
@@ -281,7 +297,7 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({ activity, onLike, on
 
     return (
         <div className="bg-white rounded-[2rem] p-8 shadow-sm border border-slate-100 space-y-6 transition-all relative">
-            
+
             {showDeleteModal && (
                 <div className="fixed inset-0 w-full h-full z-[9999] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 overflow-hidden">
                     <div className="bg-white rounded-[3rem] p-10 max-w-sm w-full shadow-2xl border border-slate-100 text-center animate-in zoom-in-95 duration-300 relative">
@@ -293,14 +309,14 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({ activity, onLike, on
                             Estás a punto de borrar permanentemente esta actividad de tu feed.
                         </p>
                         <div className="flex gap-4">
-                            <button 
-                                onClick={() => setShowDeleteModal(false)} 
+                            <button
+                                onClick={() => setShowDeleteModal(false)}
                                 className="flex-1 py-3 font-black text-slate-400 uppercase text-[10px] tracking-widest hover:text-slate-600 transition-colors"
                             >
                                 Cancelar
                             </button>
-                            <button 
-                                onClick={confirmDelete} 
+                            <button
+                                onClick={confirmDelete}
                                 className="flex-1 py-3 bg-slate-900 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg shadow-slate-200 hover:bg-rose-600 hover:shadow-rose-100 transition-all"
                             >
                                 Eliminar

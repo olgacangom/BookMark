@@ -5,10 +5,13 @@ import {
     Search, Clock, CheckCircle, Plus,
     BookMarked, Edit2, Trash2, AlertTriangle, Sparkles, Star,
     BookOpen, StickyNote, LayoutGrid, List, SlidersHorizontal,
-    ChevronDown, X
+    ChevronDown, X,
+    AlertCircle,
+    Check
 } from 'lucide-react';
 import { BookFormData } from '../../books/schemas/books.shema';
 import { BookNotes } from './BooksNotes';
+
 
 export const LibraryView = () => {
     const [books, setBooks] = useState<Book[]>([]);
@@ -23,6 +26,9 @@ export const LibraryView = () => {
     const [selectedBook, setSelectedBook] = useState<Book | null>(null);
     const [isNotesOpen, setIsNotesOpen] = useState(false);
     const [isFilterOpen, setIsFilterOpen] = useState(false);
+
+    const [feedback, setFeedback] = useState({ isOpen: false, type: 'success', title: '', message: '' });
+
 
     const loadData = useCallback(async () => {
         setLoading(true);
@@ -59,31 +65,56 @@ export const LibraryView = () => {
         </div>
     );
 
-    return (
-        <div className="min-h-screen bg-[#F8FAFB] font-sans text-slate-900 pb-20">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    const FeedbackModal = ({ isOpen, onClose, type, title, message }: any) => {
+        if (!isOpen) return null;
+        const isSuccess = type === 'success';
 
-                {/* HEADER */}
-                <div className="mb-10">
-                    <h1 className="text-3xl font-black text-slate-900 tracking-tight mb-1">Mi Biblioteca</h1>
-                    <p className="text-slate-400 text-sm font-medium tracking-tight">Tu catálogo personal de libros.</p>
+        return (
+            <div className="fixed inset-0 z-[400] flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4 animate-in fade-in duration-300 text-center">
+                <div className="bg-white rounded-[2rem] md:rounded-[3rem] p-6 md:p-10 max-w-sm w-full shadow-2xl border-4 md:border-8 border-white animate-in zoom-in-95 relative">
+                    <button onClick={onClose} className="absolute top-6 right-6 text-slate-300 hover:text-slate-500 transition-colors">
+                        <X size={20} />
+                    </button>
+                    <div className={`w-16 h-16 md:w-20 md:h-20 rounded-[1.5rem] md:rounded-[2rem] flex items-center justify-center mx-auto mb-6 shadow-lg ${isSuccess ? 'bg-teal-500 shadow-teal-100' : 'bg-rose-500 shadow-rose-100'}`}>
+                        {isSuccess ? <Check size={32} className="text-white" strokeWidth={3} /> : <AlertCircle size={32} className="text-white" strokeWidth={3} />}
+                    </div>
+                    <h3 className={`text-xl md:text-2xl font-black mb-2 uppercase tracking-tighter leading-none ${isSuccess ? 'text-slate-900' : 'text-rose-600'}`}>
+                        {title}
+                    </h3>
+                    <p className="text-slate-500 text-xs md:text-sm mb-8 font-medium leading-relaxed">{message}</p>
+                    <button onClick={onClose} className={`w-full py-4 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-xl transition-all active:scale-95 ${isSuccess ? 'bg-slate-900 hover:bg-teal-600' : 'bg-teal-600 hover:bg-rose-700'}`}>
+                        Entendido
+                    </button>
+                </div>
+            </div>
+        );
+    };
+
+    return (
+        <div className="font-sans text-slate-900 pb-6 md:pb-10">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <div className="flex items-center gap-5 mb-6">
+                    <div>
+                        <h1 className="text-2xl md:text-3xl font-black tracking-tighter text-slate-900 italic uppercase">
+                            Mi <span className="text-teal-600 font-serif">Biblioteca</span>
+                        </h1>
+                    </div>
                 </div>
 
-                {/* STAT CARDS */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 mb-12">
-                    <StatCard label="Total" value={books.length} icon={<BookMarked size={18}/>} color="bg-teal-500" />
-                    <StatCard label="Leyendo" value={books.filter(b => b.status === 'Reading').length} icon={<BookOpen size={18}/>} color="bg-sky-500" />
-                    <StatCard label="Completados" value={books.filter(b => b.status === 'Read').length} icon={<CheckCircle size={18}/>} color="bg-indigo-500" />
-                    <StatCard label="Pendientes" value={books.filter(b => b.status === 'Want to Read').length} icon={<Clock size={18}/>} color="bg-orange-500" />
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-5 mb-8 md:mb-12">
+                    <StatCard label="Total" value={books.length} icon={<BookMarked size={18} />} color="bg-teal-500" />
+                    <StatCard label="Leyendo" value={books.filter(b => b.status === 'Reading').length} icon={<BookOpen size={18} />} color="bg-sky-500" />
+                    <StatCard label="Completados" value={books.filter(b => b.status === 'Read').length} icon={<CheckCircle size={18} />} color="bg-indigo-500" />
+                    <StatCard label="Pendientes" value={books.filter(b => b.status === 'Want to Read').length} icon={<Clock size={18} />} color="bg-orange-500" />
                 </div>
 
                 {/* FILTROS TABS */}
-                <div className="flex items-center gap-2 mb-8 bg-slate-200/40 p-1.5 rounded-2xl w-fit">
-                    {["todos", "Reading", "Read", "Want to Read"].map((status) => (
+                <div className="overflow-x-auto no-scrollbar pb-2 -mx-4 px-4 mb-8">
+                    <div className="flex items-center gap-2 bg-slate-200/40 p-1.5 rounded-2xl w-max min-w-full md:min-w-0 md:w-fit">                    {["todos", "Reading", "Read", "Want to Read"].map((status) => (
                         <button
                             key={status}
                             onClick={() => setFilterStatus(status)}
-                            className={`px-6 py-2 rounded-xl font-bold text-[10px] uppercase tracking-widest transition-all ${filterStatus === status
+                            className={`shrink-0 px-4 md:px-6 py-2 rounded-xl font-bold text-[10px] uppercase tracking-widest transition-all ${filterStatus === status
                                 ? "bg-[#1A535C] text-white shadow-md"
                                 : "text-slate-500 hover:text-[#1A535C]"
                                 }`}
@@ -91,6 +122,7 @@ export const LibraryView = () => {
                             {status === 'todos' ? 'Todos' : status === 'Reading' ? 'Leyendo' : status === 'Read' ? 'Completados' : 'Pendientes'}
                         </button>
                     ))}
+                    </div>
                 </div>
 
                 {/* BARRA DE BÚSQUEDA Y ACCIONES */}
@@ -103,13 +135,12 @@ export const LibraryView = () => {
                                 placeholder="Buscar por título o autor"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pl-11 pr-4 py-3.5 bg-white border border-slate-100 rounded-2xl text-sm focus:ring-4 focus:ring-teal-500/5 transition-all outline-none shadow-sm"
-                            />
+                                className="w-full bg-white border border-slate-200 rounded-2xl py-4 pl-14 pr-6 text-sm shadow-sm focus:ring-4 focus:ring-teal-500/5 focus:border-teal-500/20 transition-all outline-none font-medium placeholder:text-slate-400" />
                         </div>
 
                         {/* DESPLEGABLE DE FILTROS FUNCIONAL */}
                         <div className="relative">
-                            <button 
+                            <button
                                 onClick={() => setIsFilterOpen(!isFilterOpen)}
                                 className={`flex items-center gap-2 px-5 py-3.5 bg-white border border-slate-100 rounded-2xl text-slate-600 font-bold text-xs hover:bg-slate-50 transition-all shadow-sm ${isFilterOpen ? 'border-teal-500 ring-2 ring-teal-500/10' : ''}`}
                             >
@@ -121,9 +152,9 @@ export const LibraryView = () => {
                             {isFilterOpen && (
                                 <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-2xl shadow-xl border border-slate-100 z-50 p-2 animate-in fade-in slide-in-from-top-2">
                                     <p className="px-3 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 mb-1">Ordenar por</p>
-                                    <button onClick={() => {setSortBy('recent'); setIsFilterOpen(false)}} className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold ${sortBy === 'recent' ? 'bg-teal-50 text-teal-600' : 'text-slate-600 hover:bg-slate-50'}`}>Más recientes</button>
-                                    <button onClick={() => {setSortBy('title'); setIsFilterOpen(false)}} className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold ${sortBy === 'title' ? 'bg-teal-50 text-teal-600' : 'text-slate-600 hover:bg-slate-50'}`}>Título (A-Z)</button>
-                                    <button onClick={() => {setSortBy('author'); setIsFilterOpen(false)}} className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold ${sortBy === 'author' ? 'bg-teal-50 text-teal-600' : 'text-slate-600 hover:bg-slate-50'}`}>Autor</button>
+                                    <button onClick={() => { setSortBy('recent'); setIsFilterOpen(false) }} className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold ${sortBy === 'recent' ? 'bg-teal-50 text-teal-600' : 'text-slate-600 hover:bg-slate-50'}`}>Más recientes</button>
+                                    <button onClick={() => { setSortBy('title'); setIsFilterOpen(false) }} className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold ${sortBy === 'title' ? 'bg-teal-50 text-teal-600' : 'text-slate-600 hover:bg-slate-50'}`}>Título (A-Z)</button>
+                                    <button onClick={() => { setSortBy('author'); setIsFilterOpen(false) }} className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold ${sortBy === 'author' ? 'bg-teal-50 text-teal-600' : 'text-slate-600 hover:bg-slate-50'}`}>Autor</button>
                                 </div>
                             )}
                         </div>
@@ -132,22 +163,21 @@ export const LibraryView = () => {
                     <div className="flex items-center gap-3 w-full md:w-auto">
                         <button
                             onClick={() => { setSelectedBook(null); setIsModalOpen(true); }}
-                            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-8 py-3.5 bg-[#1A535C] text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-[#14424a] transition-all shadow-lg shadow-teal-900/20 active:scale-95"
+                            className="bg-slate-900 text-white px-4.5 py-3.5 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-teal-600 transition-all shadow-xl active:scale-95 flex items-center gap-2"
                         >
-                            <Plus size={18} strokeWidth={3} />
-                            <span>Añadir libro</span>
+                            <Plus size={16} strokeWidth={3} /> Añadir libro
                         </button>
-                        
+
                         {/* SELECTOR DE CUADRÍCULA */}
                         <div className="flex items-center bg-white border border-slate-100 rounded-2xl p-1 shadow-sm h-[52px]">
-                            <button 
-                                onClick={() => setGridCols(6)} 
+                            <button
+                                onClick={() => setGridCols(6)}
                                 className={`p-2.5 rounded-xl transition-all ${gridCols === 6 ? 'bg-teal-50 text-teal-600 shadow-inner' : 'text-slate-300 hover:text-slate-400'}`}
                             >
                                 <LayoutGrid size={20} />
                             </button>
-                            <button 
-                                onClick={() => setGridCols(4)} 
+                            <button
+                                onClick={() => setGridCols(4)}
                                 className={`p-2.5 rounded-xl transition-all ${gridCols === 4 ? 'bg-teal-50 text-teal-600 shadow-inner' : 'text-slate-300 hover:text-slate-400'}`}
                             >
                                 <List size={20} />
@@ -158,7 +188,7 @@ export const LibraryView = () => {
 
                 {/* GRID DE LIBROS */}
                 {filteredBooks.length > 0 ? (
-                    <div className={`grid gap-x-6 gap-y-10 ${gridCols === 6 ? 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6' : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4'}`}>
+                    <div className={`grid gap-x-6 gap-y-10 ${gridCols === 6 ? 'grid-cols-3 md:grid-cols-5 lg:grid-cols-6' : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4'}`}>
                         {filteredBooks.map((book) => (
                             <BookCard
                                 key={book.id}
@@ -187,9 +217,20 @@ export const LibraryView = () => {
                 onClose={() => { setIsModalOpen(false); setSelectedBook(null); }}
                 onSuccess={loadData}
                 createBook={async (data: BookFormData) => {
-                    if (selectedBook) return await bookService.update(selectedBook.id, data as any);
+                    if (selectedBook) {
+                        return await bookService.update(selectedBook.id, data as any);
+                    }
+
                     return await bookService.create(data as any);
                 }}
+                onError={(message) =>
+                    setFeedback({
+                        isOpen: true,
+                        type: 'error',
+                        title: 'Libro duplicado',
+                        message
+                    })
+                }
             />
 
             <ConfirmDeleteModal
@@ -205,6 +246,14 @@ export const LibraryView = () => {
                 }}
             />
 
+            <FeedbackModal
+                isOpen={feedback.isOpen}
+                onClose={() => setFeedback({ ...feedback, isOpen: false })}
+                type={feedback.type}
+                title={feedback.title}
+                message={feedback.message}
+            />
+
             {isNotesOpen && selectedBook && (
                 <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
                     <div className="bg-[#F8FAFB] rounded-[3.5rem] w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col shadow-2xl border-[12px] border-white animate-in zoom-in-95">
@@ -213,7 +262,7 @@ export const LibraryView = () => {
                                 <h3 className="font-black text-slate-900 uppercase text-lg leading-tight tracking-tight">{selectedBook.title}</h3>
                                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Notas Personales</p>
                             </div>
-                            <button onClick={() => setIsNotesOpen(false)} className="w-10 h-10 flex items-center justify-center bg-slate-50 text-slate-400 hover:text-slate-900 rounded-full transition-colors"><X size={20}/></button>
+                            <button onClick={() => setIsNotesOpen(false)} className="w-10 h-10 flex items-center justify-center bg-slate-50 text-slate-400 hover:text-slate-900 rounded-full transition-colors"><X size={20} /></button>
                         </div>
                         <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
                             <BookNotes bookId={selectedBook.id} />
@@ -238,11 +287,11 @@ const StatCard = ({ label, value, icon, color }: { label: string, value: number,
     </div>
 );
 
-const BookCard = ({ book, onEdit, onDelete, onOpenNotes }: { 
-    book: Book, 
-    onEdit: () => void, 
-    onDelete: (e: React.MouseEvent) => void, 
-    onOpenNotes: (b: Book) => void 
+const BookCard = ({ book, onEdit, onDelete, onOpenNotes }: {
+    book: Book,
+    onEdit: () => void,
+    onDelete: (e: React.MouseEvent) => void,
+    onOpenNotes: (b: Book) => void
 }) => {
     const ratingValue = (book as any).rating || 0;
     return (
@@ -253,22 +302,31 @@ const BookCard = ({ book, onEdit, onDelete, onOpenNotes }: {
                 ) : (
                     <div className="w-full h-full flex items-center justify-center bg-slate-100 text-slate-300 font-black text-4xl">{book.title.charAt(0)}</div>
                 )}
-                
+
                 <div className="absolute top-4 right-4">
                     {book.status === "Reading" && <div className="w-8 h-8 bg-sky-500 rounded-full flex items-center justify-center border-2 border-white shadow-lg"><Clock size={14} className="text-white" /></div>}
                     {book.status === "Read" && <div className="w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center border-2 border-white shadow-lg"><CheckCircle size={14} className="text-white" /></div>}
                     {book.status === "Want to Read" && <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center border-2 border-white shadow-lg"><Sparkles size={14} className="text-white" /></div>}
                 </div>
 
-                <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col justify-end p-5 gap-2.5">
-                    <div className="flex gap-2">
-                        <button onClick={onEdit} className="flex-1 bg-white text-slate-900 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-tighter hover:bg-teal-50 transition-all flex items-center justify-center gap-1.5"><Edit2 size={12}/> Editar</button>
-                        <button onClick={() => onOpenNotes(book)} className="flex-1 bg-[#1A535C] text-white py-2.5 rounded-xl text-[10px] font-black uppercase tracking-tighter hover:bg-[#14424a] flex items-center justify-center gap-1.5"><StickyNote size={12}/> Notas</button>
+                <div
+                    className="absolute inset-0 bg-slate-900/25 backdrop-blur-[0px] flex flex-col justify-end p-4 gap-2.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all duration-300"
+                >
+                    <div className="flex gap-3">
+                        <button onClick={onEdit} className="w-8 h-8 bg-white rounded-full flex items-center justify-center shadow">
+                            <Edit2 size={14} />
+                        </button>
+                        <button onClick={() => onOpenNotes(book)} className="w-8 h-8 bg-teal-600 text-white rounded-full flex items-center justify-center shadow">
+                            <StickyNote size={14} />
+                        </button>
+                        <button onClick={onDelete} className="w-8 h-8 bg-rose-500 text-white rounded-full flex items-center justify-center shadow">
+                            <Trash2 size={14} />
+                        </button>
                     </div>
-                    <button onClick={onDelete} className="w-full bg-rose-500 text-white py-2.5 rounded-xl text-[10px] font-black uppercase tracking-tighter hover:bg-rose-600 transition-all flex items-center justify-center gap-1.5"><Trash2 size={12}/> Eliminar</button>
+
                 </div>
             </div>
-            
+
             <div className="px-2">
                 <h3 className="font-black text-slate-800 text-[11px] mb-0.5 line-clamp-2 uppercase leading-tight tracking-tight group-hover:text-teal-600 transition-colors">{book.title}</h3>
                 <p className="text-[10px] text-slate-400 font-bold mb-3 truncate">{book.author}</p>
@@ -282,6 +340,8 @@ const BookCard = ({ book, onEdit, onDelete, onOpenNotes }: {
                 </div>
             </div>
         </div>
+
+
     );
 };
 
@@ -301,5 +361,7 @@ const ConfirmDeleteModal = ({ isOpen, title, onClose, onConfirm }: { isOpen: boo
                 </div>
             </div>
         </div>
+
     );
 };
+

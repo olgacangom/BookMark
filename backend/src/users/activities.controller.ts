@@ -8,11 +8,15 @@ import {
   Body,
   Patch,
   Delete,
+  Req,
 } from '@nestjs/common';
 import { ActivitiesService } from './activities.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CreateActivityDto } from './dto/create-activity.dto';
 import { UpdateActivityDto } from './dto/update-activity.dto';
+import { UserRole } from './entities/user.entity';
+import { Roles } from './roles/roles.decorator';
+import { RolesGuard } from './roles/roles.guard';
 
 interface RequestWithUser {
   user: {
@@ -21,8 +25,9 @@ interface RequestWithUser {
   };
 }
 
-@UseGuards(JwtAuthGuard)
 @Controller('activities')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(UserRole.USER)
 export class ActivitiesController {
   constructor(private readonly activitiesService: ActivitiesService) {}
 
@@ -76,5 +81,14 @@ export class ActivitiesController {
     @Request() req: RequestWithUser,
   ) {
     return this.activitiesService.ignoreActivity(req.user.id, id);
+  }
+
+  @Post(':id/vote')
+  votePoll(
+    @Param('id') id: string,
+    @Body() body: { optionIndex: number },
+    @Req() req: RequestWithUser,
+  ) {
+    return this.activitiesService.votePoll(id, req.user.id, body.optionIndex);
   }
 }

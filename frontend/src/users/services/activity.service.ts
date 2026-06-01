@@ -18,27 +18,50 @@ export interface Comment {
     };
 }
 
+export interface PollOption {
+    text: string;
+    votes: number;
+}
+
+export interface Poll {
+    options: PollOption[];
+}
+
 export interface Activity {
     id: string;
     type: ActivityType;
     createdAt: string;
+
     user: {
         id: string;
         fullName: string;
         avatarUrl?: string;
     };
+
     likesCount: number;
     isLiked: boolean;
+
     commentsCount: number;
     comments: Comment[];
-    content?: string;      // Texto del post
-    imageUrl?: string;     // Imagen del post
-    pollOptions?: string[]; // Opciones de la encuesta
+
+    content?: string;
+    imageUrl?: string;
+
+    poll?: {
+        options: {
+            text: string;
+            votes: number;
+        }[];
+    };
+
+    selectedPollOption?: number | null;
+
     targetUser?: {
         id: string;
         fullName: string;
         avatarUrl?: string;
     };
+
     targetBook?: {
         id: number;
         title: string;
@@ -54,12 +77,7 @@ export const activityService = {
         return data;
     },
 
-    createActivity: async (payload: {
-        content: string,
-        imageUrl?: string | null,
-        bookId?: number | null,
-        pollOptions?: string[] | null
-    }): Promise<Activity> => {
+    createActivity: async (payload: any): Promise<Activity> => {
         const { data } = await api.post<Activity>('/activities', payload);
         return data;
     },
@@ -69,11 +87,21 @@ export const activityService = {
         payload: {
             content: string;
             imageUrl?: string | null;
-            pollOptions?: string[] | null;
+            poll?: {
+                options: {
+                    text: string;
+                    votes: number;
+                }[];
+            };
+
+            selectedPollOption?: number | null;
             bookId?: number | null;
         }
     ): Promise<Activity> => {
-        const { data } = await api.patch<Activity>(`/activities/${id}`, payload);
+        const { data } = await api.patch<Activity>(
+            `/activities/${id}`,
+            payload
+        );
         return data;
     },
 
@@ -81,17 +109,36 @@ export const activityService = {
         await api.delete(`/activities/${id}`);
     },
 
-    toggleLike: async (activityId: string): Promise<{ liked: boolean, count: number }> => {
-        const { data } = await api.post(`/activities/${activityId}/like`);
+    toggleLike: async (
+        activityId: string
+    ): Promise<{ liked: boolean; count: number }> => {
+        const { data } = await api.post(
+            `/activities/${activityId}/like`
+        );
         return data;
     },
 
-    addComment: async (activityId: string, text: string): Promise<any> => {
-        const { data } = await api.post(`/activities/${activityId}/comments`, { text });
+    addComment: async (
+        activityId: string,
+        text: string
+    ): Promise<any> => {
+        const { data } = await api.post(
+            `/activities/${activityId}/comments`,
+            { text }
+        );
         return data;
     },
 
-    ignoreActivity: async (activityId: string): Promise<void> => {
-        await api.post(`/activities/${activityId}/ignore`);
+    ignoreActivity: async (
+        activityId: string
+    ): Promise<void> => {
+        await api.post(
+            `/activities/${activityId}/ignore`
+        );
+    },
+
+    votePoll: async (activityId: string, optionIndex: number): Promise<Activity> => {
+        const { data } = await api.post<Activity>(`/activities/${activityId}/vote`, { optionIndex });
+        return data;
     }
 };

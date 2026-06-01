@@ -1,92 +1,115 @@
 import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { X, Store, Tag, Check } from 'lucide-react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { X, Tag, Check, BookPlus } from 'lucide-react';
+import { BookFormData, bookSchema, BOOK_GENRES } from '../../books/schemas/books.shema';
 
 interface Props {
     isOpen: boolean;
     onClose: () => void;
-    book: any; 
-    onConfirm: (data: { price: number; inStock: boolean }) => void;
+    book: any;
+    onConfirm: (data: BookFormData) => void;
     isEditing?: boolean;
 }
 
 export const AddStoreBookModal: React.FC<Props> = ({ isOpen, onClose, book, onConfirm, isEditing = false }) => {
-    const { register, handleSubmit, reset } = useForm({
-        defaultValues: { price: 0, inStock: true }
+    const { register, handleSubmit, reset, watch } = useForm<BookFormData>({
+        resolver: zodResolver(bookSchema),
+        defaultValues: { price: 0, inStock: true, pageCount: 0 }
     });
 
+    const currentPortada = watch('urlPortada');
+
     useEffect(() => {
-        if (isOpen) {
-            if (isEditing && book) {
-                reset({
-                    price: Number(book.price),
-                    inStock: book.inStock
-                });
-            } else {
-                reset({ price: 0, inStock: true });
-            }
+        if (isOpen && book) {
+            const b = isEditing ? book.book : book;
+            reset({
+                title: b.title,
+                author: b.author,
+                genre: b.genre || '',
+                description: b.description || '',
+                pageCount: b.pageCount || 0,
+                urlPortada: b.urlPortada || '',
+                isbn: b.isbn || '',
+                price: Number(book.price || 0),
+                inStock: book.inStock ?? true,
+                status: b.status || 'Read'
+            });
         }
-    }, [isOpen, book, reset, isEditing]);
+    }, [isOpen, book, isEditing, reset]);
 
     if (!isOpen || !book) return null;
 
-    const displayBook = isEditing ? book.book : book;
-
     return (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-in fade-in duration-300 text-left">
-            <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden border border-slate-100 animate-in zoom-in-95">
-                
+            <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-2xl overflow-hidden border border-slate-200 animate-in zoom-in-95">
+
                 <header className="px-8 py-6 border-b border-slate-50 flex justify-between items-center bg-teal-600 text-white">
-                    <div className="flex items-center gap-3">
-                        <Store size={20} />
-                        <h2 className="text-lg font-bold uppercase tracking-tight">
-                            {isEditing ? 'Editar Existencias' : 'Añadir al Inventario'}
-                        </h2>
-                    </div>
-                    <button onClick={onClose} className="p-2 hover:bg-white/20 rounded-full transition-colors"><X size={20}/></button>
+                    <h2 className="text-xl font-black uppercase tracking-tight flex items-center gap-3">
+                        {isEditing ? <Check size={24} /> : <BookPlus size={24} />}
+                        {isEditing ? 'Editar Inventario' : 'Añadir al Inventario'}
+                    </h2>
+                    <button onClick={onClose} className="p-2 hover:bg-white/20 rounded-full transition-colors"><X size={20} /></button>
                 </header>
 
-                <div className="p-8">
-                    <div className="flex items-center gap-4 mb-8 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                        <img src={displayBook.urlPortada} className="w-12 h-16 object-cover rounded-lg shadow-sm" alt="" />
-                        <div>
-                            <p className="font-bold text-slate-800 text-sm leading-tight">{displayBook.title}</p>
-                            <p className="text-[10px] text-slate-400 font-bold uppercase">{displayBook.author}</p>
+                <form onSubmit={handleSubmit(onConfirm)} className="p-8 space-y-6 max-h-[75vh] overflow-y-auto custom-scrollbar">
+
+                    <div className="flex gap-6">
+                        <div className="w-24 aspect-[2/3] bg-slate-100 rounded-xl border border-slate-200 overflow-hidden shadow-inner shrink-0">
+                            {currentPortada ? <img src={currentPortada} className="w-full h-full object-cover" alt="portada" /> : <div className="h-full flex items-center justify-center text-[8px] font-black text-slate-300">SIN FOTO</div>}
+                        </div>
+                        <div className="flex-1 space-y-4">
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-bold text-slate-400 uppercase">Título</label>
+                                <input {...register('title')} required className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-2 text-sm font-bold" />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-bold text-slate-400 uppercase">Autor</label>
+                                <input {...register('author')} required className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-2 text-sm font-bold" />
+                            </div>
                         </div>
                     </div>
 
-                    <form onSubmit={handleSubmit(onConfirm)} className="space-y-6">
+                    <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1">
-                            <label className="text-[10px] font-black text-teal-600 uppercase ml-2 tracking-widest">Precio de Venta (€)</label>
-                            <div className="relative">
-                                <Tag className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={16} />
-                                <input 
-                                    type="number" 
-                                    step="0.01"
-                                    {...register('price', { required: true, min: 0 })}
-                                    className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:border-teal-500 outline-none font-bold text-slate-700"
-                                    placeholder="0.00"
-                                />
-                            </div>
+                            <label className="text-[10px] font-bold text-slate-400 uppercase">URL Portada</label>
+                            <input {...register('urlPortada')} className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-sm font-bold" />
                         </div>
-
-                        <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                            <div>
-                                <p className="text-xs font-black text-slate-700 uppercase">Stock disponible</p>
-                                <p className="text-[10px] text-slate-400 font-medium italic">¿Disponible para compra hoy?</p>
-                            </div>
-                            <input 
-                                type="checkbox" 
-                                {...register('inStock')}
-                                className="w-6 h-6 rounded-lg border-slate-200 text-teal-600"
-                            />
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-black text-slate-400 uppercase ml-2">Género</label>
+                            <select {...register('genre')} className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-sm font-bold">
+                                <option value="">Varios...</option>
+                                {BOOK_GENRES.map(g => <option key={g} value={g}>{g}</option>)}
+                            </select>
                         </div>
+                    </div>
 
-                        <button type="submit" className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl hover:bg-teal-600 transition-all flex items-center justify-center gap-2">
-                            <Check size={18} /> {isEditing ? 'Guardar Cambios' : 'Confirmar Alta'}
-                        </button>
-                    </form>
-                </div>
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-black text-slate-400 uppercase ml-2">Páginas</label>
+                        <input type="number" {...register('pageCount', { valueAsNumber: true })} className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-sm font-bold" />
+                    </div>
+
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-black text-slate-400 uppercase ml-2">Descripción</label>
+                        <textarea {...register('description')} rows={3} className="w-full bg-slate-50 border border-slate-100 rounded-xl p-4 text-sm font-medium" />
+                    </div>
+
+                    {/* PRECIO Y STOCK */}
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-100">
+                            <label className="text-[10px] font-black text-emerald-700 uppercase block mb-1"><Tag size={12} className="inline" /> Precio (€)</label>
+                            <input type="number" step="0.01" {...register('price', { valueAsNumber: true })} required className="w-full bg-white border border-emerald-200 rounded-xl px-4 py-2 font-black" />
+                        </div>
+                        <div className="p-4 bg-teal-50 rounded-2xl border border-teal-100 flex items-center justify-between">
+                            <span className="text-[10px] font-black text-teal-700 uppercase">En Stock</span>
+                            <input type="checkbox" {...register('inStock')} className="w-6 h-6 rounded border-teal-300 text-teal-600" />
+                        </div>
+                    </div>
+
+                    <button type="submit" className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase hover:bg-teal-600 transition-all">
+                        {isEditing ? 'Guardar Cambios' : 'Confirmar Alta'}
+                    </button>
+                </form>
             </div>
         </div>
     );

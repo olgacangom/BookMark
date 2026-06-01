@@ -6,7 +6,6 @@ import api from '../../services/api';
 export const CreateEventModal = ({ isOpen, onClose, onSuccess, eventToEdit = null }: any) => {
     const { register, handleSubmit, reset } = useForm();
     const isEditing = !!eventToEdit;
-
     const now = new Date().toISOString().slice(0, 16);
 
     useEffect(() => {
@@ -45,33 +44,72 @@ export const CreateEventModal = ({ isOpen, onClose, onSuccess, eventToEdit = nul
                             {isEditing ? 'Editar Quedada' : 'Nuevo Evento'}
                         </h2>
                     </div>
-                    <button onClick={onClose} className="p-2 hover:bg-white/20 rounded-full transition-colors"><X size={20}/></button>
+                    <button onClick={onClose} className="p-2 hover:bg-white/20 rounded-full transition-colors"><X size={20} /></button>
                 </header>
 
                 <form onSubmit={handleSubmit(onSubmit)} className="p-8 space-y-5">
                     <div className="space-y-1">
+                        <label className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest">URL de la imagen (Opcional)</label>
+                        <input
+                            {...register('imageUrl')}
+                            className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl focus:border-teal-500 outline-none font-medium text-sm"
+                            placeholder="https://ejemplo.com/foto.jpg"
+                        />
+                    </div>
+                    <div className="space-y-1">
                         <label className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest">Título</label>
-                        <input {...register('title', { required: true })} className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl focus:border-teal-500 outline-none font-bold text-slate-700" placeholder="Nombre de la quedada..." />
+                        <input
+                            {...register('title', {
+                                required: true,
+                                onChange: (e) => {
+                                    if (e.target.value.length > 50) {
+                                        e.target.value = e.target.value.slice(0, 50);
+                                    }
+                                }
+                            })}
+                            required
+                            className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl focus:border-teal-500 outline-none font-bold text-slate-700"
+                            placeholder="Nombre de la quedada..."
+                        />
                     </div>
 
                     <div className="space-y-1">
                         <label className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest">Descripción</label>
-                        <textarea {...register('description', { required: true })} rows={3} className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl focus:border-teal-500 outline-none font-medium text-sm" placeholder="¿Qué haremos?" />
+                        <textarea
+                            {...register('description', {
+                                required: true,
+                                onChange: (e) => {
+                                    if (e.target.value.length > 150) {
+                                        e.target.value = e.target.value.slice(0, 150);
+                                    }
+                                }
+                            })}
+                            required
+                            rows={3}
+                            className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl focus:border-teal-500 outline-none font-medium text-sm"
+                            placeholder="¿Qué haremos?"
+                        />
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1">
                             <label className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest">Fecha y Hora</label>
-                            <input 
-                                type="datetime-local" 
+                            <input
+                                type="datetime-local"
                                 min={now}
-                                {...register('eventDate', { required: true })} 
-                                className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl focus:border-teal-500 outline-none text-sm font-bold" 
+                                {...register('eventDate', { required: true })}
+                                required
+                                className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl focus:border-teal-500 outline-none text-sm font-bold"
                             />
                         </div>
                         <div className="space-y-1">
                             <label className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest">Aforo</label>
-                            <input type="number" {...register('maxCapacity')} className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl focus:border-teal-500 outline-none text-sm font-bold" placeholder="Personas" />
+                            <input
+                                type="number" {...register('maxCapacity')}
+                                min="0"
+                                required
+                                className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl focus:border-teal-500 outline-none text-sm font-bold"
+                                placeholder="Personas" />
                         </div>
                     </div>
 

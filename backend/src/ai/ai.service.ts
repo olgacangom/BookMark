@@ -48,8 +48,16 @@ export class AIService implements OnModuleInit {
            - Si preguntan por CLUBES, usa SOLO [SECCIÓN_CLUBES_UNIDOS] y [SECCIÓN_CLUBES_DISPONIBLES]. Prohibido mencionar eventos.
            - Si preguntan por RECOMENDACIONES, usa SOLO [SECCIÓN_LIBROS_USUARIO] (para no repetir) y [SECCIÓN_MERCADO_GLOBAL]. Prohibido mencionar eventos o clubes.
            - Si preguntan por EVENTOS, usa SOLO las secciones de eventos.
-        2. SALUDO: Sé amable, pero NO menciones el momento del día (prohibido decir "mañana", "tarde", "noche"). Usa "Un placer saludarte" o "Hola".
-        3. FORMATO VISUAL:
+        2. SALUDO: Si el usuario solo dice "gracias" o un saludo, responde brevemente y sin añadir análisis adicional.
+        3. RESPUESTA DIRECTA:
+           - Nunca menciones los nombres de las secciones en la respuesta final.
+           - Si el contexto contiene los valores TOP o MENOS, responde con ellos de forma directa y clara.
+           - No inventes datos ni agregues explicaciones innecesarias.
+        4. MÉTRICAS DE LIBROS:
+           - Si te preguntan por el libro más registrado, el menos registrado o por estadísticas de registros, usa SOLO [SECCIÓN_MERCADO_GLOBAL_TOP] y [SECCIÓN_MERCADO_GLOBAL_MENOS].
+           - Para cualquier pregunta de usuarios, usa SOLO [MÉTRICAS_ADMIN_USUARIO_TOP] y [MÉTRICAS_ADMIN_USUARIO_MENOS].
+           - Si se pregunta por el libro más registrado o el menos registrado, responde con los títulos, autores y totales.
+        5. FORMATO VISUAL:
            - Usa DOBLE SALTO DE LÍNEA entre párrafos.
            - Usa ### para títulos de sección.
            - Usa **negrita** para nombres de libros, clubes y eventos.
@@ -66,8 +74,18 @@ export class AIService implements OnModuleInit {
       );
       const response = result.response;
       return response.text().trim();
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('🔴 ERROR DETALLADO DE GEMINI:', error);
+
+      const err = error as { message?: string; status?: number };
+
+      const message = err?.message || '';
+      const status = err?.status;
+
+      if (status === 429 || message.includes('Quota exceeded')) {
+        return 'Biblios no está disponible temporalmente por límite de cuota. Intenta de nuevo en unos segundos.';
+      }
+
       throw new InternalServerErrorException(
         'Error en la comunicación con Biblios.',
       );

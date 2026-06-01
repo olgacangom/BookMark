@@ -8,7 +8,10 @@ import { json, urlencoded } from 'express';
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-  app.enableCors();
+  app.enableCors({
+    origin: process.env.FRONTEND_URL || 'http://localhost:5173', // Variable en Render
+    credentials: true,
+  });
 
   // Esto evita el error de "Payload Too Large" (a veces se manifiesta como 400)
   app.use(json({ limit: '10mb' }));

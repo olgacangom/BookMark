@@ -26,4 +26,8 @@ export class UpdateUserDto extends PartialType(CreateUserDto) {
   @IsOptional()
   @IsString()
   libraryAddress?: string;
+
+  @IsOptional()
+  @IsString()
+  province?: string;
 }

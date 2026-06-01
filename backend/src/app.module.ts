@@ -19,19 +19,23 @@ import { AIModule } from './ai/ai.module';
     ClubsModule,
     BookstoreModule,
     ChatModule,
+    AuthModule,
+    UsersModule,
+    BooksModule,
+    AIModule,
 
     TypeOrmModule.forRoot({
       type: 'postgres',
       url: process.env.DATABASE_URL,
       autoLoadEntities: true,
       synchronize: true,
+      extra: {
+        statement_timeout: 60000,
+        query_timeout: 60000,
+        connection_timeout_millis: 60000,
+      },
+      poolSize: 10,
     }),
-
-    UsersModule,
-
-    AuthModule,
-    BooksModule,
-    AIModule,
   ],
   controllers: [AppController],
   providers: [AppService],

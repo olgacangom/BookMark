@@ -1,8 +1,9 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import {
     Plus, Users2, X, Loader2,
-    Trash2, AlertTriangle, Search,
-    Sparkles, Star, Rocket
+    Trash2, AlertTriangle,
+    Sparkles, Star, Rocket,
+    Search,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Club, clubsService } from "../../club/service/club.service";
@@ -39,8 +40,11 @@ export const ClubsListView = () => {
 
     const [showModal, setShowModal] = useState(false);
     const [isCreating, setIsCreating] = useState(false);
-    const [newClub, setNewClub] = useState({ name: '', description: '' });
-
+    const [newClub, setNewClub] = useState({
+        name: '',
+        description: '',
+        coverUrl: null as string | null,
+    }); const [selectedClub, setSelectedClub] = useState<Club | null>(null);
     const [deleteModal, setDeleteModal] = useState({ isOpen: false, id: '', name: '' });
 
     const fetchClubs = useCallback(async () => {
@@ -57,16 +61,24 @@ export const ClubsListView = () => {
 
     useEffect(() => { fetchClubs(); }, [fetchClubs]);
 
-    const handleCreateClub = async (e: React.FormEvent) => {
+    const handleSubmitClub = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsCreating(true);
         try {
-            await clubsService.createClub(newClub);
+            if (selectedClub) {
+                await clubsService.updateClub(selectedClub.id, {
+                    ...newClub,
+                    coverUrl: newClub.coverUrl?.trim() || null,
+                });
+            } else {
+                await clubsService.createClub(newClub);
+            }
             setShowModal(false);
-            setNewClub({ name: '', description: '' });
+            setNewClub({ name: '', description: '', coverUrl: null });
+            setSelectedClub(null);
             fetchClubs();
         } catch (error) {
-            console.error("Error al crear club:", error);
+            console.log("Error al guardar el club", error);
         } finally {
             setIsCreating(false);
         }
@@ -77,7 +89,7 @@ export const ClubsListView = () => {
             await clubsService.deleteClub(deleteModal.id);
             setDeleteModal({ ...deleteModal, isOpen: false });
             fetchClubs();
-        } catch { alert("No se pudo eliminar"); }
+        } catch { alert("No se pudo eliminar, hay threads asociados"); }
     };
 
     const getClubIcon = (name: string) => {
@@ -89,31 +101,37 @@ export const ClubsListView = () => {
     };
 
     const filteredClubs = useMemo(() => {
-        return clubs.filter(c =>
-            c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            c.description?.toLowerCase().includes(searchTerm.toLowerCase())
-        );
+        const term = searchTerm.toLowerCase();
+
+        return clubs.filter(c => {
+            const nameMatch = c.name?.toLowerCase().includes(term);
+            const descMatch = c.description?.toLowerCase().includes(term);
+
+            const creatorMatch =
+                c.creator?.fullName?.toLowerCase().includes(term) ||
+                c.creator?.email?.toLowerCase().includes(term);
+
+            return nameMatch || descMatch || creatorMatch;
+        });
     }, [clubs, searchTerm]);
 
     return (
-        <div className="min-h-screen bg-[#F8FAFB] font-sans text-slate-900 pb-24 text-left animate-in fade-in duration-500">           
-            <header className="max-w-7xl mx-auto px-8 mb-10 flex justify-between items-end">
+        <div className="min-h-screen font-sans text-slate-900 pb-24 text-left animate-in fade-in duration-500">
+            <header className="flex justify-between items-start mb-4">
                 <div>
-                    <h1 className="text-4xl font-black text-slate-900 tracking-tight leading-none uppercase italic">
-                        Clubes de <span className="text-teal-600 font-serif">Lectura.</span>
+                    <h1 className="text-2xl md:text-3xl font-black tracking-tighter text-slate-900 italic uppercase">
+                        Clubes de <span className="text-teal-600 font-serif">Lectura</span>
                     </h1>
-                    <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mt-3">Comunidades activas</p>
                 </div>
-                <button 
-                    onClick={() => setShowModal(true)}
-                    className="bg-slate-900 text-white px-8 py-3.5 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-teal-600 transition-all shadow-xl active:scale-95 flex items-center gap-2"
+                <button
+                    onClick={() => { setSelectedClub(null); setNewClub({ name: '', description: '', coverUrl: null }); setShowModal(true); }}
+                    className="bg-slate-900 text-white px-4.5 py-3.5 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-teal-600 transition-all shadow-xl active:scale-95 flex items-center gap-2"
                 >
                     <Plus size={16} strokeWidth={3} /> Fundar club
                 </button>
             </header>
-
-             {/* BARRA DE BÚSQUEDA */}
-            <div className="relative z-5 px-4 py-3 bg-white/50 backdrop-blur-md border-b border-slate-100 mb-8">
+            {/* BARRA DE BÚSQUEDA */}
+            <div className="relative z-5 px-4 py-3 mb-4">
                 <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
                     <div className="relative flex-1 w-full max-w-2xl group">
                         <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-teal-600 transition-colors" size={20} />
@@ -125,7 +143,7 @@ export const ClubsListView = () => {
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                         {searchTerm && (
-                            <button 
+                            <button
                                 onClick={() => setSearchTerm('')}
                                 className="absolute right-4 top-1/2 -translate-y-1/2 p-1 hover:bg-slate-100 rounded-full text-slate-400 transition-colors"
                             >
@@ -145,74 +163,56 @@ export const ClubsListView = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                         {filteredClubs.map((club) => {
                             const memberCount = club.members?.length || 0;
-                                                        
-                            const displayMembers = club.members?.slice(0, 4) || [];
-
                             return (
                                 <div
                                     key={club.id}
-                                    onClick={() => navigate(`/clubs/${club.id}`)}
-                                    className="bg-white rounded-[2.5rem] overflow-hidden border border-slate-100 shadow-sm hover:shadow-2xl transition-all duration-500 group cursor-pointer relative"
+                                    onClick={() => {
+                                        if (user && club.creator?.id === user.id) {
+                                            setSelectedClub(club);
+                                            setNewClub({
+                                                name: club.name,
+                                                description: club.description,
+                                                coverUrl: club.coverUrl || null,
+                                            });
+                                            setShowModal(true);
+                                        } else {
+                                            navigate(`/clubs/${club.id}`);
+                                        }
+                                    }}
+                                    className="bg-white rounded-[2.5rem] overflow-hidden border border-slate-100 shadow-sm hover:shadow-2xl transition-all duration-500 group relative cursor-pointer"
                                 >
+                                    {/* Contenido de la tarjeta */}
                                     <div className="h-44 w-full relative">
                                         <img
                                             src={club.coverUrl || `https://picsum.photos/seed/${club.id}/600/400`}
-                                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                                            alt=""
-                                        />
-                                        <div className="absolute inset-0 bg-slate-900/20" />
+                                            onError={(e: any) => {
+                                                e.target.src = `https://picsum.photos/seed/${club.id}/600/400`;
+                                            }}
+                                            className="w-full h-full object-cover"
+                                            alt={club.name}
+                                        />                                        <div className="absolute inset-0 bg-slate-900/20" />
                                     </div>
-
                                     <div className="absolute top-32 left-1/2 -translate-x-1/2 w-20 h-20 bg-white rounded-full border-[6px] border-white shadow-xl flex items-center justify-center text-slate-800 z-10 group-hover:text-teal-600 transition-colors">
                                         {getClubIcon(club.name)}
                                     </div>
-
                                     <div className="p-8 pt-12 text-center">
-                                        <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight mb-2 group-hover:text-teal-600 transition-colors">
-                                            {club.name}
-                                        </h3>
-                                        <p className="text-slate-400 text-xs italic font-medium mb-8 px-4 line-clamp-1 italic">
-                                            "{club.description}"
-                                        </p>
-
-                                        <div className="flex items-center justify-center gap-8 mb-8">
-                                            <div className="flex flex-col items-center">
-                                                <span className="flex items-center gap-1.5 text-slate-400 font-bold text-[10px] uppercase tracking-widest mb-1">
-                                                    <Users2 size={14} /> {memberCount} {memberCount === 1 ? 'miembro' : 'miembros'}
-                                                </span>
-                                            </div>
-                                        </div>
+                                        <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight mb-2">{club.name}</h3>
+                                        <p className="text-slate-400 text-xs italic font-medium px-4 line-clamp-1 mb-1">"{club.description}"</p>
+                                        <p className="text-[10px] text-teal-600 font-black uppercase tracking-widest mb-6">Creado por: {club.creator?.fullName || 'Desconocido'}</p>
 
                                         <div className="flex justify-center -space-x-2 mb-8 h-8">
-                                            {displayMembers.map((m) => (
-                                                <img
-                                                    key={m.id}
-                                                    className="w-8 h-8 rounded-full border-2 border-white object-cover bg-slate-100 shadow-sm"
-                                                    src={m.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${m.id}`}
-                                                    alt="avatar"
-                                                />
+                                            {club.members?.slice(0, 4).map((m) => (
+                                                <img key={m.id} className="w-8 h-8 rounded-full border-2 border-white object-cover bg-slate-100" src={m.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${m.id}`} alt="avatar" />
                                             ))}
-                                            {memberCount > 4 && (
-                                                <div className="w-8 h-8 rounded-full bg-slate-50 border-2 border-white flex items-center justify-center text-[10px] font-black text-slate-400">
-                                                    +{memberCount - 4}
-                                                </div>
-                                            )}
+                                            {memberCount > 4 && <div className="w-8 h-8 rounded-full bg-slate-50 border-2 border-white flex items-center justify-center text-[10px] font-black text-slate-400">+{memberCount - 4}</div>}
                                         </div>
 
-                                        <div className="flex gap-2">
-                                            <button className="flex-1 py-3.5 border-2 border-slate-200 text-slate-700 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:border-teal-500 hover:text-teal-600 transition-all">
-                                                Entrar al club
-                                            </button>
+                                        <div className="flex justify-center gap-2">
+                                            <button onClick={() => navigate(`/clubs/${club.id}`)} className="flex-1 py-3.5 border-2 border-slate-200 text-slate-700 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:border-teal-500 hover:text-teal-600 transition-all">Entrar al club</button>
                                             {user && club.creator?.id === user.id && (
-                                                <button 
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        setDeleteModal({ isOpen: true, id: club.id, name: club.name });
-                                                    }}
-                                                    className="p-3 bg-rose-50 text-rose-500 rounded-2xl hover:bg-rose-500 hover:text-white transition-all shadow-sm"
-                                                >
-                                                    <Trash2 size={18} />
-                                                </button>
+                                                <>
+                                                    <button onClick={(e) => { e.stopPropagation(); setDeleteModal({ isOpen: true, id: club.id, name: club.name }); }} className="p-3.5 bg-rose-50 text-rose-500 rounded-2xl hover:bg-rose-500 hover:text-white transition-all shadow-sm"><Trash2 size={18} /></button>
+                                                </>
                                             )}
                                         </div>
                                     </div>
@@ -223,37 +223,33 @@ export const ClubsListView = () => {
                 )}
             </main>
 
-            {/* MODAL DE CREACIÓN */}
             {showModal && (
                 <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-md animate-in fade-in" onClick={() => setShowModal(false)} />
-                    <form onSubmit={handleCreateClub} className="bg-white rounded-[3rem] p-10 max-w-lg w-full shadow-2xl relative animate-in zoom-in-95 border-8 border-white text-left">
-                        <button type="button" onClick={() => setShowModal(false)} className="absolute top-8 right-8 text-slate-300 hover:text-slate-900 transition-colors"><X size={24} /></button>
-                        <div className="w-16 h-16 bg-teal-50 rounded-2xl flex items-center justify-center text-teal-600 mb-6"><Plus size={32} strokeWidth={3}/></div>
-                        <h3 className="text-2xl font-black text-slate-900 mb-1 uppercase tracking-tight italic">Fundar un Club</h3>
+                    <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-md" onClick={() => setShowModal(false)} />
+                    <form onSubmit={handleSubmitClub} className="bg-white rounded-[3rem] p-10 max-w-lg w-full shadow-2xl relative animate-in zoom-in-95 border-8 border-white text-left">
+                        <button type="button" onClick={() => { setShowModal(false); setSelectedClub(null); }} className="absolute top-8 right-8 text-slate-300 hover:text-slate-900"><X size={24} /></button>
+                        <h3 className="text-2xl font-black text-slate-900 mb-1 uppercase tracking-tight italic">{selectedClub ? 'Editar Club' : 'Fundar un Club'}</h3>
                         <div className="space-y-6 mt-8">
                             <div>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 mb-2 block">URL Portada</label>
+                                <input value={newClub.coverUrl || ''} onChange={e => setNewClub({ ...newClub, coverUrl: e.target.value })} className="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 text-sm font-bold text-slate-900 outline-none" placeholder="https://..." />
+                            </div>
+                            <div>
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 mb-2 block">Nombre</label>
-                                <input required value={newClub.name} onChange={e => setNewClub({ ...newClub, name: e.target.value })} className="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 text-sm font-bold text-slate-900 focus:bg-white focus:ring-4 focus:ring-teal-500/5 outline-none transition-all" placeholder="Ej: Lectores de Narnia" />
+                                <input required value={newClub.name} onChange={e => setNewClub({ ...newClub, name: e.target.value })} className="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 text-sm font-bold text-slate-900 outline-none" placeholder="Nombre..." />
                             </div>
                             <div>
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 mb-2 block">Descripción</label>
-                                <textarea required value={newClub.description} onChange={e => setNewClub({ ...newClub, description: e.target.value })} className="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 text-sm font-medium text-slate-600 focus:bg-white focus:ring-4 focus:ring-teal-500/5 outline-none transition-all resize-none" placeholder="¿De qué trata este club?" rows={3} />
+                                <textarea required value={newClub.description} onChange={e => setNewClub({ ...newClub, description: e.target.value })} className="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 text-sm font-medium text-slate-600 outline-none resize-none" rows={3} placeholder="¿De qué trata?" />
                             </div>
                         </div>
-                        <button type="submit" disabled={isCreating} className="w-full mt-10 py-5 bg-slate-900 text-white rounded-[2rem] font-black text-xs uppercase tracking-[0.2em] hover:bg-teal-600 transition-all shadow-xl disabled:opacity-50">
-                            {isCreating ? <Loader2 className="animate-spin mx-auto" size={18} /> : "Crear comunidad"}
+                        <button type="submit" disabled={isCreating} className="w-full mt-10 py-5 bg-slate-900 text-white rounded-[2rem] font-black text-xs uppercase tracking-[0.2em] hover:bg-teal-600 transition-all shadow-xl">
+                            {isCreating ? <Loader2 className="animate-spin mx-auto" size={18} /> : (selectedClub ? "Guardar cambios" : "Crear comunidad")}
                         </button>
                     </form>
                 </div>
             )}
-
-            <ConfirmDeleteModal 
-                isOpen={deleteModal.isOpen} 
-                title={deleteModal.name} 
-                onClose={() => setDeleteModal({ ...deleteModal, isOpen: false })} 
-                onConfirm={handleConfirmDelete} 
-            />
+            <ConfirmDeleteModal isOpen={deleteModal.isOpen} title={deleteModal.name} onClose={() => setDeleteModal({ ...deleteModal, isOpen: false })} onConfirm={handleConfirmDelete} />
         </div>
     );
 };

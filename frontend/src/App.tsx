@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { MainLayout } from './layouts/MainLayout';
 import { LoginView } from './pages/auth/LoginView';
@@ -23,42 +23,65 @@ import { LibreroEventsView } from './pages/librero/LibreroEventsView';
 import { SustainabilityView } from './pages/sustainability/SustainabilityView';
 import { EventsView } from './pages/events/EventsView';
 
+const RedirectToDashboard = () => {
+  const { user } = useAuth();
+
+  if (!user) return <Navigate to="/login" replace />;
+
+  if (user.role === 'admin') return <Navigate to="/admin/users" replace />;
+  if (user.role === 'librero') return <Navigate to="/librero/catalog" replace />;
+
+  // Por defecto (lectores)
+  return <Navigate to="/explore" replace />;
+};
+
 function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          {/* --- RUTAS PÚBLICAS  --- */}
+          {/* --- RUTAS PÚBLICAS --- */}
           <Route path="/login" element={<LoginView />} />
           <Route path="/register" element={<RegisterView />} />
           <Route path="/forgot-password" element={<ForgotPasswordView />} />
           <Route path="/reset-password/:token" element={<ResetPasswordView />} />
 
-          {/* --- RUTAS PROTEGIDAS  --- */}
+          {/* --- RUTAS PROTEGIDAS --- */}
           <Route element={<ProtectedRoute />}>
             <Route path="/" element={<MainLayout />}>
-              <Route index element={<Navigate to="/explore" />} />
-              <Route path="library" element={<LibraryView />} />
-              <Route path="explore" element={<ExploreView />} />
-              <Route path="feed" element={<FeedView />} />
-              <Route path="requests" element={<RequestsView />} />
-              <Route path="chat" element={<ChatView />} />
-              <Route path="clubs" element={<ClubsListView />} />
-              <Route path="clubs/:id" element={<ClubDetailsView />} />
-              <Route path="clubs/thread/:threadId" element={<ThreadView />} />
-              <Route path="bookstore" element={<BookstoresMapView />} />
-              <Route path="admin/users" element={<AdminUserListView />} />
-              <Route path="admin/stats" element={<AdminStatsView />} />
-              <Route path="librero/events" element={<LibreroEventsView />} />
-              <Route path="librero/catalog" element={<LibreroCatalogView />} />
-              <Route path="sustainability" element={<SustainabilityView />} />
-              <Route path="events" element={<EventsView />} />
+              <Route index element={<RedirectToDashboard />} />
+
+              {/* Rutas accesibles por TODOS (User, Librero, Admin) */}
               <Route path="myprofile" element={<MyProfileView />} />
+
+              {/* RUTAS SOLO USER */}
+              <Route element={<ProtectedRoute roles={['user']} />}>
+                <Route path="explore" element={<ExploreView />} />
+                <Route path="feed" element={<FeedView />} />
+                <Route path="library" element={<LibraryView />} />
+                <Route path="requests" element={<RequestsView />} />
+                <Route path="clubs" element={<ClubsListView />} />
+                <Route path="clubs/:id" element={<ClubDetailsView />} />
+                <Route path="clubs/thread/:threadId" element={<ThreadView />} />
+                <Route path="bookstore" element={<BookstoresMapView />} />
+                <Route path="sustainability" element={<SustainabilityView />} />
+                <Route path="events" element={<EventsView />} />
+                <Route path="chat" element={<ChatView />} />
+              </Route>
+
+              {/* RUTAS SOLO LIBRERO */}
+              <Route element={<ProtectedRoute roles={['librero']} />}>
+                <Route path="librero/events" element={<LibreroEventsView />} />
+                <Route path="librero/catalog" element={<LibreroCatalogView />} />
+              </Route>
+
+              {/* RUTAS SOLO ADMIN */}
+              <Route element={<ProtectedRoute roles={['admin']} />}>
+                <Route path="admin/users" element={<AdminUserListView />} />
+                <Route path="admin/stats" element={<AdminStatsView />} />
+              </Route>
             </Route>
           </Route>
-
-          {/* Redirección por defecto */}
-          <Route path="*" element={<Navigate to="/explore" />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

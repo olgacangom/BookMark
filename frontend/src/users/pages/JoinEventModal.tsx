@@ -117,11 +117,11 @@ export const JoinEventModal = ({ isOpen, onClose, event, onStatusChange }: any) 
                         </div>
                     </button>
 
-                    {/* Ubicación al final como pie de página */}
+                    {/* Ubicación al final*/}
                     <div className="mt-8 flex items-center justify-center gap-2 py-3 bg-slate-50 rounded-2xl border border-slate-100">
                         <MapPin size={12} className="text-rose-500" />
-                        <p className="text-[12px] font-semibold text-slate-800 uppercase ">
-                            Lugar: {event.organizer?.libraryAddress}
+                        <p className="text-[12px] font-semibold text-slate-800">
+                            LUGAR: {event.organizer?.libraryAddress}, {event.organizer?.province}
                         </p>
                     </div>
                 </div>

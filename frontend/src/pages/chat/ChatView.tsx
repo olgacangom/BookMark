@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useAuth } from '../../context/AuthContext';
 import { Send, User as UserIcon, Search, MessageSquare, ArrowLeft } from 'lucide-react';
+import api from '../../services/api';
 
 interface Message {
     id: string;
@@ -27,16 +28,19 @@ export const ChatView = () => {
     const scrollRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        const newSocket = io('http://localhost:3000');
+        const socketUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+        const newSocket = io(socketUrl);
         setSocket(newSocket);
 
         newSocket.on('new_message', (msg: any) => {
-            if (selectedConv?.id === (msg.conversationId || msg.conversation?.id)) {
+            const conversationId = msg.conversationId || msg.conversation?.id;
+
+            if (selectedConv?.id === conversationId) {
                 setMessages((prev) => [...prev, msg]);
             } else {
-                setConversations((prev) => 
-                    prev.map((c) => 
-                        c.id === (msg.conversationId || msg.conversation?.id)
+                setConversations((prev) =>
+                    prev.map((c) =>
+                        c.id === conversationId
                             ? { ...c, unreadCount: (c.unreadCount || 0) + 1 }
                             : c
                     )
@@ -44,7 +48,9 @@ export const ChatView = () => {
             }
         });
 
-        return () => { newSocket.close(); };
+        return () => {
+            newSocket.close();
+        };
     }, [selectedConv]);
 
     useEffect(() => {
@@ -64,24 +70,20 @@ export const ChatView = () => {
 
     const fetchConversations = async () => {
         try {
-            const token = localStorage.getItem('token');
-            const res = await fetch('http://localhost:3000/chat/conversations', {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            const data = await res.json();
-            setConversations(Array.isArray(data) ? data : []);
-        } catch { setConversations([]); }
+            const res = await api.get('/chat/conversations');
+            setConversations(Array.isArray(res.data) ? res.data : []);
+        } catch {
+            setConversations([]);
+        }
     };
 
     const fetchMessages = async (convId: string) => {
         try {
-            const token = localStorage.getItem('token');
-            const res = await fetch(`http://localhost:3000/chat/messages/${convId}`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            const data = await res.json();
-            setMessages(Array.isArray(data) ? data : []);
-        } catch (e) { console.error(e); }
+            const res = await api.get(`/chat/messages/${convId}`);
+            setMessages(Array.isArray(res.data) ? res.data : []);
+        } catch {
+            setMessages([]);
+        }
     };
 
     const handleSelectConversation = async (conv: Conversation) => {
@@ -89,19 +91,16 @@ export const ChatView = () => {
 
         if (conv.unreadCount && conv.unreadCount > 0) {
             try {
-                const token = localStorage.getItem('token');
-                await fetch(`http://localhost:3000/chat/read/${conv.id}`, {
-                    method: 'PATCH',
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-                
-                setConversations(prev => 
+                await api.patch(`/chat/read/${conv.id}`);
+                setConversations(prev =>
                     prev.map(c => c.id === conv.id ? { ...c, unreadCount: 0 } : c)
                 );
 
                 window.dispatchEvent(new Event('refresh_unread_global'));
 
-            } catch (e) { console.error(e); }
+            } catch (e) {
+                console.error("Error marcando como leída:", e);
+            }
         }
     };
 
@@ -121,7 +120,7 @@ export const ChatView = () => {
 
     return (
         <div className="h-[calc(100vh-10rem)] lg:h-[calc(100vh-8rem)] max-w-6xl mx-auto flex bg-white/80 backdrop-blur-xl rounded-3xl lg:rounded-[3rem] shadow-2xl overflow-hidden border-4 lg:border-8 border-white">
-            
+
             <div className={`w-full lg:w-80 border-r border-slate-100 flex flex-col bg-slate-50/50 ${selectedConv ? 'hidden lg:flex' : 'flex'}`}>
                 <div className="p-6">
                     <h2 className="text-xl font-black text-slate-800 uppercase tracking-tighter mb-4">Mensajes</h2>
@@ -146,7 +145,7 @@ export const ChatView = () => {
                                     <div className="w-12 h-12 rounded-full bg-teal-100 overflow-hidden border-2 border-white shadow-sm">
                                         {other.avatarUrl ? <img src={other.avatarUrl} className="w-full h-full object-cover" /> : <UserIcon className="m-auto text-teal-600" />}
                                     </div>
-                                    
+
                                     {count > 0 && (
                                         <div className="absolute -top-1 -right-1 w-5 h-5 bg-rose-500 text-white text-[10px] font-black rounded-full flex items-center justify-center border-2 border-white animate-pulse">
                                             {count}

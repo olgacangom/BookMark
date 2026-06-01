@@ -26,11 +26,14 @@ export class LibraryEvent {
   @Column({ nullable: true })
   maxCapacity: number;
 
-  @ManyToOne(() => User, (user) => user.id)
+  @ManyToOne(() => User, (user) => user.events)
   organizer: User;
 
   @OneToMany(() => EventRegistration, (reg) => reg.event)
   registrations: EventRegistration[];
+
+  @Column({ nullable: true })
+  imageUrl: string;
 
   @Column({ type: 'int', default: 0 })
   @CreateDateColumn()
