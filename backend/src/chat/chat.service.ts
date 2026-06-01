@@ -59,7 +59,7 @@ export class ChatService {
         userOne: { id: userOneId },
         userTwo: { id: userTwoId },
       });
-      await this.conversationRepo.save(conversation);
+      conversation = await this.conversationRepo.save(conversation);
     }
 
     return conversation;

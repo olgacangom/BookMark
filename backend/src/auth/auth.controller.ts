@@ -15,6 +15,17 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
 
+export function generateLicenseFilename(file: Express.Multer.File) {
+  const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+  return `${uniqueSuffix}${extname(file.originalname)}`;
+}
+
+export function multerFilenameCallback() {
+  return (req: any, file: Express.Multer.File, cb: (err: Error | null, filename: string) => void) => {
+    cb(null, generateLicenseFilename(file));
+  };
+}
+
 @Controller('auth')
 export class AuthController {
   constructor(
@@ -27,11 +38,7 @@ export class AuthController {
     FileInterceptor('document', {
       storage: diskStorage({
         destination: './uploads/licencias',
-        filename: (req, file, cb) => {
-          const uniqueSuffix =
-            Date.now() + '-' + Math.round(Math.random() * 1e9);
-          cb(null, `${uniqueSuffix}${extname(file.originalname)}`);
-        },
+        filename: multerFilenameCallback(),
       }),
     }),
   )

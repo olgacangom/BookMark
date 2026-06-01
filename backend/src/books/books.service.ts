@@ -11,6 +11,7 @@ import { CreateBookDto } from './dto/create-book.dto';
 import { UpdateBookDto } from './dto/update-book.dto';
 import { GoogleBooksService } from './google-books/google-books.service';
 import { ActivitiesService } from 'src/users/activities.service';
+import { ActivityType } from 'src/users/entities/activity.entity';
 import { BookStatus } from './enum/book-status.enum';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Note } from './entities/note.entity';
@@ -65,7 +66,21 @@ export class BooksService {
       userId,
     });
 
-    return this.bookRepository.save(newBook);
+    const saved = await this.bookRepository.save(newBook);
+
+    try {
+      await this.activitiesService.create(
+        userId,
+        ActivityType.BOOK_ADDED,
+        saved.id?.toString(),
+      );
+    } catch (err) {
+      console.error('Error al registrar actividad:',
+        err instanceof Error ? err.message : err,
+      );
+    }
+
+    return saved;
   }
 
   async findAll(userId: string) {

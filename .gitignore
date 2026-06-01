@@ -1,3 +1,22 @@
+# Node
 node_modules/
+dist/
+build/
+*.log
+
+# Entornos
+.env*
+!.env.example
+
+# Carpetas de tests y reportes
+coverage/
+.nyc_output/
+
+# IDEs
+.vscode/
+.idea/
+.DS_Store
+
 frontend/.env
 backend/uploads/
+coverage/lcov-report/block-navigation.js
