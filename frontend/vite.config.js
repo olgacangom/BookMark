@@ -35,6 +35,11 @@ export default defineConfig({
         'src/main.tsx',      
         'src/vite-env.d.ts',
         'src/components/shared/**',
+        'src/users/pages',
+        'src/pages',
+        'src/layouts',
+        'src/bookstore',
+        'App.tsx'
       ],
     },
   },

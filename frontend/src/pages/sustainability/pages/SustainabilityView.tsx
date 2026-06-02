@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import api from '../../services/api';
-import { CreateListingModal } from './components/CreateListingModal';
+import api from '../../../services/api';
+import { CreateListingModal } from '../components/CreateListingModal';
 import {
     Plus, Search,
     RefreshCw, Heart, Loader2,
@@ -8,7 +8,7 @@ import {
     ShoppingBag, Info, Globe, Sparkle,
     Edit3, Users, Calendar, X, Check, HandHelping
 } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../../context/AuthContext';
 
 const ActionModal = ({ isOpen, type, title, onClose, onConfirm }: any) => {
     if (!isOpen) return null;

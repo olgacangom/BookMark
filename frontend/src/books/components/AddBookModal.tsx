@@ -170,6 +170,7 @@ export const AddBookModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, onEr
                                 />
                                 <button
                                     type="button"
+                                    data-testid="camera-button-id"
                                     onClick={() => setIsScannerOpen(true)}
                                     className="p-2 bg-white border border-slate-200 rounded-xl"
                                 >
@@ -261,7 +262,11 @@ export const AddBookModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, onEr
 
                             <div className="flex justify-center gap-1">
                                 {[1, 2, 3, 4, 5].map(s => (
-                                    <button key={s} type="button" onClick={() => handleSetRating(s)}>
+                                    <button
+                                        key={s}
+                                        type="button"
+                                        data-testid={`star-${s}`}
+                                        onClick={() => handleSetRating(s)}>
                                         <Star
                                             size={24}
                                             className={s <= currentRating ? 'text-amber-400 fill-amber-400' : 'text-slate-300'}

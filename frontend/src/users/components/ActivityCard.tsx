@@ -18,7 +18,7 @@ const badgeConfig: Record<string, { icon: React.ComponentType<any>, color: strin
     DEFAULT: { icon: Target, color: 'text-slate-400', label: 'Actividad' },
 };
 
-interface ActivityCardProps {
+export interface ActivityCardProps {
     activity: Activity;
     onLike: (activityId: string) => void;
     onIgnore: (activityId: string) => void;
@@ -338,7 +338,7 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({ activity, onLike, on
                 <div className="flex items-center gap-2">
                     <ActivityBadge type={activity.type} />
                     <div className="relative">
-                        <button onClick={() => setShowMenu(!showMenu)} className={`p-2 rounded-xl transition-all ${showMenu ? 'bg-slate-100 text-slate-600' : 'text-slate-300 hover:text-slate-600'}`}>
+                        <button aria-label="Abrir menú" onClick={() => setShowMenu(!showMenu)} className={`p-2 rounded-xl transition-all ${showMenu ? 'bg-slate-100 text-slate-600' : 'text-slate-300 hover:text-slate-600'}`}>
                             <MoreHorizontal size={20} />
                         </button>
 
@@ -391,7 +391,11 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({ activity, onLike, on
                         <Heart size={18} className={activity.isLiked ? 'fill-rose-500' : ''} />
                         {activity.likesCount || 0}
                     </button>
-                    <button onClick={() => setShowComments(!showComments)} className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-widest transition-all ${showComments ? 'text-teal-600' : 'text-slate-400 hover:text-teal-600'}`}>
+                    <button
+                        aria-label="Toggle comments"
+                        onClick={() => setShowComments(!showComments)}
+                        className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-widest transition-all ${showComments ? 'text-teal-600' : 'text-slate-400 hover:text-teal-600'}`}
+                    >
                         <MessageCircle size={18} />
                         {activity.commentsCount || 0}
                     </button>

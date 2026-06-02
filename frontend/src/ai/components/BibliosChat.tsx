@@ -70,8 +70,17 @@ export const BibliosChat = () => {
                             </div>
                         </div>
                         <div className="flex gap-1">
-                            <button onClick={clearChat} className="p-2 hover:bg-white/10 rounded-full transition-colors text-slate-400 hover:text-red-400"><Trash2 size={16} /></button>
-                            <button onClick={() => setIsOpen(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20} /></button>
+                            <button
+                                onClick={clearChat}
+                                data-testid="clear-chat-btn"
+                                className="p-2 hover:bg-white/10 rounded-full transition-colors text-slate-400 hover:text-red-400">
+                                <Trash2 size={16} />
+                            </button>
+                            <button
+                                onClick={() => setIsOpen(false)}
+                                data-testid="close-chat-btn"
+                                className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20} />
+                            </button>
                         </div>
                     </header>
 
@@ -116,7 +125,13 @@ export const BibliosChat = () => {
                                 placeholder="Pregunta a Biblios..."
                                 className="flex-1 bg-transparent border-none py-3 text-[13px] outline-none text-slate-700 font-medium"
                             />
-                            <button onClick={() => handleSend()} disabled={loading || !input.trim()} className="bg-teal-600 text-white p-2.5 rounded-xl hover:bg-teal-700 transition-all active:scale-95"><Send size={18} /></button>
+                            <button
+                                onClick={() => handleSend()}
+                                disabled={loading || !input.trim()}
+                                data-testid="send-msg-btn"
+                                className="bg-teal-600 text-white p-2.5 rounded-xl hover:bg-teal-700 transition-all active:scale-95">
+                                <Send size={18} />
+                            </button>
                         </div>
                     </div>
                 </div>
