@@ -1,10 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { In } from 'typeorm';
 import {
   SustainabilityService,
   CreateListingDto,
-  UpdateListingDto,
 } from './sustainability.service';
 import {
   BookListing,
@@ -14,8 +12,6 @@ import {
 import { DonationPoint } from '../entities/donation-point.entity';
 import { SustainabilityRequest } from '../entities/sustainability-request.entity';
 import { UsersService } from '../users.service';
-import { User } from '../entities/user.entity';
-import { Book } from 'src/books/entities/book.entity';
 import { NotFoundException, ForbiddenException } from '@nestjs/common';
 
 describe('SustainabilityService', () => {
@@ -48,7 +44,10 @@ describe('SustainabilityService', () => {
         SustainabilityService,
         { provide: getRepositoryToken(BookListing), useValue: listingRepo },
         { provide: getRepositoryToken(DonationPoint), useValue: donationRepo },
-        { provide: getRepositoryToken(SustainabilityRequest), useValue: requestRepo },
+        {
+          provide: getRepositoryToken(SustainabilityRequest),
+          useValue: requestRepo,
+        },
         { provide: UsersService, useValue: usersService },
       ],
     }).compile();
@@ -124,9 +123,9 @@ describe('SustainabilityService', () => {
   it('updateListing throws if not found', async () => {
     listingRepo.findOne.mockResolvedValue(null);
 
-    await expect(
-      service.updateListing('u1', 'l1', {}),
-    ).rejects.toThrow(NotFoundException);
+    await expect(service.updateListing('u1', 'l1', {})).rejects.toThrow(
+      NotFoundException,
+    );
   });
 
   it('updateListing updates fields', async () => {
@@ -152,9 +151,9 @@ describe('SustainabilityService', () => {
   it('deleteListing not found', async () => {
     listingRepo.findOne.mockResolvedValue(null);
 
-    await expect(
-      service.deleteListing('u1', 'l1'),
-    ).rejects.toThrow(NotFoundException);
+    await expect(service.deleteListing('u1', 'l1')).rejects.toThrow(
+      NotFoundException,
+    );
   });
 
   it('deleteListing forbidden', async () => {
@@ -163,9 +162,9 @@ describe('SustainabilityService', () => {
       user: { id: 'other' },
     });
 
-    await expect(
-      service.deleteListing('u1', 'l1'),
-    ).rejects.toThrow(ForbiddenException);
+    await expect(service.deleteListing('u1', 'l1')).rejects.toThrow(
+      ForbiddenException,
+    );
   });
 
   it('deleteListing success', async () => {
@@ -183,9 +182,9 @@ describe('SustainabilityService', () => {
   it('toggleAvailability not found', async () => {
     listingRepo.findOne.mockResolvedValue(null);
 
-    await expect(
-      service.toggleAvailability('u1', 'l1'),
-    ).rejects.toThrow(NotFoundException);
+    await expect(service.toggleAvailability('u1', 'l1')).rejects.toThrow(
+      NotFoundException,
+    );
   });
 
   it('toggleAvailability flips value', async () => {
@@ -212,9 +211,9 @@ describe('SustainabilityService', () => {
   it('createRequest listing not found', async () => {
     listingRepo.findOne.mockResolvedValue(null);
 
-    await expect(
-      service.createRequest('u1', 'l1'),
-    ).rejects.toThrow(NotFoundException);
+    await expect(service.createRequest('u1', 'l1')).rejects.toThrow(
+      NotFoundException,
+    );
   });
 
   it('createRequest own listing forbidden', async () => {
@@ -223,9 +222,9 @@ describe('SustainabilityService', () => {
       user: { id: 'u1' },
     });
 
-    await expect(
-      service.createRequest('u1', 'l1'),
-    ).rejects.toThrow(ForbiddenException);
+    await expect(service.createRequest('u1', 'l1')).rejects.toThrow(
+      ForbiddenException,
+    );
   });
 
   it('createRequest duplicate forbidden', async () => {
@@ -236,9 +235,9 @@ describe('SustainabilityService', () => {
 
     requestRepo.findOne.mockResolvedValue({ id: 'r1' });
 
-    await expect(
-      service.createRequest('u1', 'l1'),
-    ).rejects.toThrow(ForbiddenException);
+    await expect(service.createRequest('u1', 'l1')).rejects.toThrow(
+      ForbiddenException,
+    );
   });
 
   it('createRequest success', async () => {
@@ -260,9 +259,9 @@ describe('SustainabilityService', () => {
   it('cancelRequest not found', async () => {
     requestRepo.findOne.mockResolvedValue(null);
 
-    await expect(
-      service.cancelRequest('u1', 'l1'),
-    ).rejects.toThrow(NotFoundException);
+    await expect(service.cancelRequest('u1', 'l1')).rejects.toThrow(
+      NotFoundException,
+    );
   });
 
   it('cancelRequest success', async () => {
@@ -280,9 +279,9 @@ describe('SustainabilityService', () => {
   it('markAsReturned forbidden', async () => {
     requestRepo.findOne.mockResolvedValue(null);
 
-    await expect(
-      service.markAsReturned('u1', 'r1'),
-    ).rejects.toThrow(ForbiddenException);
+    await expect(service.markAsReturned('u1', 'r1')).rejects.toThrow(
+      ForbiddenException,
+    );
   });
 
   it('markAsReturned success', async () => {
@@ -304,9 +303,9 @@ describe('SustainabilityService', () => {
   it('markAsDonated not found', async () => {
     listingRepo.findOne.mockResolvedValue(null);
 
-    await expect(
-      service.markAsDonated('u1', 'l1'),
-    ).rejects.toThrow(NotFoundException);
+    await expect(service.markAsDonated('u1', 'l1')).rejects.toThrow(
+      NotFoundException,
+    );
   });
 
   it('markAsDonated success', async () => {
@@ -377,8 +376,8 @@ describe('SustainabilityService', () => {
 
     expect(result).toHaveLength(2);
 
-    const r1 = result.find(r => r.id === 'r1');
-    const r2 = result.find(r => r.id === 'r2');
+    const r1 = result.find((r) => r.id === 'r1');
+    const r2 = result.find((r) => r.id === 'r2');
 
     expect(r1?.isOwner).toBe(true);
     expect(r2?.isOwner).toBe(false);
@@ -421,11 +420,7 @@ describe('SustainabilityService', () => {
       status: 'accepted',
     });
 
-    const result = await service.updateRequestStatus(
-      'u1',
-      'r1',
-      'accepted',
-    );
+    const result = await service.updateRequestStatus('u1', 'r1', 'accepted');
 
     expect(listingRepo.update).toHaveBeenCalledWith('l1', {
       isAvailable: false,
@@ -448,11 +443,7 @@ describe('SustainabilityService', () => {
       status: 'rejected',
     });
 
-    const result = await service.updateRequestStatus(
-      'u1',
-      'r1',
-      'rejected',
-    );
+    const result = await service.updateRequestStatus('u1', 'r1', 'rejected');
 
     expect(listingRepo.update).not.toHaveBeenCalled();
     expect(result.status).toBe('rejected');

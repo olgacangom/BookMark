@@ -16,13 +16,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { jest, describe, it, expect, beforeEach } from '@jest/globals';
-
-const createQB = () => ({
-  where: jest.fn().mockReturnThis(),
-  andWhere: jest.fn().mockReturnThis(),
-  leftJoin: jest.fn().mockReturnThis(),
-  getOne: jest.fn(),
-});
+import { RegisterDto } from 'src/auth/dto/register.dto';
 
 describe('UsersService', () => {
   let service: UsersService;
@@ -123,7 +117,7 @@ describe('UsersService', () => {
     usersRepository.findOneBy.mockResolvedValue({ id: '1' });
 
     await expect(
-      service.create({ email: 'a', password: 'b' } as any),
+      service.create({ email: 'a', password: 'b' } as RegisterDto),
     ).rejects.toThrow(BadRequestException);
   });
 
@@ -135,7 +129,10 @@ describe('UsersService', () => {
     userStatsRepository.create.mockReturnValue({});
     userStatsRepository.save.mockResolvedValue({});
 
-    const res = await service.create({ email: 'a', password: 'b' } as any);
+    const res = await service.create({
+      email: 'a',
+      password: 'b',
+    } as RegisterDto);
 
     expect(usersRepository.save).toHaveBeenCalled();
     expect(userStatsRepository.save).toHaveBeenCalled();
@@ -193,7 +190,7 @@ describe('UsersService', () => {
   it('update throws if preload null', async () => {
     usersRepository.preload.mockResolvedValue(null);
 
-    await expect(service.update('x', {} as any)).rejects.toThrow(
+    await expect(service.update('x', {} as RegisterDto)).rejects.toThrow(
       NotFoundException,
     );
   });
@@ -203,7 +200,7 @@ describe('UsersService', () => {
     usersRepository.save.mockResolvedValue({});
     usersRepository.findOne.mockResolvedValue({ id: '1' });
 
-    await service.update('1', {} as any);
+    await service.update('1', {} as RegisterDto);
     expect(usersRepository.save).toHaveBeenCalled();
   });
 
@@ -393,9 +390,7 @@ describe('UsersService', () => {
   it('delete avatar not found', async () => {
     usersRepository.findOne.mockResolvedValue(null);
 
-    await expect(service.deleteAvatar('x')).rejects.toThrow(
-      NotFoundException,
-    );
+    await expect(service.deleteAvatar('x')).rejects.toThrow(NotFoundException);
   });
 
   it('update avatar', async () => {
@@ -444,7 +439,9 @@ describe('UsersService', () => {
       where: jest.fn().mockReturnThis(),
       groupBy: jest.fn().mockReturnThis(),
       orderBy: jest.fn().mockReturnThis(),
-      getRawMany: jest.fn<any>().mockResolvedValue([{ month: '2026-01', count: 1 }]),
+      getRawMany: jest
+        .fn<any>()
+        .mockResolvedValue([{ month: '2026-01', count: 1 }]),
     };
 
     usersRepository.createQueryBuilder.mockReturnValue(qb);
@@ -463,7 +460,7 @@ describe('UsersService', () => {
       .spyOn(service as any, 'setupInitialBadges')
       .mockResolvedValue(undefined);
 
-    const logSpy = jest.spyOn(console, 'log').mockImplementation(() => { });
+    const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
 
     await service.onModuleInit();
 
@@ -543,7 +540,7 @@ describe('UsersService', () => {
     const requesterId = 'u2';
 
     const futureDate = new Date(Date.now() + 1000 * 60 * 60 * 24); // +1 día
-    const pastDate = new Date(Date.now() - 1000 * 60 * 60 * 24);   // -1 día
+    const pastDate = new Date(Date.now() - 1000 * 60 * 60 * 24); // -1 día
 
     const userMock = {
       id: 'u1',
@@ -638,7 +635,7 @@ describe('UsersService', () => {
       .mockResolvedValueOnce({ clubs: [] }); // 👈 2ª llamada (clubs)
 
     eventRepository.find.mockResolvedValue([]); // events
-    bookRepository.find.mockResolvedValue([]);   // books
+    bookRepository.find.mockResolvedValue([]); // books
 
     registrationRepository.find.mockResolvedValue([
       {
@@ -662,9 +659,9 @@ describe('UsersService', () => {
   it('should throw NotFoundException when deactivating non-existing user', async () => {
     usersRepository.findOne.mockResolvedValue(null);
 
-    await expect(service.deactivateAccount('missing-id'))
-      .rejects
-      .toThrow(NotFoundException);
+    await expect(service.deactivateAccount('missing-id')).rejects.toThrow(
+      NotFoundException,
+    );
   });
 
   it('should deactivate user account', async () => {
@@ -705,10 +702,7 @@ describe('UsersService', () => {
     const result = await service.searchUsers('john');
 
     expect(usersRepository.find).toHaveBeenCalledWith({
-      where: [
-        { fullName: expect.anything() },
-        { email: expect.anything() },
-      ],
+      where: [{ fullName: expect.anything() }, { email: expect.anything() }],
       select: ['id', 'fullName', 'avatarUrl', 'bio', 'isPublic'],
     });
 

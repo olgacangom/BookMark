@@ -62,7 +62,9 @@ describe('ChatService', () => {
   describe('getOrCreateConversation', () => {
     it('throws if not mutually following', async () => {
       jest.spyOn(service, 'areMutuallyFollowing').mockResolvedValue(false);
-      await expect(service.getOrCreateConversation('a', 'b')).rejects.toThrow(ForbiddenException);
+      await expect(service.getOrCreateConversation('a', 'b')).rejects.toThrow(
+        ForbiddenException,
+      );
     });
 
     it('returns existing conversation if found', async () => {
@@ -76,7 +78,10 @@ describe('ChatService', () => {
     it('creates new conversation if missing', async () => {
       jest.spyOn(service, 'areMutuallyFollowing').mockResolvedValue(true);
       convRepo.findOne!.mockResolvedValue(null);
-      convRepo.create!.mockReturnValue({ userOne: { id: 'a' }, userTwo: { id: 'b' } });
+      convRepo.create!.mockReturnValue({
+        userOne: { id: 'a' },
+        userTwo: { id: 'b' },
+      });
       convRepo.save!.mockResolvedValue({ id: 'new' });
 
       const res = await service.getOrCreateConversation('a', 'b');
@@ -92,7 +97,11 @@ describe('ChatService', () => {
       msgRepo.save!.mockResolvedValue({ id: 'm1' });
       convRepo.update!.mockResolvedValue({});
 
-      const res = await service.saveMessage({ conversationId: 'c1', senderId: 'u1', content: 'hi' });
+      const res = await service.saveMessage({
+        conversationId: 'c1',
+        senderId: 'u1',
+        content: 'hi',
+      });
       expect(msgRepo.create).toHaveBeenCalled();
       expect(msgRepo.save).toHaveBeenCalled();
       expect(convRepo.update).toHaveBeenCalledWith('c1', expect.any(Object));
@@ -103,7 +112,9 @@ describe('ChatService', () => {
   describe('getMessages', () => {
     it('throws if conversation missing', async () => {
       convRepo.findOne!.mockResolvedValue(null);
-      await expect(service.getMessages('c1', 'u1')).rejects.toThrow(ForbiddenException);
+      await expect(service.getMessages('c1', 'u1')).rejects.toThrow(
+        ForbiddenException,
+      );
     });
 
     it('returns messages when conversation exists', async () => {
@@ -118,7 +129,16 @@ describe('ChatService', () => {
   describe('listConversations', () => {
     it('maps conversations and unreadCount', async () => {
       convRepo.find!.mockResolvedValue([
-        { id: 'c1', userOne: { id: 'a' }, userTwo: { id: 'b' }, lastActivity: new Date(), messages: [{ isRead: false, sender: { id: 'b' } }, { isRead: true, sender: { id: 'b' } }] },
+        {
+          id: 'c1',
+          userOne: { id: 'a' },
+          userTwo: { id: 'b' },
+          lastActivity: new Date(),
+          messages: [
+            { isRead: false, sender: { id: 'b' } },
+            { isRead: true, sender: { id: 'b' } },
+          ],
+        },
       ]);
 
       const res = await service.listConversations('a');

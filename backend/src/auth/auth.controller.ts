@@ -21,7 +21,11 @@ export function generateLicenseFilename(file: Express.Multer.File) {
 }
 
 export function multerFilenameCallback() {
-  return (req: any, file: Express.Multer.File, cb: (err: Error | null, filename: string) => void) => {
+  return (
+    req: any,
+    file: Express.Multer.File,
+    cb: (err: Error | null, filename: string) => void,
+  ) => {
     cb(null, generateLicenseFilename(file));
   };
 }

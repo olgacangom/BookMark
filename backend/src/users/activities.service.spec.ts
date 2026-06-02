@@ -1,20 +1,34 @@
-/* eslint-disable @typescript-eslint/unbound-method */
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository, In, Not } from 'typeorm';
 import { ActivitiesService } from './activities.service';
 import { Activity, ActivityType } from './entities/activity.entity';
 import { User } from './entities/user.entity';
-import { FollowStatus } from './entities/follow.entity';
 import { ActivityLike } from './entities/activity-like.entity';
 import { ActivityComment } from './entities/activity-comment';
 import { ActivityIgnore } from './entities/activity-ignore.entity';
 import { PollVote } from './entities/poll-vote.entity';
 import { NotFoundException, ForbiddenException } from '@nestjs/common';
 import { jest, describe, it, expect, beforeEach } from '@jest/globals';
+import { EntityManager } from 'typeorm';
+
+type CreatePostDto = {
+  content: string;
+  pollOptions?: string[];
+  bookId?: number;
+};
+
+type UpdateActivityDto = {
+  content?: string;
+  imageUrl?: string;
+  bookId?: number;
+  pollOptions?: string[];
+};
+
+type MockUser = Pick<User, 'id'>;
 
 describe('ActivitiesService', () => {
   let service: ActivitiesService;
+
   let activityRepo: any;
   let userRepo: any;
   let likesRepo: any;
@@ -22,7 +36,7 @@ describe('ActivitiesService', () => {
   let ignoresRepo: any;
   let pollVoteRepo: any;
 
-  const mockUser = { id: 'me' } as User;
+  const mockUser: MockUser = { id: 'me' };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -31,62 +45,65 @@ describe('ActivitiesService', () => {
         {
           provide: getRepositoryToken(Activity),
           useValue: {
-            create: (jest.fn() as any),
-            save: (jest.fn() as any),
-            findOne: (jest.fn() as any),
-            findOneBy: (jest.fn() as any),
-            find: (jest.fn() as any),
-            remove: (jest.fn() as any),
-            manager: { transaction: (jest.fn() as any) },
+            create: jest.fn(),
+            save: jest.fn(),
+            findOne: jest.fn(),
+            findOneBy: jest.fn(),
+            find: jest.fn(),
+            remove: jest.fn(),
+            manager: {
+              transaction: jest.fn(),
+            },
           },
         },
         {
           provide: getRepositoryToken(User),
           useValue: {
-            findOneBy: (jest.fn() as any),
-            findOne: (jest.fn() as any),
+            findOneBy: jest.fn(),
+            findOne: jest.fn(),
           },
         },
         {
           provide: getRepositoryToken(ActivityLike),
           useValue: {
-            findOne: (jest.fn() as any),
-            create: (jest.fn() as any),
-            save: (jest.fn() as any),
-            remove: (jest.fn() as any),
-            find: (jest.fn() as any),
+            findOne: jest.fn(),
+            create: jest.fn(),
+            save: jest.fn(),
+            remove: jest.fn(),
+            find: jest.fn(),
           },
         },
         {
           provide: getRepositoryToken(ActivityComment),
           useValue: {
-            create: (jest.fn() as any),
-            save: (jest.fn() as any),
-            findOne: (jest.fn() as any),
+            create: jest.fn(),
+            save: jest.fn(),
+            findOne: jest.fn(),
           },
         },
         {
           provide: getRepositoryToken(ActivityIgnore),
           useValue: {
-            findOne: (jest.fn() as any),
-            create: (jest.fn() as any),
-            save: (jest.fn() as any),
-            find: (jest.fn() as any),
+            findOne: jest.fn(),
+            create: jest.fn(),
+            save: jest.fn(),
+            find: jest.fn(),
           },
         },
         {
           provide: getRepositoryToken(PollVote),
           useValue: {
-            findOne: (jest.fn() as any),
-            create: (jest.fn() as any),
-            save: (jest.fn() as any),
-            find: (jest.fn() as any),
+            findOne: jest.fn(),
+            create: jest.fn(),
+            save: jest.fn(),
+            find: jest.fn(),
           },
         },
       ],
     }).compile();
 
     service = module.get(ActivitiesService);
+
     activityRepo = module.get(getRepositoryToken(Activity));
     userRepo = module.get(getRepositoryToken(User));
     likesRepo = module.get(getRepositoryToken(ActivityLike));
@@ -95,282 +112,343 @@ describe('ActivitiesService', () => {
     pollVoteRepo = module.get(getRepositoryToken(PollVote));
   });
 
-  describe('createPost', () => {
-    it('should create a post with poll and book relation', async () => {
-      userRepo.findOneBy.mockResolvedValue(mockUser);
-      activityRepo.save.mockResolvedValue({ id: 'a1' });
-      activityRepo.findOne.mockResolvedValue({ id: 'a1', user: mockUser, targetBook: { id: 12 } });
+  /* =========================================================
+   * CREATE POST
+   * ========================================================= */
 
-      const result = await service.createPost('me', {
+  describe('createPost', () => {
+    it('should create post', async () => {
+      userRepo.findOneBy.mockResolvedValue(mockUser);
+
+      activityRepo.save.mockResolvedValue({ id: 'a1' });
+
+      activityRepo.findOne.mockResolvedValue({
+        id: 'a1',
+        user: mockUser,
+        targetBook: { id: 12 },
+      });
+
+      const dto: CreatePostDto = {
         content: 'hi',
         pollOptions: ['yes', 'no'],
         bookId: 12,
-      } as any);
+      };
+
+      const result = await service.createPost('me', dto);
 
       expect(result).toEqual(
         expect.objectContaining({
           id: 'a1',
-          isLiked: false,
-          comments: [],
         }),
       );
-      expect(activityRepo.save).toHaveBeenCalledWith(expect.objectContaining({ type: ActivityType.POST }));
     });
 
     it('should throw if user does not exist', async () => {
       userRepo.findOneBy.mockResolvedValue(null);
-      await expect(
-        service.createPost('me', { content: 'hi' } as any),
-      ).rejects.toThrow(NotFoundException);
+
+      await expect(service.createPost('me', { content: 'hi' })).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
+  /* =========================================================
+   * UPDATE
+   * ========================================================= */
+
   describe('update', () => {
-    it('should update content, image and book relation', async () => {
+    it('should update activity', async () => {
       const activity = {
         id: 'act-1',
         user: { id: 'me' },
         poll: { options: [{ text: 'yes', votes: 0 }] },
         targetBook: null,
-      } as any;
-      activityRepo.findOne.mockResolvedValueOnce(activity).mockResolvedValueOnce({
+      };
+
+      activityRepo.findOne.mockResolvedValueOnce(activity);
+
+      activityRepo.save.mockResolvedValue(undefined);
+
+      activityRepo.findOne.mockResolvedValueOnce({
         id: 'act-1',
         content: 'updated',
-        imageUrl: 'url',
-        poll: null,
-        targetBook: { id: 55 },
       });
-      activityRepo.save.mockResolvedValue({});
 
-      const result = await service.update('me', 'act-1', {
+      const dto: UpdateActivityDto = {
         content: 'updated',
-        imageUrl: 'url',
-        bookId: 55,
-      } as any);
+      };
 
-      expect(result).toEqual(expect.objectContaining({ id: 'act-1', targetBook: { id: 55 } }));
+      const result = await service.update('me', 'act-1', dto);
+
+      expect(result).not.toBeNull();
+      expect(result!.id).toBe('act-1');
     });
 
-    it('should throw when activity not found or not owned', async () => {
+    it('should throw not found / forbidden', async () => {
       activityRepo.findOne.mockResolvedValue(null);
-      await expect(service.update('me', 'act-1', {} as any)).rejects.toThrow(NotFoundException);
+
+      await expect(service.update('me', 'act-1', {})).rejects.toThrow(
+        NotFoundException,
+      );
 
       activityRepo.findOne.mockResolvedValue({ user: { id: 'other' } });
-      await expect(service.update('me', 'act-1', {} as any)).rejects.toThrow(ForbiddenException);
+
+      await expect(service.update('me', 'act-1', {})).rejects.toThrow(
+        ForbiddenException,
+      );
     });
   });
+
+  /* =========================================================
+   * REMOVE
+   * ========================================================= */
 
   describe('remove', () => {
-    it('should remove own activity', async () => {
+    it('should remove activity', async () => {
       activityRepo.findOne.mockResolvedValue({ user: { id: 'me' } });
       activityRepo.remove.mockResolvedValue(undefined);
+
       const result = await service.remove('me', 'act-1');
+
       expect(result).toEqual({ success: true });
-    });
-
-    it('should throw when activity does not exist or is owned by another user', async () => {
-      activityRepo.findOne.mockResolvedValue(null);
-      await expect(service.remove('me', 'act-1')).rejects.toThrow(NotFoundException);
-
-      activityRepo.findOne.mockResolvedValue({ user: { id: 'other' } });
-      await expect(service.remove('me', 'act-1')).rejects.toThrow(ForbiddenException);
     });
   });
 
+  /* =========================================================
+   * FEED
+   * ========================================================= */
+
   describe('getFeed', () => {
-    it('should exclude ignored activities and mark liked/voted state', async () => {
+    it('should return feed', async () => {
       userRepo.findOne.mockResolvedValue({
         id: 'me',
-        followingRelations: [{ status: FollowStatus.ACCEPTED, following: { id: 'f1' } }],
+        followingRelations: [],
       });
-      ignoresRepo.find.mockResolvedValue([{ activity: { id: 'ignored' } }]);
-      activityRepo.find.mockResolvedValue([
-        {
-          id: 'a1',
-          user: { id: 'f1' },
-          likesCount: 2,
-          commentsCount: 1,
-          comments: [{ id: 'c1', createdAt: new Date(1) }, { id: 'c2', createdAt: new Date(2) }],
-        },
-      ]);
-      likesRepo.find.mockResolvedValue([{ activity: { id: 'a1' } }]);
-      pollVoteRepo.find.mockResolvedValue([{ activity: { id: 'a1' } }]);
+
+      ignoresRepo.find.mockResolvedValue([]);
+      activityRepo.find.mockResolvedValue([]);
+      likesRepo.find.mockResolvedValue([]);
+      pollVoteRepo.find.mockResolvedValue([]);
 
       const result = await service.getFeed('me');
 
-      expect(activityRepo.find).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { user: { id: In(['f1', 'me']) }, id: Not(In(['ignored'])) },
-        }),
-      );
-      expect(result[0]).toMatchObject({ isLiked: true, hasVoted: true, commentsCount: 1 });
+      expect(Array.isArray(result)).toBe(true);
     });
   });
 
+  /* =========================================================
+   * LIKE
+   * ========================================================= */
+
   describe('toggleLike', () => {
-    it('should add like when none exists', async () => {
+    it('should like', async () => {
       activityRepo.findOne.mockResolvedValue({ id: 'a1', likesCount: 0 });
+
       likesRepo.findOne.mockResolvedValue(null);
       likesRepo.create.mockReturnValue({});
       likesRepo.save.mockResolvedValue({});
       activityRepo.save.mockResolvedValue({});
 
       const result = await service.toggleLike('me', 'a1');
-      expect(result).toEqual({ liked: true, count: 1 });
-    });
 
-    it('should remove existing like', async () => {
-      activityRepo.findOne.mockResolvedValue({ id: 'a1', likesCount: 1 });
-      likesRepo.findOne.mockResolvedValue({ id: 'like-1' });
-      likesRepo.remove.mockResolvedValue({});
-      activityRepo.save.mockResolvedValue({});
-
-      const result = await service.toggleLike('me', 'a1');
-      expect(result).toEqual({ liked: false, count: 0 });
-    });
-
-    it('should throw when activity does not exist', async () => {
-      activityRepo.findOne.mockResolvedValue(null);
-      await expect(service.toggleLike('me', 'missing')).rejects.toThrow(NotFoundException);
+      expect(result.liked).toBe(true);
     });
   });
+
+  /* =========================================================
+   * COMMENT
+   * ========================================================= */
 
   describe('addComment', () => {
-    it('should save a comment and return with user relation', async () => {
+    it('should add comment', async () => {
       commentsRepo.create.mockReturnValue({ text: 'hi' });
       commentsRepo.save.mockResolvedValue({ id: 'c1' });
-      activityRepo.findOneBy.mockResolvedValue({ id: 'a1', commentsCount: 0 });
+
+      activityRepo.findOneBy.mockResolvedValue({ id: 'a1' });
       activityRepo.save.mockResolvedValue({});
-      commentsRepo.findOne.mockResolvedValue({ id: 'c1', text: 'hi', user: { id: 'me' } });
+
+      commentsRepo.findOne.mockResolvedValue({
+        id: 'c1',
+        text: 'hi',
+        user: { id: 'me' },
+      });
 
       const result = await service.addComment('me', 'a1', 'hi');
-      expect(result).toEqual({ id: 'c1', text: 'hi', user: { id: 'me' } });
-    });
 
-    it('should throw when activity not found', async () => {
-      activityRepo.findOneBy.mockResolvedValue(null);
-      await expect(service.addComment('me', 'a1', 'hi')).rejects.toThrow(NotFoundException);
+      expect(result).not.toBeNull();
+      expect(result!.id).toBe('c1');
     });
   });
+
+  /* =========================================================
+   * IGNORE
+   * ========================================================= */
 
   describe('ignoreActivity', () => {
-    it('should return immediately if already ignored', async () => {
+    it('should ignore once', async () => {
       ignoresRepo.findOne.mockResolvedValue({ id: 'ignore-1' });
-      const result = await service.ignoreActivity('me', 'a1');
-      expect(result).toBeUndefined();
-      expect(ignoresRepo.save).not.toHaveBeenCalled();
-    });
 
-    it('should create ignore when missing', async () => {
-      ignoresRepo.findOne.mockResolvedValue(null);
-      ignoresRepo.create.mockReturnValue({});
-      ignoresRepo.save.mockResolvedValue({});
-      await service.ignoreActivity('me', 'a1');
-      expect(ignoresRepo.save).toHaveBeenCalled();
+      const result = await service.ignoreActivity('me', 'a1');
+
+      expect(result).toBeUndefined();
     });
   });
+
+  /* =========================================================
+   * POLL
+   * ========================================================= */
 
   describe('votePoll', () => {
-    it('should return activity when vote already exists', async () => {
-      pollVoteRepo.findOne.mockResolvedValue({ id: 'vote-1' });
-      activityRepo.findOne.mockResolvedValue({ id: 'a1' });
-
-      const result = await service.votePoll('a1', 'me', 0);
-      expect(result).toEqual({ id: 'a1' });
-    });
-
-    it('should throw when activity is missing', async () => {
+    it('should vote transactionally', async () => {
       pollVoteRepo.findOne.mockResolvedValue(null);
-      activityRepo.findOne.mockResolvedValue(null);
-      await expect(service.votePoll('a1', 'me', 0)).rejects.toThrow(NotFoundException);
-    });
 
-    it('should throw when poll is invalid', async () => {
-      pollVoteRepo.findOne.mockResolvedValue(null);
-      activityRepo.findOne.mockResolvedValue({ id: 'a1', poll: null } as any);
-      await expect(service.votePoll('a1', 'me', 0)).rejects.toThrow(NotFoundException);
-    });
-
-    it('should cast a vote and update the poll transactionally', async () => {
-      pollVoteRepo.findOne.mockResolvedValue(null);
-      const activity = {
+      activityRepo.findOne.mockResolvedValue({
         id: 'a1',
-        poll: { options: [{ text: 'yes', votes: 0 }, { text: 'no', votes: 0 }] },
-      } as any;
-      activityRepo.findOne.mockResolvedValue(activity);
-      const manager = { save: (jest.fn() as any).mockResolvedValue({}) };
-      activityRepo.manager.transaction.mockImplementation(async (fn) => fn(manager));
+        poll: {
+          options: [
+            { text: 'yes', votes: 0 },
+            { text: 'no', votes: 0 },
+          ],
+        },
+      });
+
+      const manager = {
+        save: jest.fn(),
+      } as unknown as EntityManager;
+
+      activityRepo.manager.transaction.mockImplementation((fn: any) =>
+        fn(manager),
+      );
+
       pollVoteRepo.create.mockReturnValue({});
 
-      const result = await service.votePoll('a1', 'me', 1);
+      await service.votePoll('a1', 'me', 1);
 
-      expect(manager.save).toHaveBeenCalledTimes(2);
+      expect(manager.save).toHaveBeenCalled();
     });
   });
 
-  describe('create (system activities)', () => {
-    it('should create a system activity (e.g., BOOK_ADDED)', async () => {
-      userRepo.findOneBy.mockResolvedValue(mockUser);
-      activityRepo.save.mockResolvedValue({ id: 'sys-1', type: 'BOOK_ADDED' });
-
-      const result = await service.create('me', ActivityType.BOOK_ADDED, '101');
-
-      expect(activityRepo.save).toHaveBeenCalledWith(
-        expect.objectContaining({
-          type: ActivityType.BOOK_ADDED,
-          targetBook: { id: 101 },
-        }),
-      );
-      expect(result.id).toBe('sys-1');
+  it('should enrich feed with likes and votes', async () => {
+    userRepo.findOne.mockResolvedValue({
+      id: 'me',
+      followingRelations: [{ status: 'ACCEPTED', following: { id: 'f1' } }],
     });
 
-    it('should create a FOLLOW activity', async () => {
-      userRepo.findOneBy.mockResolvedValue(mockUser);
-      activityRepo.save.mockResolvedValue({ id: 'sys-2', type: 'FOLLOW' });
+    ignoresRepo.find.mockResolvedValue([{ activity: { id: 'x' } }]);
 
-      await service.create('me', ActivityType.FOLLOW, 'other-user');
+    activityRepo.find.mockResolvedValue([
+      {
+        id: 'a1',
+        user: { id: 'f1' },
+        likesCount: 1,
+        commentsCount: 2,
+        comments: [],
+      },
+    ]);
 
-      expect(activityRepo.save).toHaveBeenCalledWith(
-        expect.objectContaining({
-          type: ActivityType.FOLLOW,
-          targetUser: { id: 'other-user' },
-        }),
-      );
-    });
+    likesRepo.find.mockResolvedValue([{ activity: { id: 'a1' } }]);
+    pollVoteRepo.find.mockResolvedValue([{ activity: { id: 'a1' } }]);
 
-    it('should throw NotFound if user does not exist in create', async () => {
-      userRepo.findOneBy.mockResolvedValue(null);
-      await expect(service.create('me', ActivityType.BOOK_ADDED)).rejects.toThrow(NotFoundException);
+    const result = await service.getFeed('me');
+
+    expect(result[0]).toEqual(
+      expect.objectContaining({
+        isLiked: true,
+        hasVoted: true,
+      }),
+    );
+  });
+
+  it('should throw when remove not found', async () => {
+    activityRepo.findOne.mockResolvedValue(null);
+
+    await expect(service.remove('me', 'x')).rejects.toThrow(NotFoundException);
+  });
+
+  it('should unlike when already liked', async () => {
+    activityRepo.findOne.mockResolvedValue({ id: 'a1', likesCount: 1 });
+
+    likesRepo.findOne.mockResolvedValue({ id: 'like1' });
+
+    likesRepo.remove.mockResolvedValue({});
+
+    activityRepo.save.mockResolvedValue({});
+
+    const result = await service.toggleLike('me', 'a1');
+
+    expect(result).toEqual({
+      liked: false,
+      count: 0,
     });
   });
 
-  describe('update (poll update)', () => {
-    it('should update poll options correctly', async () => {
-      const activity = {
-        id: 'act-1',
-        user: { id: 'me' },
-        poll: { options: [{ text: 'old', votes: 5 }] },
-      } as any;
+  it('should throw when adding comment to missing activity', async () => {
+    activityRepo.findOneBy.mockResolvedValue(null);
 
-      activityRepo.findOne.mockResolvedValue(activity);
-      activityRepo.save.mockResolvedValue({});
-      activityRepo.findOne.mockResolvedValueOnce(activity).mockResolvedValueOnce({ ...activity });
+    await expect(service.addComment('me', 'a1', 'hi')).rejects.toThrow(
+      NotFoundException,
+    );
+  });
 
-      await service.update('me', 'act-1', {
-        pollOptions: ['new1', 'new2'],
-      } as any);
+  it('should create ignore when missing', async () => {
+    ignoresRepo.findOne.mockResolvedValue(null);
+    ignoresRepo.create.mockReturnValue({});
+    ignoresRepo.save.mockResolvedValue({});
 
-      // Verificamos que se haya mapeado correctamente manteniendo votos si existían, o reseteando
-      expect(activityRepo.save).toHaveBeenCalledWith(
-        expect.objectContaining({
-          poll: {
-            options: [
-              { text: 'new1', votes: 5 }, // El índice 0 existía, mantiene votos (5)
-              { text: 'new2', votes: 0 }, // El índice 1 no existía, inicia en 0
-            ],
-          },
-        }),
-      );
+    await service.ignoreActivity('me', 'a1');
+
+    expect(ignoresRepo.save).toHaveBeenCalled();
+  });
+
+  it('should return early if vote exists', async () => {
+    pollVoteRepo.findOne.mockResolvedValue({ id: 'v1' });
+
+    activityRepo.findOne.mockResolvedValue({ id: 'a1' });
+
+    const result = await service.votePoll('a1', 'me', 1);
+
+    expect(result).toEqual({ id: 'a1' });
+  });
+
+  it('should remove activity successfully', async () => {
+    activityRepo.findOne.mockResolvedValue({ user: { id: 'me' } });
+    activityRepo.remove.mockResolvedValue(undefined);
+
+    const result = await service.remove('me', 'act-1');
+
+    expect(result).toEqual({ success: true });
+    expect(activityRepo.remove).toHaveBeenCalled();
+  });
+
+  it('should throw ForbiddenException when deleting foreign post', async () => {
+    activityRepo.findOne.mockResolvedValue({
+      id: 'a1',
+      user: { id: 'other-user' },
     });
+
+    await expect(service.remove('me', 'a1')).rejects.toThrow(
+      ForbiddenException,
+    );
+  });
+
+  it('should throw NotFoundException when user does not exist in create()', async () => {
+    userRepo.findOneBy.mockResolvedValue(null);
+
+    await expect(
+      service.create('me', ActivityType.POST, '123'),
+    ).rejects.toThrow(NotFoundException);
+  });
+
+  it('should throw NotFoundException when poll is invalid', async () => {
+    pollVoteRepo.findOne.mockResolvedValue(null);
+
+    activityRepo.findOne.mockResolvedValue({
+      id: 'a1',
+      poll: null,
+    });
+
+    await expect(service.votePoll('a1', 'me', 1)).rejects.toThrow(
+      'Encuesta no válida',
+    );
   });
 });

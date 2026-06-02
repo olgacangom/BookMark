@@ -66,7 +66,9 @@ describe('BookstoreService', () => {
   });
 
   it('returns empty array on axios error and logs error', async () => {
-    const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const consoleSpy = jest
+      .spyOn(console, 'error')
+      .mockImplementation(() => {});
     mockedAxios.get.mockRejectedValue(new Error('Network fail'));
 
     const res = await service.findNearby(0, 0);

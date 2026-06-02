@@ -1,19 +1,15 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { InternalServerErrorException } from '@nestjs/common';
-import { AIService } from './ai.service';
 
-// Variables globales para el mock
-let mockSendMessage: jest.Mock;
-let mockStartChat: jest.Mock;
-let mockGetGenerativeModel: jest.Mock;
+import { AIService } from './ai.service';
 
 jest.mock('@google/generative-ai', () => {
   return {
     GoogleGenerativeAI: jest.fn().mockImplementation(() => ({
-      getGenerativeModel: jest.fn(function() {
+      getGenerativeModel: jest.fn(function () {
         return {
-          startChat: jest.fn(function() {
+          startChat: jest.fn(function () {
             return {
               sendMessage: jest.fn(),
             };
@@ -34,10 +30,11 @@ describe('AIService', () => {
   beforeEach(async () => {
     jest.clearAllMocks();
 
-    // Configurar el mock
     mockSendMessage = jest.fn();
 
-    const mockGenerativeAI = GoogleGenerativeAI as jest.MockedClass<typeof GoogleGenerativeAI>;
+    const mockGenerativeAI = GoogleGenerativeAI as jest.MockedClass<
+      typeof GoogleGenerativeAI
+    >;
     mockGenerativeAI.mockImplementation(() => {
       const mockChat = {
         sendMessage: mockSendMessage,
@@ -82,7 +79,9 @@ describe('AIService', () => {
     });
 
     it('debe obtener el modelo generativo correctamente', () => {
-      const instance = (GoogleGenerativeAI as jest.MockedClass<typeof GoogleGenerativeAI>).mock.results[0].value;
+      const instance = (
+        GoogleGenerativeAI as jest.MockedClass<typeof GoogleGenerativeAI>
+      ).mock.results[0].value;
       expect(instance.getGenerativeModel).toHaveBeenCalledWith({
         model: 'gemini-3-flash-preview',
       });
@@ -125,12 +124,7 @@ describe('AIService', () => {
         },
       });
 
-      await service.getChatResponse(
-        'pregunta',
-        [],
-        'contexto',
-        'admin',
-      );
+      await service.getChatResponse('pregunta', [], 'contexto', 'admin');
 
       const callArgs = mockSendMessage.mock.calls[0][0];
       expect(callArgs).toContain('Analista Jefe');
@@ -144,12 +138,7 @@ describe('AIService', () => {
         },
       });
 
-      await service.getChatResponse(
-        'pregunta',
-        [],
-        'contexto',
-        'librero',
-      );
+      await service.getChatResponse('pregunta', [], 'contexto', 'librero');
 
       const callArgs = mockSendMessage.mock.calls[0][0];
       expect(callArgs).toContain('Consultor Estratégico');
@@ -163,12 +152,7 @@ describe('AIService', () => {
         },
       });
 
-      await service.getChatResponse(
-        'pregunta',
-        [],
-        'contexto',
-        'usuario',
-      );
+      await service.getChatResponse('pregunta', [], 'contexto', 'usuario');
 
       const callArgs = mockSendMessage.mock.calls[0][0];
       expect(callArgs).toContain('Biblios');
@@ -187,8 +171,11 @@ describe('AIService', () => {
         },
       });
 
-      const instance = (GoogleGenerativeAI as jest.MockedClass<typeof GoogleGenerativeAI>).mock.results[0].value;
-      const startChatMock = (instance.getGenerativeModel().startChat as jest.Mock);
+      const instance = (
+        GoogleGenerativeAI as jest.MockedClass<typeof GoogleGenerativeAI>
+      ).mock.results[0].value;
+      const startChatMock = instance.getGenerativeModel()
+        .startChat as jest.Mock;
 
       await service.getChatResponse(
         'pregunta 2',
@@ -209,15 +196,13 @@ describe('AIService', () => {
         },
       });
 
-      const instance = (GoogleGenerativeAI as jest.MockedClass<typeof GoogleGenerativeAI>).mock.results[0].value;
-      const startChatMock = (instance.getGenerativeModel().startChat as jest.Mock);
+      const instance = (
+        GoogleGenerativeAI as jest.MockedClass<typeof GoogleGenerativeAI>
+      ).mock.results[0].value;
+      const startChatMock = instance.getGenerativeModel()
+        .startChat as jest.Mock;
 
-      await service.getChatResponse(
-        'pregunta',
-        [],
-        'contexto',
-        'admin',
-      );
+      await service.getChatResponse('pregunta', [], 'contexto', 'admin');
 
       expect(startChatMock).toHaveBeenCalledWith({
         history: [],
@@ -232,12 +217,7 @@ describe('AIService', () => {
         },
       });
 
-      await service.getChatResponse(
-        'pregunta',
-        [],
-        contexto,
-        'admin',
-      );
+      await service.getChatResponse('pregunta', [], contexto, 'admin');
 
       const callArgs = mockSendMessage.mock.calls[0][0];
       expect(callArgs).toContain(contexto);
@@ -252,12 +232,7 @@ describe('AIService', () => {
         },
       });
 
-      await service.getChatResponse(
-        userPrompt,
-        [],
-        'contexto',
-        'admin',
-      );
+      await service.getChatResponse(userPrompt, [], 'contexto', 'admin');
 
       const callArgs = mockSendMessage.mock.calls[0][0];
       expect(callArgs).toContain(userPrompt);
@@ -347,12 +322,7 @@ describe('AIService', () => {
         },
       });
 
-      await service.getChatResponse(
-        'pregunta',
-        [],
-        'contexto',
-        'admin',
-      );
+      await service.getChatResponse('pregunta', [], 'contexto', 'admin');
 
       const callArgs = mockSendMessage.mock.calls[0][0];
       expect(callArgs).toContain('REGLAS DE ORO');
@@ -368,12 +338,7 @@ describe('AIService', () => {
         },
       });
 
-      await service.getChatResponse(
-        'pregunta',
-        [],
-        'contexto',
-        'admin',
-      );
+      await service.getChatResponse('pregunta', [], 'contexto', 'admin');
 
       const callArgs = mockSendMessage.mock.calls[0][0];
       expect(callArgs).toContain('###');
@@ -387,12 +352,7 @@ describe('AIService', () => {
         },
       });
 
-      await service.getChatResponse(
-        'pregunta',
-        [],
-        'contexto',
-        'admin',
-      );
+      await service.getChatResponse('pregunta', [], 'contexto', 'admin');
 
       const callArgs = mockSendMessage.mock.calls[0][0];
       expect(callArgs).toContain('Analista Jefe');

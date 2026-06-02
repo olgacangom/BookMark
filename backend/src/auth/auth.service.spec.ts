@@ -2,10 +2,6 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import {
-  BadRequestException,
-  NotFoundException,
-} from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import * as nodemailer from 'nodemailer';
 import * as uuid from 'uuid';
@@ -13,6 +9,7 @@ import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
 import { User, UserRole } from '../users/entities/user.entity';
 import { UserStats } from '../users/entities/user-stats.entity';
+import { Repository } from 'typeorm';
 
 jest.mock('bcrypt');
 jest.mock('nodemailer');
@@ -23,95 +20,49 @@ describe('AuthService', () => {
   let usersService: jest.Mocked<UsersService>;
   let jwtService: jest.Mocked<JwtService>;
   let configService: jest.Mocked<ConfigService>;
-  let userRepository: any;
-  let userStatsRepository: any;
+  let userRepository: jest.Mocked<Repository<User>>;
+  let userStatsRepository: jest.Mocked<Repository<UserStats>>;
 
-  const mockUser = {
-    id: 'user-123',
-    email: 'test@example.com',
-    password: 'hashed_password',
-    fullName: 'Test User',
-    province: 'Madrid',
-    role: UserRole.USER,
-    libraryName: null,
-    libraryAddress: null,
-    document: null,
-    libraryPhone: null,
-    librarySchedule: null,
-    bio: null,
-    avatarUrl: null,
-    isPublic: true,
-    isActive: true,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    resetPasswordToken: null,
-    resetPasswordExpires: null,
-    address: null,
-    city: null,
-    books: [],
-    followerRelations: [],
-    followingRelations: [],
-    stats: {} as any,
-    badges: [],
-    clubs: [],
-    registrations: [],
-    events: [],
-  } as any;
-
-  const mockInactiveUser = {
-    ...mockUser,
-    isActive: false,
-  } as any;
-
-  const mockLibreroPendienteUser = {
-    ...mockUser,
-    role: UserRole.LIBRERO_PENDIENTE,
-  } as any;
+  const createMockUser = (overrides: Partial<User> = {}): User =>
+    ({
+      id: 'user-123',
+      email: 'test@example.com',
+      password: 'hashed_password',
+      fullName: 'Test User',
+      role: UserRole.USER,
+      isActive: true,
+      followers: [],
+      following: [],
+      ...overrides,
+    }) as User;
 
   beforeEach(async () => {
     userRepository = {
       create: jest.fn(),
       save: jest.fn(),
       findOne: jest.fn(),
-    };
+    } as unknown as jest.Mocked<Repository<User>>;
 
     userStatsRepository = {
       create: jest.fn(),
       save: jest.fn(),
-    };
+    } as unknown as jest.Mocked<Repository<UserStats>>;
 
     usersService = {
       findOneByEmail: jest.fn(),
       create: jest.fn(),
-    } as any;
+    } as unknown as jest.Mocked<UsersService>;
 
-    jwtService = {
-      sign: jest.fn(),
-    } as any;
-
-    configService = {
-      get: jest.fn(),
-    } as any;
+    jwtService = { sign: jest.fn() } as unknown as jest.Mocked<JwtService>;
+    configService = { get: jest.fn() } as unknown as jest.Mocked<ConfigService>;
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
-        {
-          provide: UsersService,
-          useValue: usersService,
-        },
-        {
-          provide: JwtService,
-          useValue: jwtService,
-        },
-        {
-          provide: ConfigService,
-          useValue: configService,
-        },
-        {
-          provide: getRepositoryToken(User),
-          useValue: userRepository,
-        },
+        { provide: UsersService, useValue: usersService },
+        { provide: JwtService, useValue: jwtService },
+        { provide: ConfigService, useValue: configService },
+        { provide: getRepositoryToken(User), useValue: userRepository },
         {
           provide: getRepositoryToken(UserStats),
           useValue: userStatsRepository,
@@ -122,15 +73,10 @@ describe('AuthService', () => {
     service = module.get<AuthService>(AuthService);
   });
 
-  afterEach(() => {
-    jest.clearAllMocks();
-  });
-
   describe('validateUser', () => {
-
     it('debe retornar null con contraseña incorrecta', async () => {
       (bcrypt.compare as jest.Mock).mockResolvedValueOnce(false);
-      usersService.findOneByEmail.mockResolvedValueOnce(mockUser);
+      usersService.findOneByEmail.mockResolvedValueOnce(createMockUser());
 
       const result = await service.validateUser(
         'test@example.com',
@@ -153,7 +99,9 @@ describe('AuthService', () => {
 
     it('debe lanzar BadRequestException si usuario es LIBRERO_PENDIENTE', async () => {
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
-      usersService.findOneByEmail.mockResolvedValue(mockLibreroPendienteUser);
+      usersService.findOneByEmail.mockResolvedValue(
+        createMockUser({ role: UserRole.LIBRERO_PENDIENTE }),
+      );
 
       await expect(
         service.validateUser('librero@example.com', 'password123'),
@@ -164,7 +112,9 @@ describe('AuthService', () => {
 
     it('debe lanzar BadRequestException si usuario está inactivo', async () => {
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
-      usersService.findOneByEmail.mockResolvedValue(mockInactiveUser);
+      usersService.findOneByEmail.mockResolvedValue(
+        createMockUser({ isActive: false }),
+      );
 
       await expect(
         service.validateUser('test@example.com', 'password123'),
@@ -173,12 +123,16 @@ describe('AuthService', () => {
 
     it('debe retornar usuario sin la propiedad password cuando las credenciales son correctas', async () => {
       (bcrypt.compare as jest.Mock).mockResolvedValueOnce(true);
-      usersService.findOneByEmail.mockResolvedValueOnce(mockUser);
+      const user = createMockUser({ email: 'test@example.com' });
 
-      const result = await service.validateUser('test@example.com', 'password123');
+      usersService.findOneByEmail.mockResolvedValueOnce(user);
+      const result = await service.validateUser(
+        'test@example.com',
+        'password123',
+      );
 
       expect(result).not.toHaveProperty('password');
-      expect(result?.email).toBe(mockUser.email);
+      expect(result?.email).toBe(user.email);
     });
   });
 
@@ -192,16 +146,21 @@ describe('AuthService', () => {
         role: UserRole.USER,
       };
 
-      const newUser = { ...mockUser, ...registerDto };
+      const mockStats: Partial<UserStats> = {
+        xp: 0,
+        level: 1,
+        totalBooksFinished: 0,
+        currentStreak: 0,
+      };
 
       (bcrypt.hash as jest.Mock).mockResolvedValueOnce('hashed_password');
       usersService.findOneByEmail.mockResolvedValueOnce(null);
-      userRepository.create.mockReturnValueOnce(newUser);
-      userRepository.save.mockResolvedValueOnce(newUser);
-      userStatsRepository.create.mockReturnValueOnce({});
-      userStatsRepository.save.mockResolvedValueOnce({});
+      userRepository.create.mockReturnValueOnce(createMockUser());
+      userRepository.save.mockResolvedValueOnce(createMockUser());
+      userStatsRepository.create.mockReturnValueOnce(mockStats as UserStats);
+      userStatsRepository.save.mockResolvedValueOnce(mockStats as UserStats);
 
-      const result = await service.register(registerDto);
+      await service.register(registerDto);
 
       expect(usersService.findOneByEmail).toHaveBeenCalledWith(
         registerDto.email,
@@ -222,7 +181,7 @@ describe('AuthService', () => {
         role: UserRole.USER,
       };
 
-      usersService.findOneByEmail.mockResolvedValue(mockUser);
+      usersService.findOneByEmail.mockResolvedValue(createMockUser());
 
       await expect(service.register(registerDto)).rejects.toThrow(
         'El correo electrónico ya está registrado',
@@ -230,7 +189,7 @@ describe('AuthService', () => {
     });
 
     it('debe crear usuario con isActive=false para LIBRERO', async () => {
-      const librerDto = {
+      const libreroDto = {
         email: 'librero@example.com',
         password: 'password123',
         fullName: 'Librero User',
@@ -238,16 +197,24 @@ describe('AuthService', () => {
         role: UserRole.LIBRERO,
       };
 
-      const newUser = { ...mockUser, ...librerDto };
+      const newUser = createMockUser({
+        ...libreroDto,
+      });
 
       (bcrypt.hash as jest.Mock).mockResolvedValueOnce('hashed_password');
       usersService.findOneByEmail.mockResolvedValueOnce(null);
       userRepository.create.mockReturnValueOnce(newUser);
       userRepository.save.mockResolvedValueOnce(newUser);
-      userStatsRepository.create.mockReturnValueOnce({});
-      userStatsRepository.save.mockResolvedValueOnce({});
+      userStatsRepository.create.mockReturnValue({
+        xp: 0,
+        level: 1,
+      } as UserStats);
+      userStatsRepository.save.mockResolvedValue({
+        xp: 0,
+        level: 1,
+      } as UserStats);
 
-      await service.register(librerDto);
+      await service.register(libreroDto);
 
       const createCall = userRepository.create.mock.calls[0][0];
       expect(createCall.isActive).toBe(false);
@@ -262,16 +229,20 @@ describe('AuthService', () => {
         role: UserRole.USER,
       };
 
-      const savedUser = { ...mockUser, email: registerDto.email, password: 'hashed_pw' };
+      const savedUser = createMockUser({
+        email: registerDto.email,
+        password: 'hashed_pw',
+      });
 
       (bcrypt.hash as jest.Mock).mockResolvedValueOnce('hashed_pw');
       usersService.findOneByEmail.mockResolvedValueOnce(null);
-      userRepository.create.mockReturnValueOnce(savedUser);
-      userRepository.save.mockResolvedValueOnce(savedUser);
-      userStatsRepository.create.mockReturnValueOnce({});
-      userStatsRepository.save.mockResolvedValueOnce({});
+      userRepository.create.mockReturnValue(savedUser);
+      userRepository.save.mockResolvedValue(savedUser);
+      const mockStats: Partial<UserStats> = { xp: 0, level: 1 };
+      userStatsRepository.create.mockReturnValue(mockStats as UserStats);
+      userStatsRepository.save.mockResolvedValue(mockStats as UserStats);
 
-      const result = await service.register(registerDto as any);
+      const result = await service.register(registerDto);
 
       expect(result).not.toHaveProperty('password');
       expect(result.email).toBe(registerDto.email);
@@ -280,25 +251,20 @@ describe('AuthService', () => {
 
   describe('login', () => {
     it('debe retornar token JWT y usuario', () => {
-      const userWithoutPassword = {
-        id: mockUser.id,
-        email: mockUser.email,
-        fullName: mockUser.fullName,
-        role: mockUser.role,
-        isActive: mockUser.isActive,
-      };
+      const user = createMockUser();
+      const userWithoutPassword = { ...user };
+      delete (userWithoutPassword as any).password;
+      const resultPayload = userWithoutPassword as unknown as Omit<
+        User,
+        'password'
+      >;
 
-      jwtService.sign.mockReturnValueOnce('jwt-token-123');
+      jwtService.sign.mockReturnValue('jwt-token-123');
 
-      const result = service.login(userWithoutPassword as any);
+      const result = service.login(resultPayload);
 
-      expect(jwtService.sign).toHaveBeenCalledWith({
-        email: userWithoutPassword.email,
-        sub: userWithoutPassword.id,
-        role: userWithoutPassword.role,
-      });
       expect(result.access_token).toBe('jwt-token-123');
-      expect(result.user).toEqual(userWithoutPassword);
+      expect(result.user).toEqual(resultPayload);
     });
   });
 
@@ -312,12 +278,15 @@ describe('AuthService', () => {
         mockTransporter,
       );
       (uuid.v4 as jest.Mock).mockReturnValueOnce('uuid-token');
-      userRepository.findOne.mockResolvedValueOnce(mockUser);
-      userRepository.save.mockResolvedValueOnce({
-        ...mockUser,
-        resetPasswordToken: 'uuid-token',
-        resetPasswordExpires: new Date(Date.now() + 3600000),
-      });
+
+      const userWithToken = createMockUser({ email: 'test@example.com' });
+      userWithToken.resetPasswordToken = 'uuid-token';
+      userWithToken.resetPasswordExpires = new Date(Date.now() + 3600000);
+
+      userRepository.findOne.mockResolvedValueOnce(
+        createMockUser({ email: 'test@example.com' }),
+      );
+      userRepository.save.mockResolvedValueOnce(userWithToken);
       configService.get.mockReturnValue('email@gmail.com');
 
       const result = await service.forgotPassword('test@example.com');
@@ -333,28 +302,33 @@ describe('AuthService', () => {
     it('debe lanzar NotFoundException si email no está registrado', async () => {
       userRepository.findOne.mockResolvedValueOnce(null);
 
-      await expect(service.forgotPassword('unknown@example.com')).rejects.toThrow(
-        'El correo no está registrado',
-      );
+      await expect(
+        service.forgotPassword('unknown@example.com'),
+      ).rejects.toThrow('El correo no está registrado');
     });
 
     it('debe incluir token en email de recuperación', async () => {
       const mockTransporter = {
         sendMail: jest.fn().mockResolvedValueOnce({}),
       };
-
       const mockToken = 'specific-uuid-token';
 
       (nodemailer.createTransport as jest.Mock).mockReturnValueOnce(
         mockTransporter,
       );
       (uuid.v4 as jest.Mock).mockReturnValueOnce(mockToken);
-      userRepository.findOne.mockResolvedValueOnce(mockUser);
-      userRepository.save.mockResolvedValueOnce({
-        ...mockUser,
+
+      const userWithToken = createMockUser({ email: 'test@example.com' });
+
+      Object.assign(userWithToken, {
         resetPasswordToken: mockToken,
         resetPasswordExpires: new Date(Date.now() + 3600000),
       });
+
+      userRepository.findOne.mockResolvedValueOnce(
+        createMockUser({ email: 'test@example.com' }),
+      );
+      userRepository.save.mockResolvedValueOnce(userWithToken);
       configService.get.mockReturnValue('test@gmail.com');
 
       await service.forgotPassword('test@example.com');
@@ -368,28 +342,29 @@ describe('AuthService', () => {
   describe('resetPassword', () => {
     it('debe actualizar contraseña con token válido', async () => {
       const futureDate = new Date(Date.now() + 3600000);
-      const userWithToken = {
-        ...mockUser,
-        resetPasswordToken: 'valid-token',
-        resetPasswordExpires: futureDate,
-      };
+      const userWithToken = createMockUser();
+      userWithToken.resetPasswordToken = 'valid-token';
+      userWithToken.resetPasswordExpires = futureDate;
 
       (bcrypt.hash as jest.Mock).mockResolvedValueOnce('new_hashed_password');
       userRepository.findOne.mockResolvedValueOnce(userWithToken);
-      userRepository.save.mockResolvedValueOnce({
-        ...userWithToken,
-        password: 'new_hashed_password',
-        resetPasswordToken: null,
-        resetPasswordExpires: null,
-      });
 
-      const result = await service.resetPassword('valid-token', 'newpassword123');
+      const savedUser = { ...userWithToken, password: 'new_hashed_password' };
+      savedUser.resetPasswordToken = null;
+      savedUser.resetPasswordExpires = null;
+
+      userRepository.save.mockResolvedValueOnce(savedUser as User);
+
+      const result = await service.resetPassword(
+        'valid-token',
+        'newpassword123',
+      );
 
       expect(userRepository.findOne).toHaveBeenCalledWith({
         where: { resetPasswordToken: 'valid-token' },
       });
       expect(bcrypt.hash).toHaveBeenCalledWith('newpassword123', 10);
-      expect(userRepository.save).toHaveBeenCalled();
+      expect(userRepository.save).toHaveBeenCalledWith(savedUser);
       expect(result.message).toBe('Contraseña actualizada con éxito');
     });
 
@@ -403,12 +378,9 @@ describe('AuthService', () => {
 
     it('debe lanzar BadRequestException si token ha expirado', async () => {
       const pastDate = new Date(Date.now() - 3600000);
-      const expiredUser = {
-        ...mockUser,
-        resetPasswordToken: 'expired-token',
-        resetPasswordExpires: pastDate,
-      };
-
+      const expiredUser = createMockUser();
+      expiredUser.resetPasswordToken = 'expired-token';
+      expiredUser.resetPasswordExpires = pastDate;
       userRepository.findOne.mockResolvedValueOnce(expiredUser);
 
       await expect(
@@ -418,19 +390,18 @@ describe('AuthService', () => {
 
     it('debe limpiar token y expiration después de reset', async () => {
       const futureDate = new Date(Date.now() + 3600000);
-      const userWithToken = {
-        ...mockUser,
+      const baseUser = createMockUser({
         resetPasswordToken: 'valid-token',
         resetPasswordExpires: futureDate,
-      };
+      });
 
       (bcrypt.hash as jest.Mock).mockResolvedValueOnce('new_hashed_password');
-      userRepository.findOne.mockResolvedValueOnce(userWithToken);
-      userRepository.save.mockResolvedValueOnce({});
+      userRepository.findOne.mockResolvedValueOnce(baseUser);
+      userRepository.save.mockResolvedValueOnce(baseUser);
 
       await service.resetPassword('valid-token', 'newpassword123');
-
       const saveCall = userRepository.save.mock.calls[0][0];
+
       expect(saveCall.resetPasswordToken).toBeNull();
       expect(saveCall.resetPasswordExpires).toBeNull();
     });
@@ -489,15 +460,15 @@ describe('AuthService', () => {
 
   describe('JWT Payload', () => {
     it('debe incluir email, id y role en JWT payload', () => {
-      const user = {
+      const user: Omit<User, 'password' | 'followers' | 'following'> = {
         id: 'user-456',
         email: 'custom@example.com',
         role: UserRole.LIBRERO,
-      };
+      } as Omit<User, 'password'>;
 
       jwtService.sign.mockReturnValueOnce('custom-token');
 
-      service.login(user as any);
+      service.login(user as Omit<User, 'password'>);
 
       expect(jwtService.sign).toHaveBeenCalledWith({
         email: 'custom@example.com',
@@ -517,12 +488,17 @@ describe('AuthService', () => {
         role: UserRole.USER,
       };
 
+      const newUser = createMockUser(registerDto);
+      const mockStats: Partial<UserStats> = { xp: 0, level: 1 };
+
       (bcrypt.hash as jest.Mock).mockResolvedValueOnce('hashed_result');
       usersService.findOneByEmail.mockResolvedValueOnce(null);
-      userRepository.create.mockReturnValueOnce({});
-      userRepository.save.mockResolvedValueOnce({});
-      userStatsRepository.create.mockReturnValueOnce({});
-      userStatsRepository.save.mockResolvedValueOnce({});
+
+      userRepository.create.mockReturnValue(newUser);
+      userRepository.save.mockResolvedValue(newUser);
+
+      userStatsRepository.create.mockReturnValue(mockStats as UserStats);
+      userStatsRepository.save.mockResolvedValue(mockStats as UserStats);
 
       await service.register(registerDto);
 
@@ -531,15 +507,15 @@ describe('AuthService', () => {
 
     it('debe hashear contraseña en resetPassword', async () => {
       const futureDate = new Date(Date.now() + 3600000);
-      const userWithToken = {
-        ...mockUser,
+      const userWithToken = createMockUser({
         resetPasswordToken: 'valid-token',
         resetPasswordExpires: futureDate,
-      };
+      });
 
       (bcrypt.hash as jest.Mock).mockResolvedValueOnce('new_hashed_result');
       userRepository.findOne.mockResolvedValueOnce(userWithToken);
-      userRepository.save.mockResolvedValueOnce({});
+      userWithToken.password = 'new_hashed_password';
+      userRepository.save.mockResolvedValueOnce(userWithToken);
 
       await service.resetPassword('valid-token', 'newpassword');
 
@@ -557,16 +533,26 @@ describe('AuthService', () => {
         role: UserRole.USER,
       };
 
+      const newUser = createMockUser({ email: registerDto.email });
+
       (bcrypt.hash as jest.Mock).mockResolvedValueOnce('hashed_password');
       usersService.findOneByEmail.mockResolvedValueOnce(null);
-      userRepository.create.mockReturnValueOnce({});
-      userRepository.save.mockResolvedValueOnce({ id: 'user-123' });
-      userStatsRepository.create.mockReturnValueOnce({});
-      userStatsRepository.save.mockResolvedValueOnce({});
+      userRepository.create.mockReturnValue(newUser);
+      userRepository.save.mockResolvedValue(newUser);
+
+      const initialStats: Partial<UserStats> = {
+        xp: 0,
+        level: 1,
+        totalBooksFinished: 0,
+        currentStreak: 0,
+      };
+
+      userStatsRepository.create.mockReturnValue(initialStats as UserStats);
+      userStatsRepository.save.mockResolvedValue(initialStats as UserStats);
 
       await service.register(registerDto);
-
       const statsCall = userStatsRepository.create.mock.calls[0][0];
+
       expect(statsCall.xp).toBe(0);
       expect(statsCall.level).toBe(1);
       expect(statsCall.totalBooksFinished).toBe(0);

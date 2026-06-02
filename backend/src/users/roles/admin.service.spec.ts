@@ -65,10 +65,19 @@ describe('AdminService', () => {
         { provide: getRepositoryToken(Book), useValue: repoFactory() },
         { provide: getRepositoryToken(BookListing), useValue: repoFactory() },
         { provide: getRepositoryToken(LibraryEvent), useValue: repoFactory() },
-        { provide: getRepositoryToken(EventRegistration), useValue: repoFactory() },
-        { provide: getRepositoryToken(SustainabilityRequest), useValue: repoFactory() },
+        {
+          provide: getRepositoryToken(EventRegistration),
+          useValue: repoFactory(),
+        },
+        {
+          provide: getRepositoryToken(SustainabilityRequest),
+          useValue: repoFactory(),
+        },
         { provide: getRepositoryToken(Club), useValue: repoFactory() },
-        { provide: AuthService, useValue: { sendNotificationEmail: jest.fn() } },
+        {
+          provide: AuthService,
+          useValue: { sendNotificationEmail: jest.fn() },
+        },
       ],
     }).compile();
 
@@ -96,13 +105,25 @@ describe('AdminService', () => {
 
   it('toggleUserStatus throws when user not found', async () => {
     userRepo.findOne!.mockResolvedValue(null);
-    await expect(service.toggleUserStatus('u1')).rejects.toThrow(NotFoundException);
+    await expect(service.toggleUserStatus('u1')).rejects.toThrow(
+      NotFoundException,
+    );
   });
 
   it('approveLibrero promotes user and sends email', async () => {
-    const user = { id: 'u1', email: 'a@b.com', fullName: 'User', role: UserRole.USER, isActive: false } as any;
+    const user = {
+      id: 'u1',
+      email: 'a@b.com',
+      fullName: 'User',
+      role: UserRole.USER,
+      isActive: false,
+    } as any;
     userRepo.findOne!.mockResolvedValue(user);
-    userRepo.save!.mockResolvedValue({ ...user, role: UserRole.LIBRERO, isActive: true });
+    userRepo.save!.mockResolvedValue({
+      ...user,
+      role: UserRole.LIBRERO,
+      isActive: true,
+    });
 
     const result = await service.approveLibrero('u1');
     expect(userRepo.save).toHaveBeenCalled();
@@ -156,9 +177,15 @@ describe('AdminService', () => {
       const eventRepo = module.get(getRepositoryToken(LibraryEvent));
 
       bookRepo.createQueryBuilder = jest.fn().mockReturnValue(mockQueryBuilder);
-      listingRepo.createQueryBuilder = jest.fn().mockReturnValue(mockQueryBuilder);
-      requestRepo.createQueryBuilder = jest.fn().mockReturnValue(mockQueryBuilder);
-      eventRepo.createQueryBuilder = jest.fn().mockReturnValue(mockQueryBuilder);
+      listingRepo.createQueryBuilder = jest
+        .fn()
+        .mockReturnValue(mockQueryBuilder);
+      requestRepo.createQueryBuilder = jest
+        .fn()
+        .mockReturnValue(mockQueryBuilder);
+      eventRepo.createQueryBuilder = jest
+        .fn()
+        .mockReturnValue(mockQueryBuilder);
 
       const stats = await service.getGlobalStats();
       expect(stats.totalUsers).toBe(10);
@@ -190,9 +217,9 @@ describe('AdminService', () => {
       addGroupBy: jest.fn().mockReturnThis(),
       orderBy: jest.fn().mockReturnThis(),
       limit: jest.fn().mockReturnThis(),
-      getRawMany: jest.fn<any>().mockResolvedValue([
-        { createdAt: new Date().toISOString() }
-      ]),
+      getRawMany: jest
+        .fn<any>()
+        .mockResolvedValue([{ createdAt: new Date().toISOString() }]),
       getRawOne: jest.fn<any>().mockResolvedValue(null),
       getCount: jest.fn<any>().mockResolvedValue(0),
     });
@@ -208,7 +235,9 @@ describe('AdminService', () => {
   });
 
   it('findAllLibreros should return users with specific roles', async () => {
-    userRepo.find = jest.fn<any>().mockResolvedValue([{ id: 'u1', role: UserRole.LIBRERO }]);
+    userRepo.find = jest
+      .fn<any>()
+      .mockResolvedValue([{ id: 'u1', role: UserRole.LIBRERO }]);
     const result = await service.findAllLibreros();
     expect(result[0].role).toBe(UserRole.LIBRERO);
   });
@@ -223,7 +252,9 @@ describe('AdminService', () => {
       addGroupBy: jest.fn().mockReturnThis(),
       orderBy: jest.fn().mockReturnThis(),
       limit: jest.fn().mockReturnThis(),
-      getRawOne: jest.fn<any>().mockResolvedValue({ title: 'Libro', author: 'Autor' } as any),
+      getRawOne: jest
+        .fn<any>()
+        .mockResolvedValue({ title: 'Libro', author: 'Autor' } as any),
     });
     const result = await service.getMostRequestedBook();
     expect(result).toEqual({ title: 'Libro', author: 'Autor' });
@@ -259,19 +290,15 @@ describe('AdminService', () => {
 
     const consoleSpy = jest
       .spyOn(console, 'error')
-      .mockImplementation(() => { });
+      .mockImplementation(() => {});
 
     // Forzamos un fallo en una dependencia utilizada por getGlobalStats
     userRepo.count!.mockRejectedValue(error);
 
     await expect(service.getGlobalStats()).rejects.toThrow('Database error');
 
-    expect(consoleSpy).toHaveBeenCalledWith(
-      'Error en getGlobalStats:',
-      error,
-    );
+    expect(consoleSpy).toHaveBeenCalledWith('Error en getGlobalStats:', error);
 
     consoleSpy.mockRestore();
   });
-
 });

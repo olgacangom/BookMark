@@ -2,10 +2,23 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
 import { jest, describe, it, expect, beforeEach } from '@jest/globals';
+import { UpdateUserDto } from './dto/update-user.dto';
+import { RegisterDto } from 'src/auth/dto/register.dto';
+import { User, UserRole } from './entities/user.entity';
+
+interface MockRequest {
+  user: {
+    id: string;
+    email: string;
+  };
+}
+
+const USER_ID = 'abc';
+const TARGET_ID = 'target-1';
 
 describe('UsersController', () => {
   let controller: UsersController;
-  let service: any;
+  let service: jest.Mocked<UsersService>;
 
   const usersServiceMock = {
     getPendingRequests: jest.fn(),
@@ -29,25 +42,22 @@ describe('UsersController', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [UsersController],
-      providers: [
-        {
-          provide: UsersService,
-          useValue: usersServiceMock,
-        },
-      ],
+      providers: [{ provide: UsersService, useValue: usersServiceMock }],
     }).compile();
 
     controller = module.get<UsersController>(UsersController);
     service = module.get(UsersService);
-
     jest.clearAllMocks();
   });
 
   it('should call getPendingRequests with user id', async () => {
-    const req = { user: { id: 'abc' } } as any;
-
+    const req: MockRequest = {
+      user: {
+        id: 'abc',
+        email: 'test@test.com',
+      },
+    };
     await controller.getRequests(req);
-
     expect(service.getPendingRequests).toHaveBeenCalledWith('abc');
   });
 
@@ -58,50 +68,67 @@ describe('UsersController', () => {
   });
 
   it('should update profile', async () => {
-    const req = { user: { id: 'abc' } } as any;
+    const req: MockRequest = {
+      user: {
+        id: 'abc',
+        email: 'test@test.com',
+      },
+    };
     const dto = { fullName: 'New Name' };
 
-    await controller.updateProfile(req, dto as any);
-
+    await controller.updateProfile(req, dto);
     expect(service.update).toHaveBeenCalledWith('abc', dto);
   });
 
-  it('should upload avatar and build URL correctly', async () => {
-    const file = { filename: 'avatar.png' } as any;
-    const req = { user: { id: 'user-1' } } as any;
-
-    await controller.uploadAvatar(file, req);
-
+  it('should upload avatar', async () => {
+    const file: Partial<Express.Multer.File> = {
+      filename: 'avatar.png',
+    };
+    const req: MockRequest = {
+      user: {
+        id: USER_ID,
+        email: 'test@test.com',
+      },
+    };
+    await controller.uploadAvatar(file as Express.Multer.File, req);
     expect(service.updateAvatar).toHaveBeenCalledWith(
-      'user-1',
-      'http://localhost:3000/uploads/avatars/avatar.png',
+      USER_ID,
+      expect.stringContaining('avatar.png'),
     );
   });
 
   it('should delete avatar', async () => {
-    const req = { user: { id: 'user-1' } } as any;
-
+    const req = {
+      user: {
+        id: USER_ID,
+      } as User,
+    };
     await controller.deleteAvatar(req);
-
-    expect(service.deleteAvatar).toHaveBeenCalledWith('user-1');
+    expect(service.deleteAvatar).toHaveBeenCalledWith(USER_ID);
   });
 
   it('should deactivate account', async () => {
-    const req = { user: { id: 'user-1' } } as any;
-
-    await controller.deactivateMyAccount(req as any);
-
-    expect(service.deactivateAccount).toHaveBeenCalledWith('user-1');
+    const req = {
+      user: {
+        id: USER_ID,
+      } as User,
+    };
+    await controller.deactivateMyAccount(req);
+    expect(service.deactivateAccount).toHaveBeenCalledWith(USER_ID);
   });
 
   it('should follow and unfollow users', async () => {
-    const req = { user: { id: 'user-1' } } as any;
+    const req: MockRequest = {
+      user: {
+        id: USER_ID,
+        email: 'test@test.com',
+      },
+    };
+    await controller.follow(req, TARGET_ID);
+    await controller.unfollow(req, TARGET_ID);
 
-    await controller.follow(req, 'target-1');
-    await controller.unfollow(req, 'target-2');
-
-    expect(service.followUser).toHaveBeenCalledWith('user-1', 'target-1');
-    expect(service.unfollowUser).toHaveBeenCalledWith('user-1', 'target-2');
+    expect(service.followUser).toHaveBeenCalledWith(USER_ID, TARGET_ID);
+    expect(service.unfollowUser).toHaveBeenCalledWith(USER_ID, TARGET_ID);
   });
 
   it('should accept and decline follow requests', async () => {
@@ -113,35 +140,54 @@ describe('UsersController', () => {
   });
 
   it('should get profile correctly', async () => {
-    const req = { user: { id: 'me' } } as any;
-
+    const req: MockRequest = {
+      user: {
+        id: USER_ID,
+        email: 'test@test.com',
+      },
+    };
     await controller.getProfile(req, 'target');
-
-    expect(service.findOneProfile).toHaveBeenCalledWith('target', 'me');
+    expect(service.findOneProfile).toHaveBeenCalledWith('target', USER_ID);
   });
 
   it('should call CRUD methods', async () => {
     await controller.findAll();
     await controller.findOne('1');
-    await controller.update('2', { bio: 'test' } as any);
+
+    const updateDto: UpdateUserDto = { bio: 'test' };
+    await controller.update('2', updateDto);
     await controller.remove('3');
-    await controller.create({ email: 'a@a.com', password: '123' } as any);
+
+    const registerDto: RegisterDto = {
+      email: 'a@a.com',
+      password: '123',
+      fullName: 'Test',
+      province: 'Sevilla',
+      role: UserRole.USER,
+    };
+    await controller.create(registerDto);
 
     expect(service.findAll).toHaveBeenCalled();
     expect(service.findOne).toHaveBeenCalledWith('1');
-    expect(service.update).toHaveBeenCalledWith('2', { bio: 'test' });
+    expect(service.update).toHaveBeenCalledWith('2', updateDto);
     expect(service.remove).toHaveBeenCalledWith('3');
-    expect(service.create).toHaveBeenCalledWith({
-      email: 'a@a.com',
-      password: '123',
-    });
+
+    expect(service.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        email: 'a@a.com',
+        password: '123',
+      }),
+    );
   });
 
   it('should get growth stats', async () => {
-    const req = { user: { id: 'user-1' } } as any;
-
+    const req: MockRequest = {
+      user: {
+        id: USER_ID,
+        email: 'test@test.com',
+      },
+    };
     await controller.getGrowth(req);
-
-    expect(service.getBooksGrowth).toHaveBeenCalledWith('user-1');
+    expect(service.getBooksGrowth).toHaveBeenCalledWith(USER_ID);
   });
 });

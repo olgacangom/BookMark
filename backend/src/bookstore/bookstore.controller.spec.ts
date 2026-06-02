@@ -7,10 +7,9 @@ describe('BookstoreController', () => {
   let controller: BookstoreController;
 
   const mockService = {
-    findNearby: jest.fn() as jest.MockedFunction<(
-      lat: number,
-      lon: number,
-    ) => Promise<any[]>>,
+    findNearby: jest.fn() as jest.MockedFunction<
+      (lat: number, lon: number) => Promise<any[]>
+    >,
   };
 
   beforeEach(async () => {

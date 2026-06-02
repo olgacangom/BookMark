@@ -93,7 +93,11 @@ describe('BooksService', () => {
     noteRepo.create?.mockReturnValue({ id: 'note-1', content: 'hola' });
     noteRepo.save?.mockImplementation((val) => Promise.resolve(val));
     noteRepo.find?.mockResolvedValue([{ id: 'note-1', content: 'hola' }]);
-    noteRepo.findOne?.mockResolvedValue({ id: 'note-1', content: 'hola', book: mockBook });
+    noteRepo.findOne?.mockResolvedValue({
+      id: 'note-1',
+      content: 'hola',
+      book: mockBook,
+    });
     noteRepo.remove?.mockResolvedValue({ deleted: true });
   });
 
@@ -274,7 +278,11 @@ describe('BooksService', () => {
     it('createNote crea y guarda una nota', async () => {
       repo.findOne?.mockResolvedValue(mockBook);
       noteRepo.create?.mockReturnValue({ content: 'mi nota', book: mockBook });
-      noteRepo.save?.mockResolvedValue({ id: 'n1', content: 'mi nota', book: mockBook });
+      noteRepo.save?.mockResolvedValue({
+        id: 'n1',
+        content: 'mi nota',
+        book: mockBook,
+      });
 
       const res = await service.createNote(1, 'mi nota', mockUserId);
 
@@ -300,7 +308,11 @@ describe('BooksService', () => {
     });
 
     it('updateNote actualiza la nota correctamente', async () => {
-      noteRepo.findOne?.mockResolvedValue({ id: 'n1', content: 'old', book: mockBook });
+      noteRepo.findOne?.mockResolvedValue({
+        id: 'n1',
+        content: 'old',
+        book: mockBook,
+      });
       noteRepo.save?.mockResolvedValue({ id: 'n1', content: 'nuevo' });
 
       const res = await service.updateNote('n1', 'nuevo', mockUserId);

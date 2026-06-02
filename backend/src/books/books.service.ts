@@ -75,7 +75,8 @@ export class BooksService {
         saved.id?.toString(),
       );
     } catch (err) {
-      console.error('Error al registrar actividad:',
+      console.error(
+        'Error al registrar actividad:',
         err instanceof Error ? err.message : err,
       );
     }

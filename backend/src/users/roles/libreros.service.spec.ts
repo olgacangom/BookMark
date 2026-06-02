@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { LibrerosService } from './libreros.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, ObjectLiteral, UpdateResult } from 'typeorm';
 import { StoreInventory } from '../entities/store-inventory.entity';
 import { Book } from '../../books/entities/book.entity';
 import { User } from '../entities/user.entity';
@@ -16,11 +16,34 @@ import {
 describe('LibrerosService', () => {
   let service: LibrerosService;
 
-  let inventoryRepo: any;
-  let bookRepo: any;
-  let userRepo: any;
-  let eventRepo: any;
-  let registrationRepo: any;
+  let inventoryRepo: jest.Mocked<Repository<StoreInventory>>;
+  let bookRepo: jest.Mocked<Repository<Book>>;
+  let userRepo: jest.Mocked<Repository<User>>;
+  let eventRepo: jest.Mocked<Repository<LibraryEvent>>;
+  let registrationRepo: jest.Mocked<Repository<EventRegistration>>;
+
+  const createMockRepository = <T extends ObjectLiteral>(): jest.Mocked<
+    Repository<T>
+  > =>
+    ({
+      find: jest.fn(),
+      findOne: jest.fn(),
+      create: jest.fn(),
+      save: jest.fn(),
+      remove: jest.fn(),
+      count: jest.fn(),
+      update: jest.fn(),
+      createQueryBuilder: jest.fn().mockReturnThis(),
+      select: jest.fn().mockReturnThis(),
+      addSelect: jest.fn().mockReturnThis(),
+      leftJoin: jest.fn().mockReturnThis(),
+      groupBy: jest.fn().mockReturnThis(),
+      addGroupBy: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      getRawOne: jest.fn(),
+      getRawMany: jest.fn(),
+    }) as unknown as jest.Mocked<Repository<T>>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -28,51 +51,28 @@ describe('LibrerosService', () => {
         LibrerosService,
         {
           provide: getRepositoryToken(StoreInventory),
-          useValue: {
-            findOne: jest.fn(),
-            find: jest.fn(),
-            create: jest.fn(),
-            save: jest.fn(),
-            remove: jest.fn(),
-            count: jest.fn(),
-          },
+          useValue: createMockRepository<StoreInventory>(),
         },
         {
           provide: getRepositoryToken(Book),
-          useValue: {
-            findOne: jest.fn(),
-          },
+          useValue: createMockRepository<Book>(),
         },
         {
           provide: getRepositoryToken(User),
-          useValue: {
-            update: jest.fn(),
-            findOne: jest.fn(),
-          },
+          useValue: createMockRepository<User>(),
         },
         {
           provide: getRepositoryToken(LibraryEvent),
-          useValue: {
-            findOne: jest.fn(),
-            find: jest.fn(),
-            create: jest.fn(),
-            save: jest.fn(),
-            remove: jest.fn(),
-            count: jest.fn(),
-          },
+          useValue: createMockRepository<LibraryEvent>(),
         },
         {
           provide: getRepositoryToken(EventRegistration),
-          useValue: {
-            create: jest.fn(),
-            save: jest.fn(),
-          },
+          useValue: createMockRepository<EventRegistration>(),
         },
       ],
     }).compile();
 
-    service = module.get(LibrerosService);
-
+    service = module.get<LibrerosService>(LibrerosService);
     inventoryRepo = module.get(getRepositoryToken(StoreInventory));
     bookRepo = module.get(getRepositoryToken(Book));
     userRepo = module.get(getRepositoryToken(User));
@@ -93,14 +93,12 @@ describe('LibrerosService', () => {
   });
 
   it('should throw conflict if duplicate by id', async () => {
-    bookRepo.findOne.mockResolvedValue({
-      id: 1,
-      title: 'Book',
-      author: 'A',
-      isbn: '123',
-    });
+    bookRepo.findOne.mockResolvedValue({ id: 1 } as Book);
 
-    inventoryRepo.findOne.mockResolvedValue({ book: { title: 'Book' } });
+    inventoryRepo.findOne.mockResolvedValue({
+      id: 'existing-inv',
+      book: { title: 'Libro Duplicado' },
+    } as StoreInventory);
 
     await expect(
       service.addToInventory('l1', '1', { price: 10, inStock: true }),
@@ -112,24 +110,46 @@ describe('LibrerosService', () => {
       id: 1,
       title: 'Book',
       author: 'A',
-      isbn: null,
-    });
+    } as Partial<Book> as Book);
 
     inventoryRepo.findOne.mockResolvedValue(null);
-    inventoryRepo.create.mockReturnValue({ id: 'inv1' });
-    inventoryRepo.save.mockResolvedValue({ id: 'inv1' });
+    const mockInventoryItem = {
+      id: 'inv1',
+      price: 20,
+      inStock: true,
+      librero: { id: 'l1' },
+      book: { id: 1 },
+    } as StoreInventory;
+    inventoryRepo.create.mockReturnValue(mockInventoryItem);
+    inventoryRepo.save.mockResolvedValue(mockInventoryItem);
 
     const res = await service.addToInventory('l1', '1', {
       price: 20,
       inStock: true,
     });
 
-    expect(res).toEqual({ id: 'inv1' });
+    expect(res).toEqual(
+      expect.objectContaining({
+        id: 'inv1',
+        price: 20,
+        inStock: true,
+      }),
+    );
   });
 
   it('should update inventory item', async () => {
-    inventoryRepo.findOne.mockResolvedValue({ id: 'i1' });
-    inventoryRepo.save.mockResolvedValue({ id: 'i1', price: 99 });
+    const mockItem = {
+      id: 'i1',
+      price: 50,
+      inStock: true,
+    } as StoreInventory;
+
+    inventoryRepo.findOne.mockResolvedValue(mockItem);
+    inventoryRepo.save.mockResolvedValue({
+      ...mockItem,
+      price: 99,
+      inStock: false,
+    } as StoreInventory);
 
     const res = await service.updateInventoryItem('l1', 'i1', {
       price: 99,
@@ -137,6 +157,7 @@ describe('LibrerosService', () => {
     });
 
     expect(res.price).toBe(99);
+    expect(res.inStock).toBe(false);
   });
 
   it('should throw when updating missing item', async () => {
@@ -151,18 +172,25 @@ describe('LibrerosService', () => {
   });
 
   it('should remove inventory item', async () => {
-    inventoryRepo.findOne.mockResolvedValue({ id: 'i1' });
-    inventoryRepo.remove.mockResolvedValue(undefined);
+    const mockItem = {
+      id: 'i1',
+      librero: { id: 'l1' },
+    } as StoreInventory;
+    inventoryRepo.findOne.mockResolvedValue(mockItem);
+    inventoryRepo.remove.mockResolvedValue(mockItem);
 
-    await expect(service.removeFromInventory('l1', 'i1')).resolves.toBeUndefined();
+    await expect(
+      service.removeFromInventory('l1', 'i1'),
+    ).resolves.toBeUndefined();
+    expect(inventoryRepo.remove).toHaveBeenCalledWith(mockItem);
   });
 
   it('should throw when removing missing item', async () => {
     inventoryRepo.findOne.mockResolvedValue(null);
 
-    await expect(
-      service.removeFromInventory('l1', 'i1'),
-    ).rejects.toThrow(NotFoundException);
+    await expect(service.removeFromInventory('l1', 'i1')).rejects.toThrow(
+      NotFoundException,
+    );
   });
 
   it('should return inventory count', async () => {
@@ -185,14 +213,26 @@ describe('LibrerosService', () => {
   });
 
   it('should update profile and return user', async () => {
-    userRepo.update.mockResolvedValue(undefined);
-    userRepo.findOne.mockResolvedValue({ id: 'l1' });
+    const updateResult: UpdateResult = {
+      affected: 1,
+      raw: {},
+      generatedMaps: [],
+    };
+    userRepo.update.mockResolvedValue(updateResult);
+
+    const mockUser = {
+      id: 'l1',
+      email: 'test@libreria.com',
+      fullName: 'Librero Test',
+    } as User;
+
+    userRepo.findOne.mockResolvedValue(mockUser);
 
     const res = await service.updateProfile('l1', {
       libraryPhone: '123',
     });
 
-    expect(res).toEqual({ id: 'l1' });
+    expect(res).toEqual(mockUser);
   });
 
   /* =========================================================
@@ -214,8 +254,20 @@ describe('LibrerosService', () => {
   });
 
   it('should create event successfully', async () => {
-    eventRepo.create.mockReturnValue({ id: 'e1' });
-    eventRepo.save.mockResolvedValue({ id: 'e1' });
+    const mockEvent: LibraryEvent = {
+      id: 'e1',
+      title: 'event',
+      description: 'description',
+      eventDate: new Date(),
+      maxCapacity: 10,
+      organizer: { id: 'l1' } as User,
+      registrations: [],
+      imageUrl: '',
+      createdAt: new Date(),
+    } as LibraryEvent;
+
+    eventRepo.create.mockReturnValue(mockEvent);
+    eventRepo.save.mockResolvedValue(mockEvent);
 
     const res = await service.createEvent('l1', { title: 'event' });
 
@@ -223,9 +275,17 @@ describe('LibrerosService', () => {
   });
 
   it('should get my events with attendees count', async () => {
-    eventRepo.find.mockResolvedValue([
-      { registrations: [1, 2], eventDate: new Date() },
-    ]);
+    const mockEvents: Partial<LibraryEvent>[] = [
+      {
+        registrations: [
+          { id: 'reg1' } as EventRegistration,
+          { id: 'reg2' } as EventRegistration,
+        ],
+        eventDate: new Date(),
+      },
+    ];
+
+    eventRepo.find.mockResolvedValue(mockEvents as LibraryEvent[]);
 
     const res = await service.getMyEvents('l1');
 
@@ -233,8 +293,24 @@ describe('LibrerosService', () => {
   });
 
   it('should update event', async () => {
-    eventRepo.findOne.mockResolvedValue({ id: 'e1' });
-    eventRepo.save.mockResolvedValue({ id: 'e1', title: 'updated' });
+    const mockEvent: LibraryEvent = {
+      id: 'e1',
+      title: 'original',
+      description: 'desc',
+      eventDate: new Date(),
+      maxCapacity: 10,
+      organizer: { id: 'l1' } as User,
+      registrations: [],
+      imageUrl: '',
+      createdAt: new Date(),
+    } as LibraryEvent;
+
+    eventRepo.findOne.mockResolvedValue(mockEvent);
+
+    eventRepo.save.mockResolvedValue({
+      ...mockEvent,
+      title: 'updated',
+    });
 
     const res = await service.updateEvent('l1', 'e1', { title: 'updated' });
 
@@ -242,31 +318,57 @@ describe('LibrerosService', () => {
   });
 
   it('should delete event', async () => {
-    eventRepo.findOne.mockResolvedValue({ id: 'e1' });
-    eventRepo.remove.mockResolvedValue(undefined);
+    const mockEvent: LibraryEvent = {
+      id: 'e1',
+      title: 'Event to delete',
+      description: 'Description',
+      eventDate: new Date(),
+      maxCapacity: 10,
+      organizer: { id: 'l1' } as User,
+      registrations: [],
+      imageUrl: '',
+      createdAt: new Date(),
+    } as LibraryEvent;
 
-    await expect(
-      service.deleteEvent('l1', 'e1'),
-    ).resolves.toBeUndefined();
+    eventRepo.findOne.mockResolvedValue(mockEvent);
+    eventRepo.remove.mockResolvedValue(mockEvent);
+
+    await expect(service.deleteEvent('l1', 'e1')).resolves.toBeUndefined();
+    expect(eventRepo.remove).toHaveBeenCalledWith(mockEvent);
   });
 
   it('should throw when deleting missing event', async () => {
     eventRepo.findOne.mockResolvedValue(null);
 
-    await expect(
-      service.deleteEvent('l1', 'e1'),
-    ).rejects.toThrow(NotFoundException);
+    await expect(service.deleteEvent('l1', 'e1')).rejects.toThrow(
+      NotFoundException,
+    );
   });
 
   it('should join event successfully', async () => {
-    eventRepo.findOne.mockResolvedValue({
+    const mockEvent: LibraryEvent = {
       id: 'e1',
-      registrations: [],
+      title: 'Evento de prueba',
+      description: 'Descripción',
+      eventDate: new Date(),
       maxCapacity: 10,
-    });
+      organizer: { id: 'l1' } as User,
+      registrations: [],
+      imageUrl: '',
+      createdAt: new Date(),
+    } as LibraryEvent;
 
-    registrationRepo.create.mockReturnValue({ id: 'r1' });
-    registrationRepo.save.mockResolvedValue({ id: 'r1' });
+    eventRepo.findOne.mockResolvedValue(mockEvent);
+
+    const mockRegistration: EventRegistration = {
+      id: 'r1',
+      user: { id: 'u1' } as User,
+      event: mockEvent,
+      createdAt: new Date(),
+    } as EventRegistration;
+
+    registrationRepo.create.mockReturnValue(mockRegistration);
+    registrationRepo.save.mockResolvedValue(mockRegistration);
 
     const res = await service.joinEvent('u1', 'e1');
 
@@ -274,51 +376,121 @@ describe('LibrerosService', () => {
   });
 
   it('should not allow duplicate join', async () => {
-    eventRepo.findOne.mockResolvedValue({
-      id: 'e1',
-      registrations: [{ user: { id: 'u1' } }],
-      maxCapacity: 10,
-    });
+    const mockUser: User = {
+      id: 'u1',
+      email: 'user@test.com',
+      fullName: 'Test User',
+    } as User;
 
-    await expect(
-      service.joinEvent('u1', 'e1'),
-    ).rejects.toThrow(BadRequestException);
+    const mockEvent: LibraryEvent = {
+      id: 'e1',
+      title: 'Evento',
+      description: 'Desc',
+      eventDate: new Date(),
+      maxCapacity: 10,
+      organizer: { id: 'l1' } as User,
+      registrations: [{ user: mockUser } as EventRegistration],
+      imageUrl: '',
+      createdAt: new Date(),
+    } as LibraryEvent;
+
+    eventRepo.findOne.mockResolvedValue(mockEvent);
+
+    await expect(service.joinEvent('u1', 'e1')).rejects.toThrow(
+      BadRequestException,
+    );
   });
 
   it('should not allow full event', async () => {
-    eventRepo.findOne.mockResolvedValue({
-      id: 'e1',
-      registrations: [{}, {}],
-      maxCapacity: 2,
-    });
+    const registrationMock = {
+      id: 'reg1',
+      user: { id: 'u0' } as User,
+      event: { id: 'e1' } as LibraryEvent,
+      createdAt: new Date(),
+    } as EventRegistration;
 
-    await expect(
-      service.joinEvent('u1', 'e1'),
-    ).rejects.toThrow(BadRequestException);
+    const fullEvent: LibraryEvent = {
+      id: 'e1',
+      title: 'Evento Lleno',
+      description: '...',
+      eventDate: new Date(),
+      maxCapacity: 2,
+      organizer: { id: 'l1' } as User,
+      registrations: [registrationMock, registrationMock],
+      imageUrl: '',
+      createdAt: new Date(),
+    } as LibraryEvent;
+
+    eventRepo.findOne.mockResolvedValue(fullEvent);
+
+    await expect(service.joinEvent('u1', 'e1')).rejects.toThrow(
+      BadRequestException,
+    );
   });
 
   it('should return event attendees', async () => {
-    eventRepo.findOne.mockResolvedValue({
-      registrations: [{ user: { id: 'u1' } }],
-    });
+    const mockUser: User = {
+      id: 'u1',
+      email: 'user@example.com',
+      fullName: 'Test User',
+      password: 'password123',
+      province: 'Sevilla',
+    } as User;
 
+    const mockEvent = {
+      id: 'e1',
+      title: 'Evento',
+      description: '...',
+      eventDate: new Date(),
+      maxCapacity: 10,
+      organizer: { id: 'l1' } as User,
+      registrations: [
+        {
+          id: 'reg1',
+          user: mockUser,
+          event: {} as LibraryEvent,
+          createdAt: new Date(),
+        } as EventRegistration,
+      ],
+      imageUrl: '',
+      createdAt: new Date(),
+    } as LibraryEvent;
+
+    eventRepo.findOne.mockResolvedValue(mockEvent);
     const res = await service.getEventAttendees('l1', 'e1');
-
-    expect(res).toEqual([{ id: 'u1' }]);
+    expect(res).toEqual([mockUser]);
   });
 
   it('should throw when event not found for attendees', async () => {
     eventRepo.findOne.mockResolvedValue(null);
 
-    await expect(
-      service.getEventAttendees('l1', 'e1'),
-    ).rejects.toThrow(NotFoundException);
+    await expect(service.getEventAttendees('l1', 'e1')).rejects.toThrow(
+      NotFoundException,
+    );
   });
 
   it('should return my inventory list (covers find)', async () => {
-    inventoryRepo.find.mockResolvedValue([
-      { id: 'i1', book: { id: 1 } },
-    ]);
+    const mockBook: Book = {
+      id: 1,
+      title: 'Cien años de soledad',
+      author: 'Gabriel García Márquez',
+      isbn: '978-0307474728',
+      status: 'available',
+      genre: 'Realismo mágico',
+      description: '...',
+      pageCount: 400,
+    } as unknown as Book;
+
+    const mockInventory: StoreInventory = {
+      id: 'i1',
+      book: mockBook,
+      librero: { id: 'l1' } as User,
+      price: 15.0,
+      inStock: true,
+      createdAt: new Date(),
+    } as StoreInventory;
+
+    inventoryRepo.find.mockResolvedValue([mockInventory]);
 
     const res = await service.getMyInventory('l1');
 
@@ -328,7 +500,7 @@ describe('LibrerosService', () => {
       }),
     );
 
-    expect(res).toEqual([{ id: 'i1', book: { id: 1 } }]);
+    expect(res).toEqual([mockInventory]);
   });
 
   it('should return empty array when reference book does not exist', async () => {
@@ -341,19 +513,23 @@ describe('LibrerosService', () => {
   });
 
   it('should return stores that have the book', async () => {
-    bookRepo.findOne.mockResolvedValue({
+    const mockBook = {
       id: 1,
       title: 'Book A',
       author: 'Author A',
-    });
+    } as unknown as Book;
 
-    inventoryRepo.find.mockResolvedValue([
-      {
-        id: 'inv1',
-        price: 10,
-        librero: { id: 'l1', name: 'Store 1' },
-      },
-    ]);
+    bookRepo.findOne.mockResolvedValue(mockBook);
+
+    const mockInventory = {
+      id: 'inv1',
+      price: 10,
+      librero: { id: 'l1' } as User,
+      book: mockBook,
+      inStock: true,
+    } as unknown as StoreInventory;
+
+    inventoryRepo.find.mockResolvedValue([mockInventory]);
 
     const res = await service.findStoresByBook('1');
 
@@ -372,7 +548,7 @@ describe('LibrerosService', () => {
       {
         inventoryId: 'inv1',
         price: 10,
-        store: { id: 'l1', name: 'Store 1' },
+        store: { id: 'l1' },
       },
     ]);
   });
@@ -380,14 +556,34 @@ describe('LibrerosService', () => {
   it('should return future events with attendees count', async () => {
     const futureDate = new Date(Date.now() + 1000000);
 
-    eventRepo.find.mockResolvedValue([
+    const mockRegistrations: EventRegistration[] = [
       {
-        id: 'e1',
-        eventDate: futureDate,
-        registrations: [{ id: 1 }, { id: 2 }],
-        organizer: { id: 'l1' },
+        id: '1',
+        user: {} as User,
+        event: {} as LibraryEvent,
+        createdAt: new Date(),
       },
-    ]);
+      {
+        id: '2',
+        user: {} as User,
+        event: {} as LibraryEvent,
+        createdAt: new Date(),
+      },
+    ];
+
+    const mockEvent = {
+      id: 'e1',
+      title: 'Evento Futuro',
+      description: '...',
+      eventDate: futureDate,
+      maxCapacity: 10,
+      organizer: { id: 'l1', fullName: 'Librero' } as unknown as User,
+      registrations: mockRegistrations,
+      imageUrl: '',
+      createdAt: new Date(),
+    } as LibraryEvent;
+
+    eventRepo.find.mockResolvedValue([mockEvent]);
 
     const res = await service.getAllFutureEvents();
 
@@ -404,5 +600,4 @@ describe('LibrerosService', () => {
       }),
     ]);
   });
-  
 });

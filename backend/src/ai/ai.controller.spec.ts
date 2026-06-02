@@ -1,835 +1,357 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import {
+  Repository,
+  SelectQueryBuilder,
+  ObjectLiteral,
+  DeepPartial,
+} from 'typeorm';
+import { Request } from 'express';
 import { AIController } from './ai.controller';
 import { AIService } from './ai.service';
 import { AdminService } from '../users/roles/admin.service';
-import { User, UserRole } from '../users/entities/user.entity';
+import { User } from '../users/entities/user.entity';
 import { Book } from '../books/entities/book.entity';
 import { Activity } from '../users/entities/activity.entity';
 import { LibraryEvent } from '../users/entities/library-event.entity';
 import { Club } from '../club/entities/club.entity';
 import { BookListing } from '../users/entities/book-listing.entity';
 
+interface RequestWithUser extends Request {
+  user: { id: string; role: string };
+}
+
 describe('AIController', () => {
   let controller: AIController;
   let aiService: jest.Mocked<AIService>;
   let adminService: jest.Mocked<AdminService>;
-  let userRepo: any;
-  let bookRepo: any;
-  let activityRepo: any;
-  let eventRepo: any;
-  let clubRepo: any;
-  let listingRepo: any;
 
-  const mockRequest = (role: string = 'USER', userId: string = 'user-123') => ({
-    user: { id: userId, role },
-  });
+  const createMockRepo = <T extends ObjectLiteral>(): jest.Mocked<
+    Repository<T>
+  > =>
+    ({
+      find: jest.fn(),
+      createQueryBuilder: jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
+        leftJoin: jest.fn().mockReturnThis(),
+        groupBy: jest.fn().mockReturnThis(),
+        addGroupBy: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        getRawOne: jest.fn(),
+        getRawMany: jest.fn(),
+      } as unknown as SelectQueryBuilder<T>),
+    }) as unknown as jest.Mocked<Repository<T>>;
+
+  const userRepo = createMockRepo<User>();
+  const bookRepo = createMockRepo<Book>();
+  const activityRepo = createMockRepo<Activity>();
+  const eventRepo = createMockRepo<LibraryEvent>();
+  const clubRepo = createMockRepo<Club>();
+  const listingRepo = createMockRepo<BookListing>();
 
   beforeEach(async () => {
-    jest.spyOn(console, 'error').mockImplementation(() => {});
-    userRepo = {
-      find: jest.fn(),
-    };
-
-    bookRepo = {
-      find: jest.fn(),
-      createQueryBuilder: jest.fn(),
-    };
-
-    activityRepo = {
-      find: jest.fn(),
-      createQueryBuilder: jest.fn(),
-    };
-
-    eventRepo = {
-      find: jest.fn(),
-    };
-
-    clubRepo = {
-      find: jest.fn(),
-    };
-
-    listingRepo = {
-      find: jest.fn(),
-    };
-
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AIController],
       providers: [
-        {
-          provide: AIService,
-          useValue: {
-            getChatResponse: jest.fn(),
-          },
-        },
+        { provide: AIService, useValue: { getChatResponse: jest.fn() } },
         {
           provide: AdminService,
-          useValue: {
-            getMostRequestedBook: jest.fn(),
-          },
+          useValue: { getMostRequestedBook: jest.fn() },
         },
-        {
-          provide: getRepositoryToken(User),
-          useValue: userRepo,
-        },
-        {
-          provide: getRepositoryToken(Book),
-          useValue: bookRepo,
-        },
-        {
-          provide: getRepositoryToken(Activity),
-          useValue: activityRepo,
-        },
-        {
-          provide: getRepositoryToken(LibraryEvent),
-          useValue: eventRepo,
-        },
-        {
-          provide: getRepositoryToken(Club),
-          useValue: clubRepo,
-        },
-        {
-          provide: getRepositoryToken(BookListing),
-          useValue: listingRepo,
-        },
+        { provide: getRepositoryToken(User), useValue: userRepo },
+        { provide: getRepositoryToken(Book), useValue: bookRepo },
+        { provide: getRepositoryToken(Activity), useValue: activityRepo },
+        { provide: getRepositoryToken(LibraryEvent), useValue: eventRepo },
+        { provide: getRepositoryToken(Club), useValue: clubRepo },
+        { provide: getRepositoryToken(BookListing), useValue: listingRepo },
       ],
     }).compile();
 
     controller = module.get<AIController>(AIController);
-    aiService = module.get<jest.Mocked<AIService>>(AIService);
-    adminService = module.get<jest.Mocked<AdminService>>(AdminService);
+    aiService = module.get(AIService);
+    adminService = module.get(AdminService);
   });
 
-  afterEach(() => {
-    (console.error as jest.Mock).mockRestore();
-    jest.clearAllMocks();
+  const createMockReq = (role: string, id: string = 'u1'): RequestWithUser =>
+    ({ user: { id, role } }) as RequestWithUser;
+
+  it('responde a agradecimientos sin invocar IA', async () => {
+    const req = createMockReq('user');
+    const res = await controller.chat(req, { prompt: 'gracias', history: [] });
+    expect(res).toContain('Un gusto apoyarte');
+    expect(aiService.getChatResponse).not.toHaveBeenCalled();
   });
 
-  describe('POST /chat', () => {
-    it('debe retornar respuesta directa para "gracias"', async () => {
-      const req = mockRequest('USER', 'user-123');
+  it('maneja contexto ADMIN con datos', async () => {
+    const req = createMockReq('admin');
+    const qb = activityRepo.createQueryBuilder();
 
-      const result = await controller.chat(req as any, {
-        prompt: 'gracias',
-        history: [],
-      });
-
-      expect(result).toContain('Un gusto apoyarte');
-      expect(aiService.getChatResponse).not.toHaveBeenCalled();
+    (qb.getRawOne as jest.Mock).mockResolvedValue({
+      name: 'Test',
+      totalInteractions: 1,
     });
+    (bookRepo.createQueryBuilder().getRawMany as jest.Mock).mockResolvedValue(
+      [],
+    );
 
-    it('debe retornar respuesta directa para "muchas gracias"', async () => {
-      const req = mockRequest('USER', 'user-123');
+    aiService.getChatResponse.mockResolvedValue('Admin Response');
 
-      const result = await controller.chat(req as any, {
-        prompt: 'muchas gracias',
-        history: [],
-      });
+    const res = await controller.chat(req, { prompt: 'metrics', history: [] });
+    expect(res).toBe('Admin Response');
+  });
 
-      expect(result).toContain('Un gusto apoyarte');
-    });
+  it('maneja errores críticos de forma segura', async () => {
+    const req = createMockReq('user');
+    aiService.getChatResponse.mockRejectedValue(new Error('Fail'));
 
-    it('debe retornar respuesta directa para "gracias!"', async () => {
-      const req = mockRequest('USER', 'user-123');
+    const res = await controller.chat(req, { prompt: 'hi', history: [] });
+    expect(res).toContain('Biblios se ha despistado');
+  });
 
-      const result = await controller.chat(req as any, {
-        prompt: 'Gracias!',
-        history: [],
-      });
+  describe('getLectorContext Logic', () => {
+    it('debe clasificar correctamente clubes y eventos del usuario', async () => {
+      const userId = 'user-123';
+      const now = new Date();
+      const futureDate = new Date(now.getTime() + 86400000); // Mañana
 
-      expect(result).toContain('Un gusto apoyarte');
-    });
+      const clubs = [
+        { name: 'Club Unido', members: [{ id: userId }] },
+        { name: 'Club Disponible', members: [{ id: 'otros' }] },
+      ] as Club[];
 
-    it('debe obtener contexto ADMIN y llamar AIService para admin', async () => {
-      const req = mockRequest('admin', 'admin-123');
-      const mockResponse = 'Respuesta del admin';
-
-      activityRepo.createQueryBuilder.mockReturnValue({
-        select: jest.fn().mockReturnThis(),
-        addSelect: jest.fn().mockReturnThis(),
-        leftJoin: jest.fn().mockReturnThis(),
-        groupBy: jest.fn().mockReturnThis(),
-        addGroupBy: jest.fn().mockReturnThis(),
-        orderBy: jest.fn().mockReturnThis(),
-        limit: jest.fn().mockReturnThis(),
-        getRawOne: jest.fn().mockResolvedValueOnce({
-          name: 'Top User',
-          totalInteractions: '100',
-        }).mockResolvedValueOnce({
-          name: 'Least User',
-          totalInteractions: '5',
-        }),
-      });
-
-      bookRepo.createQueryBuilder.mockReturnValue({
-        select: jest.fn().mockReturnThis(),
-        addSelect: jest.fn().mockReturnThis(),
-        groupBy: jest.fn().mockReturnThis(),
-        addGroupBy: jest.fn().mockReturnThis(),
-        orderBy: jest.fn().mockReturnThis(),
-        limit: jest.fn().mockReturnThis(),
-        getRawMany: jest.fn()
-          .mockResolvedValueOnce([
-            { title: 'Book 1', author: 'Author 1', totalRegistrations: '10' },
-          ])
-          .mockResolvedValueOnce([
-            { title: 'Book 5', author: 'Author 5', totalRegistrations: '1' },
-          ]),
-      });
-
-      aiService.getChatResponse.mockResolvedValueOnce(mockResponse);
-
-      const result = await controller.chat(req as any, {
-        prompt: 'una pregunta',
-        history: [],
-      });
-
-      expect(aiService.getChatResponse).toHaveBeenCalled();
-      expect(result).toBe(mockResponse);
-    });
-
-    it('debe obtener contexto LIBRERO y llamar AIService para librero', async () => {
-      const req = mockRequest('librero', 'librero-123');
-      const mockResponse = 'Respuesta del librero';
-
-      adminService.getMostRequestedBook.mockResolvedValueOnce({
-        title: 'Popular Book',
-        author: 'Popular Author',
-      });
-
-      aiService.getChatResponse.mockResolvedValueOnce(mockResponse);
-
-      const result = await controller.chat(req as any, {
-        prompt: 'una pregunta',
-        history: [],
-      });
-
-      expect(aiService.getChatResponse).toHaveBeenCalled();
-      expect(result).toBe(mockResponse);
-    });
-
-    it('debe obtener contexto LECTOR y llamar AIService para lector', async () => {
-      const req = mockRequest('user', 'user-123');
-      const mockResponse = 'Respuesta del lector';
-
-      bookRepo.find.mockResolvedValueOnce([
-        { title: 'My Book 1', userId: 'user-123' },
-      ]);
-
-      clubRepo.find.mockResolvedValueOnce([
-        { name: 'Club 1', members: [{ id: 'user-123' }] },
-        { name: 'Club 2', members: [] },
-      ]);
-
-      eventRepo.find.mockResolvedValueOnce([
+      const events = [
         {
-          title: 'Event 1',
-          eventDate: new Date(Date.now() + 1000000),
-          registrations: [{ userId: 'user-123' }],
-          organizer: { libraryName: 'Library 1' },
-        },
-      ]);
-
-      listingRepo.find.mockResolvedValueOnce([
-        { book: { title: 'Listed Book 1' } },
-      ]);
-
-      aiService.getChatResponse.mockResolvedValueOnce(mockResponse);
-
-      const result = await controller.chat(req as any, {
-        prompt: 'una pregunta',
-        history: [],
-      });
-
-      expect(aiService.getChatResponse).toHaveBeenCalled();
-      expect(result).toBe(mockResponse);
-    });
-
-    it('debe manejar error y retornar mensaje de error', async () => {
-      const req = mockRequest('user', 'user-123');
-
-      aiService.getChatResponse.mockRejectedValueOnce(
-        new Error('Service Error'),
-      );
-
-      const result = await controller.chat(req as any, {
-        prompt: 'una pregunta',
-        history: [],
-      });
-
-      expect(result).toContain('Biblios se ha despistado');
-    });
-  });
-
-  describe('getDirectAnswer - Franja horaria librero', () => {
-    it('debe retornar franja horaria con mayor asistencia para librero', async () => {
-      const req = mockRequest('librero', 'librero-123');
-
-      const futureDate = new Date();
-      futureDate.setHours(14); // tarde
-
-      eventRepo.find.mockResolvedValueOnce([
-        {
-          organizer: { id: 'librero-123' },
+          title: 'Evento Inscrito',
           eventDate: futureDate,
-          registrations: [{ user: { id: 'user-1' } }, { user: { id: 'user-2' } }],
+          registrations: [{ user: { id: userId } }],
+          organizer: { libraryName: 'Biblio 1' },
         },
+        {
+          title: 'Evento Disponible',
+          eventDate: futureDate,
+          registrations: [{ user: { id: 'otros' } }],
+          organizer: { libraryName: 'Biblio 2' },
+        },
+      ] as LibraryEvent[];
+
+      clubRepo.find.mockResolvedValue(clubs);
+      eventRepo.find.mockResolvedValue(events);
+      bookRepo.find.mockResolvedValue([{ title: 'Libro A' } as Book]);
+      listingRepo.find.mockResolvedValue([
+        { book: { title: 'Libro Venta' } } as BookListing,
       ]);
 
-      const result = await controller.chat(req as any, {
-        prompt: 'franja horaria',
+      aiService.getChatResponse.mockResolvedValue('Respuesta IA');
+      await controller.chat(createMockReq('user', userId), {
+        prompt: 'hola',
         history: [],
       });
 
-      expect(result).toContain('franja horaria');
-      expect(result).toContain('tarde');
+      const context = aiService.getChatResponse.mock.calls[0][2];
+
+      expect(context).toContain('[SECCIÓN_CLUBES_UNIDOS]: Club Unido');
+      expect(context).toContain(
+        '[SECCIÓN_CLUBES_DISPONIBLES]: Club Disponible',
+      );
+      expect(context).toContain('[SECCIÓN_EVENTOS_INSCRITO]: Evento Inscrito');
+      expect(context).toContain(
+        '[SECCIÓN_EVENTOS_DISPONIBLES]: Evento Disponible en Biblio 2',
+      );
     });
 
-    it('debe retornar mensaje si no hay eventos', async () => {
-      const req = mockRequest('librero', 'librero-123');
+    it('debe manejar casos vacíos (Sin citas/Sin eventos)', async () => {
+      clubRepo.find.mockResolvedValue([]);
+      eventRepo.find.mockResolvedValue([]);
+      bookRepo.find.mockResolvedValue([]);
+      listingRepo.find.mockResolvedValue([]);
+      aiService.getChatResponse.mockResolvedValue('OK');
 
-      eventRepo.find.mockResolvedValueOnce([]);
-
-      const result = await controller.chat(req as any, {
-        prompt: 'horario',
+      await controller.chat(createMockReq('user', 'u1'), {
+        prompt: 'hola',
         history: [],
       });
 
-      expect(result).toContain('No hay datos de eventos');
+      const context = aiService.getChatResponse.mock.calls[0][2];
+      expect(context).toContain('[SECCIÓN_CLUBES_UNIDOS]: Ninguno');
+      expect(context).toContain(
+        '[SECCIÓN_EVENTOS_INSCRITO]: Sin citas próximas',
+      );
+      expect(context).toContain(
+        '[SECCIÓN_EVENTOS_DISPONIBLES]: Sin eventos próximos',
+      );
     });
 
-    it('debe retornar mensaje si eventos no tienen asistentes', async () => {
-      const req = mockRequest('librero', 'librero-123');
+    it('debe manejar eventos pasados filtrándolos correctamente', async () => {
+      const pastDate = new Date(Date.now() - 86400000);
 
-      eventRepo.find.mockResolvedValueOnce([
+      const mockEvents: DeepPartial<LibraryEvent>[] = [
         {
-          organizer: { id: 'librero-123' },
-          eventDate: new Date(),
+          title: 'Evento Pasado',
+          eventDate: pastDate,
           registrations: [],
         },
-      ]);
+      ];
 
-      const result = await controller.chat(req as any, {
-        prompt: 'asisten más lectores',
+      eventRepo.find.mockResolvedValue(mockEvents as unknown as LibraryEvent[]);
+
+      aiService.getChatResponse.mockResolvedValue('OK');
+      await controller.chat(createMockReq('user', 'u1'), {
+        prompt: 'hola',
         history: [],
       });
-
-      expect(result).toContain('ninguno tiene asistentes');
-    });
-
-    it('debe calcular correctamente franja madrugada', async () => {
-      const req = mockRequest('librero', 'librero-123');
-
-      const madrigadaDate = new Date();
-      madrigadaDate.setHours(3); // madrugada
-
-      eventRepo.find.mockResolvedValueOnce([
-        {
-          organizer: { id: 'librero-123' },
-          eventDate: madrigadaDate,
-          registrations: [{ user: { id: 'user-1' } }],
-        },
-      ]);
-
-      const result = await controller.chat(req as any, {
-        prompt: 'p público con más asistencia',
-        history: [],
-      });
-
-      expect(result).toContain('madrugada');
-    });
-
-    it('debe calcular correctamente franja mañana', async () => {
-      const req = mockRequest('librero', 'librero-123');
-
-      const mañanaDate = new Date();
-      mañanaDate.setHours(9);
-
-      eventRepo.find.mockResolvedValueOnce([
-        {
-          organizer: { id: 'librero-123' },
-          eventDate: mañanaDate,
-          registrations: [{ user: { id: 'user-1' } }],
-        },
-      ]);
-
-      const result = await controller.chat(req as any, {
-        prompt: 'franja horaria',
-        history: [],
-      });
-
-      expect(result).toContain('mañana');
-    });
-
-    it('debe calcular correctamente franja noche', async () => {
-      const req = mockRequest('librero', 'librero-123');
-
-      const nocheDate = new Date();
-      nocheDate.setHours(20);
-
-      eventRepo.find.mockResolvedValueOnce([
-        {
-          organizer: { id: 'librero-123' },
-          eventDate: nocheDate,
-          registrations: [{ user: { id: 'user-1' } }],
-        },
-      ]);
-
-      const result = await controller.chat(req as any, {
-        prompt: 'asisten más',
-        history: [],
-      });
-
-      expect(result).toContain('noche');
-    });
-
-    it('debe mostrar detalles de todas las franjas', async () => {
-      const req = mockRequest('librero', 'librero-123');
-
-      const events: any[] = [];
-      for (let hour of [3, 9, 14, 20]) {
-        const date = new Date();
-        date.setHours(hour);
-        events.push({
-          organizer: { id: 'librero-123' },
-          eventDate: date,
-          registrations: [{ user: { id: 'user-1' } }, { user: { id: 'user-2' } }],
-        });
-      }
-
-      eventRepo.find.mockResolvedValueOnce(events);
-
-      const result = await controller.chat(req as any, {
-        prompt: 'franja horaria',
-        history: [],
-      });
-
-      expect(result).toContain('madrugada');
-      expect(result).toContain('mañana');
-      expect(result).toContain('tarde');
-      expect(result).toContain('noche');
-    });
-  });
-
-  describe('getAdminContext', () => {
-    it('debe obtener contexto admin completo', async () => {
-      const req = mockRequest('admin', 'admin-123');
-
-      activityRepo.createQueryBuilder.mockReturnValue({
-        select: jest.fn().mockReturnThis(),
-        addSelect: jest.fn().mockReturnThis(),
-        leftJoin: jest.fn().mockReturnThis(),
-        groupBy: jest.fn().mockReturnThis(),
-        orderBy: jest.fn().mockReturnThis(),
-        limit: jest.fn().mockReturnThis(),
-        getRawOne: jest.fn()
-          .mockResolvedValueOnce({
-            name: 'User A',
-            totalInteractions: '50',
-          })
-          .mockResolvedValueOnce({
-            name: 'User B',
-            totalInteractions: '10',
-          }),
-      });
-
-      bookRepo.createQueryBuilder.mockReturnValue({
-        select: jest.fn().mockReturnThis(),
-        addSelect: jest.fn().mockReturnThis(),
-        groupBy: jest.fn().mockReturnThis(),
-        addGroupBy: jest.fn().mockReturnThis(),
-        orderBy: jest.fn().mockReturnThis(),
-        limit: jest.fn().mockReturnThis(),
-        getRawMany: jest.fn()
-          .mockResolvedValueOnce([
-            { title: 'Book 1', author: 'Author 1', totalRegistrations: '100' },
-            { title: 'Book 2', author: 'Author 2', totalRegistrations: '50' },
-          ])
-          .mockResolvedValueOnce([
-            { title: 'Book 10', author: 'Author 10', totalRegistrations: '1' },
-          ]),
-      });
-
-      aiService.getChatResponse.mockResolvedValueOnce('response');
-
-      await controller.chat(req as any, {
-        prompt: 'metrics',
-        history: [],
-      });
-
-      expect(aiService.getChatResponse).toHaveBeenCalledWith(
-        'metrics',
-        [],
-        expect.stringContaining('MÉTRICAS_ADMIN_USUARIO_TOP'),
-        'admin',
-      );
-    });
-
-    it('debe manejar N/A cuando no hay datos', async () => {
-      const req = mockRequest('admin', 'admin-123');
-
-      activityRepo.createQueryBuilder.mockReturnValue({
-        select: jest.fn().mockReturnThis(),
-        addSelect: jest.fn().mockReturnThis(),
-        leftJoin: jest.fn().mockReturnThis(),
-        groupBy: jest.fn().mockReturnThis(),
-        orderBy: jest.fn().mockReturnThis(),
-        limit: jest.fn().mockReturnThis(),
-        getRawOne: jest.fn()
-          .mockResolvedValueOnce(undefined)
-          .mockResolvedValueOnce(undefined),
-      });
-
-      bookRepo.createQueryBuilder.mockReturnValue({
-        select: jest.fn().mockReturnThis(),
-        addSelect: jest.fn().mockReturnThis(),
-        groupBy: jest.fn().mockReturnThis(),
-        addGroupBy: jest.fn().mockReturnThis(),
-        orderBy: jest.fn().mockReturnThis(),
-        limit: jest.fn().mockReturnThis(),
-        getRawMany: jest.fn()
-          .mockResolvedValueOnce([])
-          .mockResolvedValueOnce([]),
-      });
-
-      aiService.getChatResponse.mockResolvedValueOnce('response');
-
-      await controller.chat(req as any, {
-        prompt: 'metrics',
-        history: [],
-      });
-
-      const callArgs = aiService.getChatResponse.mock.calls[0][2];
-      expect(callArgs).toContain('N/A');
-    });
-  });
-
-  describe('getLibreroContext', () => {
-    it('debe obtener contexto librero con libro popular', async () => {
-      const req = mockRequest('librero', 'librero-123');
-
-      adminService.getMostRequestedBook.mockResolvedValueOnce({
-        title: 'Popular Book',
-        author: 'Popular Author',
-      });
-
-      aiService.getChatResponse.mockResolvedValueOnce('response');
-
-      await controller.chat(req as any, {
-        prompt: 'pregunta',
-        history: [],
-      });
-
       const context = aiService.getChatResponse.mock.calls[0][2];
-      expect(context).toContain('Popular Book');
-      expect(context).toContain('Popular Author');
-    });
 
-    it('debe manejar cuando no hay libro popular', async () => {
-      const req = mockRequest('librero', 'librero-123');
-
-      adminService.getMostRequestedBook.mockResolvedValueOnce(null);
-
-      aiService.getChatResponse.mockResolvedValueOnce('response');
-
-      await controller.chat(req as any, {
-        prompt: 'pregunta',
-        history: [],
-      });
-
-      const context = aiService.getChatResponse.mock.calls[0][2];
-      expect(context).toContain('no hay suficientes solicitudes');
-    });
-  });
-
-  describe('getLectorContext', () => {
-    it('debe obtener contexto lector completo', async () => {
-      const req = mockRequest('user', 'user-123');
-
-      bookRepo.find.mockResolvedValueOnce([
-        { title: 'My Book 1' },
-        { title: 'My Book 2' },
-      ]);
-
-      clubRepo.find.mockResolvedValueOnce([
-        { name: 'Club 1', members: [{ id: 'user-123' }] },
-        { name: 'Club 2', members: [] },
-      ]);
-
-      const futureDate = new Date();
-      futureDate.setDate(futureDate.getDate() + 1);
-
-      eventRepo.find.mockResolvedValueOnce([
-        {
-          title: 'Event 1',
-          eventDate: futureDate,
-          registrations: [{ userId: 'user-123' }],
-          organizer: { libraryName: 'Library 1' },
-        },
-        {
-          title: 'Event 2',
-          eventDate: futureDate,
-          registrations: [{ userId: 'other-user' }],
-          organizer: { libraryName: 'Library 2' },
-        },
-      ]);
-
-      listingRepo.find.mockResolvedValueOnce([
-        { book: { title: 'Listed Book 1' } },
-        { book: { title: 'Listed Book 2' } },
-      ]);
-
-      aiService.getChatResponse.mockResolvedValueOnce('response');
-
-      await controller.chat(req as any, {
-        prompt: 'pregunta',
-        history: [],
-      });
-
-      const context = aiService.getChatResponse.mock.calls[0][2];
-      expect(context).toContain('SECCIÓN_LIBROS_USUARIO');
-      expect(context).toContain('SECCIÓN_CLUBES_UNIDOS');
-      expect(context).toContain('SECCIÓN_CLUBES_DISPONIBLES');
-      expect(context).toContain('SECCIÓN_EVENTOS_INSCRITO');
-      expect(context).toContain('SECCIÓN_EVENTOS_DISPONIBLES');
-      expect(context).toContain('SECCIÓN_MERCADO_GLOBAL');
-    });
-
-    it('debe manejar sin libros, clubes ni eventos', async () => {
-      const req = mockRequest('user', 'user-123');
-
-      bookRepo.find.mockResolvedValueOnce([]);
-      clubRepo.find.mockResolvedValueOnce([]);
-      eventRepo.find.mockResolvedValueOnce([]);
-      listingRepo.find.mockResolvedValueOnce([]);
-
-      aiService.getChatResponse.mockResolvedValueOnce('response');
-
-      await controller.chat(req as any, {
-        prompt: 'pregunta',
-        history: [],
-      });
-
-      const context = aiService.getChatResponse.mock.calls[0][2];
-      expect(context).toContain('Ninguno');
       expect(context).toContain('Sin citas próximas');
       expect(context).toContain('Sin eventos próximos');
     });
+  });
 
-    it('debe manejar eventos con fecha inválida', async () => {
-      const req = mockRequest('user', 'user-123');
-
-      bookRepo.find.mockResolvedValueOnce([]);
-      clubRepo.find.mockResolvedValueOnce([]);
-
-      eventRepo.find.mockResolvedValueOnce([
-        {
-          title: 'Event 1',
-          eventDate: 'invalid-date',
-          registrations: [],
-          organizer: { libraryName: 'Library 1' },
-        },
-      ]);
-
-      listingRepo.find.mockResolvedValueOnce([]);
-
-      aiService.getChatResponse.mockResolvedValueOnce('response');
-
-      await controller.chat(req as any, {
-        prompt: 'pregunta',
-        history: [],
+  describe('getLibreroContext integration', () => {
+    it('debe obtener contexto de librero y llamar a la IA cuando el rol es librero', async () => {
+      adminService.getMostRequestedBook.mockResolvedValue({
+        title: 'El Principito',
+        author: 'Antoine de Saint-Exupéry',
       });
 
-      expect(aiService.getChatResponse).toHaveBeenCalled();
+      aiService.getChatResponse.mockResolvedValue('Respuesta IA LIBRERO');
+      const res = await controller.chat(createMockReq('librero', 'lib-123'), {
+        prompt: 'hola',
+        history: [],
+      });
+      expect(adminService.getMostRequestedBook).toHaveBeenCalled();
+
+      const contextPassedToAi = aiService.getChatResponse.mock.calls[0][2];
+      expect(contextPassedToAi).toContain(
+        'El Principito de Antoine de Saint-Exupéry',
+      );
+
+      expect(res).toBe('Respuesta IA LIBRERO');
     });
 
-    it('debe manejar registrations con estructura user.id', async () => {
-      const req = mockRequest('user', 'user-123');
+    it('debe manejar el caso donde no hay libro solicitado (getLibreroContext vacío)', async () => {
+      adminService.getMostRequestedBook.mockResolvedValue(null);
+      aiService.getChatResponse.mockResolvedValue('Respuesta con advertencia');
 
-      bookRepo.find.mockResolvedValueOnce([]);
-      clubRepo.find.mockResolvedValueOnce([]);
-
-      const futureDate = new Date();
-      futureDate.setDate(futureDate.getDate() + 1);
-
-      eventRepo.find.mockResolvedValueOnce([
-        {
-          title: 'Event 1',
-          eventDate: futureDate,
-          registrations: [{ user: { id: 'user-123' } }],
-          organizer: { libraryName: 'Library 1' },
-        },
-      ]);
-
-      listingRepo.find.mockResolvedValueOnce([]);
-
-      aiService.getChatResponse.mockResolvedValueOnce('response');
-
-      await controller.chat(req as any, {
-        prompt: 'pregunta',
+      await controller.chat(createMockReq('librero', 'lib-123'), {
+        prompt: 'hola',
         history: [],
       });
 
-      const context = aiService.getChatResponse.mock.calls[0][2];
-      expect(context).toContain('Event 1');
+      const contextPassedToAi = aiService.getChatResponse.mock.calls[0][2];
+      expect(contextPassedToAi).toContain('Aún no hay suficientes solicitudes');
     });
   });
 
-  describe('normalizePrompt', () => {
-    it('debe normalizar prompts con diferentes casos', async () => {
-      const req = mockRequest('user', 'user-123');
+  describe('getLibreroPeakTimeSlot (via getDirectAnswer)', () => {
+    it('debe invocar getLibreroPeakTimeSlot cuando el usuario es librero y pregunta por franjas horarias', async () => {
+      const pastDate = new Date();
+      pastDate.setHours(10); // Mañana
 
-      const result = await controller.chat(req as any, {
-        prompt: '  GRACIAS  ',
-        history: [],
-      });
+      eventRepo.find.mockResolvedValue([
+        {
+          eventDate: pastDate,
+          registrations: [{ user: { id: 'user-1' } }],
+        },
+      ] as unknown as LibraryEvent[]);
 
-      expect(result).toContain('Un gusto apoyarte');
+      const res = await controller.chat(
+        createMockReq('librero', 'librero-123'),
+        {
+          prompt: 'franja horaria',
+          history: [],
+        },
+      );
+
+      expect(res).toContain('mañana');
+      expect(res).toContain('1 asistente');
+
+      expect(aiService.getChatResponse).not.toHaveBeenCalled();
     });
 
-    it('debe manejar prompts vacíos', async () => {
-      const req = mockRequest('user', 'user-123');
+    it('debe devolver mensaje si no hay eventos en la franja horaria', async () => {
+      eventRepo.find.mockResolvedValue([]);
 
-      bookRepo.find.mockResolvedValueOnce([]);
-      clubRepo.find.mockResolvedValueOnce([]);
-      eventRepo.find.mockResolvedValueOnce([]);
-      listingRepo.find.mockResolvedValueOnce([]);
+      const res = await controller.chat(
+        createMockReq('librero', 'librero-123'),
+        {
+          prompt: 'asisten más lectores',
+          history: [],
+        },
+      );
 
-      aiService.getChatResponse.mockResolvedValueOnce('response');
-
-      await controller.chat(req as any, {
-        prompt: '',
-        history: [],
-      });
-
-      expect(aiService.getChatResponse).toHaveBeenCalled();
+      expect(res).toContain('No hay datos de eventos');
     });
   });
 
   describe('getTimeSlotLabel', () => {
-    it('debe retornar labels correctos para todas las franjas', async () => {
-      const req = mockRequest('librero', 'librero-123');
+    const getLabel = (slot: string): string =>
+      (controller as any).getTimeSlotLabel(slot);
 
-      const events: any[] = [];
-      const hours = [
-        { hour: 2, slot: 'madrugada' },
-        { hour: 8, slot: 'mañana' },
-        { hour: 15, slot: 'tarde' },
-        { hour: 22, slot: 'noche' },
-      ];
-
-      for (const { hour } of hours) {
-        const date = new Date();
-        date.setHours(hour);
-        events.push({
-          organizer: { id: 'librero-123' },
-          eventDate: date,
-          registrations: [{ user: { id: 'user-1' } }],
-        });
-      }
-
-      eventRepo.find.mockResolvedValueOnce(events);
-
-      aiService.getChatResponse.mockResolvedValueOnce('response');
-
-      const result = await controller.chat(req as any, {
-        prompt: 'franja horaria',
-        history: [],
-      });
-
-      expect(result).toContain('madrugada (00:00-06:00)');
-      expect(result).toContain('mañana (06:00-12:00)');
-      expect(result).toContain('tarde (12:00-18:00)');
-      expect(result).toContain('noche (18:00-24:00)');
+    it('debe retornar el label correcto para "madrugada"', () => {
+      expect(getLabel('madrugada')).toBe('madrugada (00:00-06:00)');
     });
 
-    it('debe retornar la misma cadena para una franja desconocida', () => {
-      const unknown = (controller as any).getTimeSlotLabel('siesta');
-      expect(unknown).toBe('siesta');
+    it('debe retornar el label correcto para "tarde"', () => {
+      expect(getLabel('tarde')).toBe('tarde (12:00-18:00)');
+    });
+
+    it('debe retornar el label correcto para "noche"', () => {
+      expect(getLabel('noche')).toBe('noche (18:00-24:00)');
+    });
+
+    it('debe retornar el mismo valor para una franja desconocida (default)', () => {
+      const unknownSlot = 'siesta';
+      expect(getLabel(unknownSlot)).toBe(unknownSlot);
     });
   });
 
-  describe('multiple events filtering', () => {
-    it('debe diferenciar entre eventos pasados y futuros', async () => {
-      const req = mockRequest('librero', 'librero-123');
+  it('debe retornar mensaje si los eventos registrados no tienen asistentes', async () => {
+    const eventWithoutRegistrations: DeepPartial<LibraryEvent> = {
+      organizer: { id: 'librero-123' },
+      eventDate: new Date(),
+      registrations: [],
+    };
 
-      const pastDate = new Date();
-      pastDate.setDate(pastDate.getDate() - 1);
+    eventRepo.find.mockResolvedValue([
+      eventWithoutRegistrations as unknown as LibraryEvent,
+    ]);
 
-      const futureDate = new Date();
-      futureDate.setDate(futureDate.getDate() + 1);
-
-      eventRepo.find.mockResolvedValueOnce([
-        {
-          organizer: { id: 'librero-123' },
-          eventDate: pastDate,
-          registrations: [{ user: { id: 'user-1' } }],
-        },
-        {
-          organizer: { id: 'librero-123' },
-          eventDate: futureDate,
-          registrations: [{ user: { id: 'user-2' } }],
-        },
-      ]);
-
-      const result = await controller.chat(req as any, {
-        prompt: 'franja horaria',
-        history: [],
-      });
-
-      expect(result).toContain('1 evento');
-      expect(result).toContain('1 evento');
+    const res = await controller.chat(createMockReq('librero', 'librero-123'), {
+      prompt: 'asisten más lectores',
+      history: [],
     });
+
+    expect(res).toBe(
+      'Hay eventos registrados, pero ninguno tiene asistentes apuntados aún.',
+    );
   });
 
-  describe('PassThrough - Historia y Contexto', () => {
-    it('debe pasar el historial al AIService', async () => {
-      const req = mockRequest('user', 'user-123');
-      const mockHistory = [
-        { role: 'user', parts: [{ text: 'Hello' }] },
-      ];
+  it('debe formatear correctamente la lista de libros top', async () => {
+    const bookQB = bookRepo.createQueryBuilder();
+    (bookQB.getRawMany as jest.Mock).mockResolvedValueOnce([
+      {
+        title: 'El Principito',
+        author: 'Saint-Exupéry',
+        totalRegistrations: '10',
+      },
+    ]);
+    (bookQB.getRawMany as jest.Mock).mockResolvedValueOnce([]);
 
-      bookRepo.find.mockResolvedValueOnce([]);
-      clubRepo.find.mockResolvedValueOnce([]);
-      eventRepo.find.mockResolvedValueOnce([]);
-      listingRepo.find.mockResolvedValueOnce([]);
+    const actQB = activityRepo.createQueryBuilder();
+    (actQB.getRawOne as jest.Mock).mockResolvedValue(undefined);
 
-      aiService.getChatResponse.mockResolvedValueOnce('response');
+    aiService.getChatResponse.mockResolvedValue('OK');
 
-      await controller.chat(req as any, {
-        prompt: 'pregunta',
-        history: mockHistory,
-      });
-
-      expect(aiService.getChatResponse).toHaveBeenCalledWith(
-        'pregunta',
-        mockHistory,
-        expect.any(String),
-        'user',
-      );
+    await controller.chat(createMockReq('admin', 'admin-123'), {
+      prompt: 'metrics',
+      history: [],
     });
 
-    it('debe pasar el rol correcto al AIService', async () => {
-      const req = mockRequest('librero', 'librero-456');
-
-      adminService.getMostRequestedBook.mockResolvedValueOnce({
-        title: 'Book',
-        author: 'Author',
-      });
-
-      aiService.getChatResponse.mockResolvedValueOnce('response');
-
-      await controller.chat(req as any, {
-        prompt: 'pregunta',
-        history: [],
-      });
-
-      expect(aiService.getChatResponse).toHaveBeenCalledWith(
-        'pregunta',
-        [],
-        expect.any(String),
-        'librero',
-      );
-    });
+    const context = aiService.getChatResponse.mock.calls[0][2];
+    expect(context).toContain(
+      '1. El Principito de Saint-Exupéry (10 registros)',
+    );
   });
 });

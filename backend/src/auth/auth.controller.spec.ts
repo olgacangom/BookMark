@@ -5,44 +5,19 @@ import { multerFilenameCallback } from './auth.controller';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
 import { UnauthorizedException } from '@nestjs/common';
-import { UserRole } from '../users/entities/user.entity';
+import { User, UserRole } from '../users/entities/user.entity';
 
 describe('AuthController', () => {
   let controller: AuthController;
   let authService: jest.Mocked<AuthService>;
   let usersService: jest.Mocked<UsersService>;
 
-  const mockUser = {
+  const mockUser: User = {
     id: 'user-123',
     email: 'test@example.com',
     password: 'hashed_password',
-    fullName: 'Test User',
-    province: 'Madrid',
     role: UserRole.USER,
-    libraryName: null,
-    libraryAddress: null,
-    document: null,
-    libraryPhone: null,
-    librarySchedule: null,
-    bio: null,
-    avatarUrl: null,
-    isPublic: true,
-    isActive: true,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    resetPasswordToken: null,
-    resetPasswordExpires: null,
-    address: null,
-    city: null,
-    books: [],
-    followerRelations: [],
-    followingRelations: [],
-    stats: {} as any,
-    badges: [],
-    clubs: [],
-    registrations: [],
-    events: [],
-  } as any;
+  } as User;
 
   const mockFile = {
     path: './uploads/licencias/file.pdf',
@@ -111,7 +86,10 @@ describe('AuthController', () => {
 
       usersService.create.mockResolvedValueOnce(mockUser);
 
-      const result = await controller.register(registerDto, undefined as any);
+      const result = await controller.register(
+        registerDto,
+        undefined as unknown as Express.Multer.File,
+      );
 
       expect(usersService.create).toHaveBeenCalledWith(registerDto);
       expect(result).toEqual(mockUser);
@@ -178,9 +156,9 @@ describe('AuthController', () => {
         new Error('El correo no está registrado'),
       );
 
-      await expect(controller.forgotPassword('unknown@example.com')).rejects.toThrow(
-        'El correo no está registrado',
-      );
+      await expect(
+        controller.forgotPassword('unknown@example.com'),
+      ).rejects.toThrow('El correo no está registrado');
     });
   });
 
