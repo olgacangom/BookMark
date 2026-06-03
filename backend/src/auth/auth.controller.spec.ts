@@ -214,9 +214,11 @@ describe('AuthController', () => {
 
   describe('filename generator', () => {
     it('genera un nombre único con la extensión correcta', () => {
-      const file = { originalname: 'document.pdf' } as Express.Multer.File;
+      const file = {
+        originalname: 'document.pdf',
+      } as Express.Multer.File;
       const name = generateLicenseFilename(file);
-      expect(name).toMatch(/^[0-9]+-[0-9]+\.pdf$/);
+      expect(name).toMatch(/^\d+-[a-f0-9]{32}\.pdf$/);
     });
 
     it('invoca el callback de multer y devuelve el nombre generado', () => {
