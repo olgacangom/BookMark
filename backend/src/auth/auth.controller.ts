@@ -14,10 +14,14 @@ import { RegisterDto } from './dto/register.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
+import { randomBytes } from 'crypto';
+
 
 export function generateLicenseFilename(file: Express.Multer.File) {
-  const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-  return `${uniqueSuffix}${extname(file.originalname)}`;
+  const secureSuffix = randomBytes(16).toString('hex');
+  const timestamp = Date.now();
+  const extension = extname(file.originalname);
+  return `${timestamp}-${secureSuffix}${extension}`;
 }
 
 export function multerFilenameCallback() {
@@ -35,7 +39,7 @@ export class AuthController {
   constructor(
     private authService: AuthService,
     private usersService: UsersService,
-  ) {}
+  ) { }
 
   @Post('register')
   @UseInterceptors(
