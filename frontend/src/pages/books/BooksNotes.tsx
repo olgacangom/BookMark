@@ -56,7 +56,9 @@ export function BookNotes({ bookId }: { bookId: number }) {
 
   const handleUpdate = async (id: string) => {
     if (!editContent.trim() || editContent === '<p><br></p>') return;
-    await api.put(`/notes/${id}`, { content: editContent });
+
+    await api.patch(`/notes/${id}`, { content: editContent });
+
     setEditingNoteId(null);
     fetchNotes();
   };

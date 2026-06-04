@@ -20,7 +20,7 @@ import { AdminUserListView } from './pages/admin/AdminUserListView';
 import { AdminStatsView } from './pages/admin/AdminStatsView';
 import { LibreroCatalogView } from './pages/librero/LibreroCatalogoView';
 import { LibreroEventsView } from './pages/librero/LibreroEventsView';
-import { SustainabilityView } from './pages/sustainability/SustainabilityView';
+import { SustainabilityView } from './pages/sustainability/pages/SustainabilityView';
 import { EventsView } from './pages/events/EventsView';
 
 const RedirectToDashboard = () => {

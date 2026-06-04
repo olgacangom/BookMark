@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import api from '../../services/api';
-import { CreateListingModal } from './components/CreateListingModal';
+import api from '../../../services/api';
+import { CreateListingModal } from '../components/CreateListingModal';
 import {
     Plus, Search,
     RefreshCw, Heart, Loader2,
@@ -8,7 +8,7 @@ import {
     ShoppingBag, Info, Globe, Sparkle,
     Edit3, Users, Calendar, X, Check, HandHelping
 } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../../context/AuthContext';
 
 const ActionModal = ({ isOpen, type, title, onClose, onConfirm }: any) => {
     if (!isOpen) return null;
@@ -39,7 +39,7 @@ const ActionModal = ({ isOpen, type, title, onClose, onConfirm }: any) => {
 };
 
 // MODAL DETALLES AMIGOS ---
-const SocialDetailsModal = ({ isOpen, onClose, listing, onToggleRequest, isRequested, currentUserId }: any) => {
+export const SocialDetailsModal = ({ isOpen, onClose, listing, onToggleRequest, isRequested, currentUserId }: any) => {
     if (!isOpen || !listing) return null;
     const isSale = listing.type === 'sale';
     const isOwner = listing.user?.id === currentUserId;
@@ -107,7 +107,7 @@ const SocialDetailsModal = ({ isOpen, onClose, listing, onToggleRequest, isReque
 };
 
 // --- MODAL DE FEEDBACK ---
-const FeedbackModal = ({ isOpen, onClose, type }: any) => {
+export const FeedbackModal = ({ isOpen, onClose, type }: any) => {
     if (!isOpen) return null;
     const isSuccess = type === 'success';
     return (
@@ -199,7 +199,6 @@ export const SustainabilityView = () => {
 
             const listingObj = findListing(listingId as string);
             if (listingObj && listingObj.user && listingObj.user.id === user?.id) {
-                // already owner — ignore action
                 setFeedback({ isOpen: true, type: 'cancel' });
                 return;
             }
@@ -353,7 +352,7 @@ const ImpactItem = ({ icon: Icon, color, count, label }: any) => (
 );
 
 // --- SECCIÓN MI INVENTARIO ---
-const MarketplaceSection = ({ listings, onEdit, onAction }: any) => {
+export const MarketplaceSection = ({ listings, onEdit, onAction }: any) => {
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('Todos');
 
@@ -420,10 +419,16 @@ const MarketplaceSection = ({ listings, onEdit, onAction }: any) => {
                                 </div>
 
                                 <div className="absolute top-3 right-3 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0">
-                                    <button onClick={() => onEdit(item)} className="p-2 bg-white text-[#407B75] rounded-lg shadow-xl hover:bg-[#407B75] hover:text-white transition-all">
+                                    <button
+                                        onClick={() => onEdit(item)}
+                                        aria-label='Editar'
+                                        className="p-2 bg-white text-[#407B75] rounded-lg shadow-xl hover:bg-[#407B75] hover:text-white transition-all">
                                         <Edit3 size={14} />
                                     </button>
-                                    <button onClick={() => onAction('delete', item)} className="p-2 bg-white text-rose-500 rounded-lg shadow-xl hover:bg-rose-500 hover:text-white transition-all">
+                                    <button 
+                                    onClick={() => onAction('delete', item)} 
+                                    aria-label="Eliminar"
+                                    className="p-2 bg-white text-rose-500 rounded-lg shadow-xl hover:bg-rose-500 hover:text-white transition-all">
                                         <Trash2 size={14} />
                                     </button>
                                 </div>
@@ -465,7 +470,7 @@ const MarketplaceSection = ({ listings, onEdit, onAction }: any) => {
     );
 };
 
-const HistorySection = ({ items, userId, onReturnSuccess }: any) => {
+export const HistorySection = ({ items, userId, onReturnSuccess }: any) => {
     const [actionId, setActionId] = useState<string | null>(null);
 
     const handleMarkReturned = async (requestId: string) => {

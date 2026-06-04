@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import api from '../../services/api';
 import { bookService, Book } from '../../books/services/book.service';
-import { BooksGrowthChart } from '../../components/stats/BooksGrowthChart';
+import { BooksGrowthChart } from '../../users/components/BooksGrowthChart';
 
 const PROVINCIAS = [
     "Álava", "Albacete", "Alicante", "Almería", "Asturias", "Ávila", "Badajoz", "Barcelona",

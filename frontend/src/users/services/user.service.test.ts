@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import api from '../../services/api';
 import { userService } from './user.service';
+import api from '../../services/api';
 
 vi.mock('../../services/api', () => ({
   default: {
@@ -10,51 +10,37 @@ vi.mock('../../services/api', () => ({
 }));
 
 describe('userService', () => {
-  const mockUserId = '123-uuid';
-  const mockUserProfile = {
-    id: mockUserId,
-    fullName: 'Olga Cantalejo',
-    isPublic: true,
-  };
-
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('getProfile: debe llamar a la URL correcta y devolver los datos', async () => {
-    (api.get as any).mockResolvedValue({ data: mockUserProfile });
+  it('getProfile: debería obtener el perfil de un usuario por ID', async () => {
+    const mockProfile = { id: 'u1', fullName: 'Juan Pérez', isPublic: true };
+    vi.mocked(api.get).mockResolvedValue({ data: mockProfile });
 
-    const result = await userService.getProfile(mockUserId);
-
-    expect(api.get).toHaveBeenCalledWith(`/users/profile/${mockUserId}`);
-    expect(result).toEqual(mockUserProfile);
+    const result = await userService.getProfile('u1');
+    expect(api.get).toHaveBeenCalledWith('/users/profile/u1');
+    expect(result).toEqual(mockProfile);
   });
 
-  it('follow: debe realizar una petición POST a la URL de seguimiento', async () => {
-    (api.post as any).mockResolvedValue({});
-
-    await userService.follow(mockUserId);
-
-    expect(api.post).toHaveBeenCalledWith(`/users/follow/${mockUserId}`);
+  it('follow: debería realizar una petición POST para seguir', async () => {
+    vi.mocked(api.post).mockResolvedValue({});
+    await userService.follow('u2');
+    expect(api.post).toHaveBeenCalledWith('/users/follow/u2');
   });
 
-  it('unfollow: debe realizar una petición POST a la URL de dejar de seguir', async () => {
-    (api.post as any).mockResolvedValue({});
-
-    await userService.unfollow(mockUserId);
-
-    expect(api.post).toHaveBeenCalledWith(`/users/unfollow/${mockUserId}`);
+  it('unfollow: debería realizar una petición POST para dejar de seguir', async () => {
+    vi.mocked(api.post).mockResolvedValue({});
+    await userService.unfollow('u2');
+    expect(api.post).toHaveBeenCalledWith('/users/unfollow/u2');
   });
 
-  it('searchUsers: debe llamar a la URL con el query param y devolver un array', async () => {
-    const query = 'olga';
-    const mockUsersList = [mockUserProfile];
-    (api.get as any).mockResolvedValue({ data: mockUsersList });
+  it('searchUsers: debería realizar una búsqueda con la query adecuada', async () => {
+    const mockUsers = [{ id: 'u1', fullName: 'Juan', isPublic: true }];
+    vi.mocked(api.get).mockResolvedValue({ data: mockUsers });
 
-    const result = await userService.searchUsers(query);
-
-    expect(api.get).toHaveBeenCalledWith(`/users/search?q=${query}`);
-    expect(result).toBeInstanceOf(Array);
-    expect(result).toEqual(mockUsersList);
+    const result = await userService.searchUsers('Juan');
+    expect(api.get).toHaveBeenCalledWith('/users/search?q=Juan');
+    expect(result).toEqual(mockUsers);
   });
 });

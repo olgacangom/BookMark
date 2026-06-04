@@ -1,144 +1,143 @@
-import { render, screen } from '@testing-library/react';
-import { ActivityCard } from './ActivityCard';
-import { ActivityType, Activity } from '../services/activity.service';
 import { describe, it, expect, vi } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { Activity, activityService, ActivityType } from '../services/activity.service';
+import { ActivityCard, ActivityCardProps } from './ActivityCard';
+import { MemoryRouter } from 'react-router-dom';
+import * as AuthContext from '../../context/AuthContext';
 
-vi.mock('date-fns', async () => {
-  const actual = await vi.importActual('date-fns');
-  return {
-    ...actual,
-    formatDistanceToNow: vi.fn(() => 'hace 2 horas'),
-  };
-});
+vi.mock('../services/activity.service', () => ({
+    ActivityType: { POST: 'POST', FOLLOW: 'FOLLOW', BOOK_ADDED: 'BOOK_ADDED', BOOK_FINISHED: 'BOOK_FINISHED' },
+    activityService: {
+        updateActivity: vi.fn(),
+        addComment: vi.fn(),
+    }
+}));
 
-describe('ActivityCard Component', () => {
-  const baseUser = {
-    fullName: 'Juan Pérez',
-    email: 'juan@test.com',
-    avatarUrl: 'https://avatar.com/juan.jpg',
-  };
+vi.spyOn(AuthContext, 'useAuth').mockReturnValue({ user: { id: 'user-123' } } as any);
 
-  const mockDate = '2026-04-06T10:00:00Z';
+const AllTheProviders = ({ children }: { children: React.ReactNode }) => (
+    <MemoryRouter>
+        {children}
+    </MemoryRouter>
+);
 
-  it('debe renderizar correctamente una actividad de tipo FOLLOW', () => {
-    const activity: Activity = {
-      id: '1',
-      type: ActivityType.FOLLOW,
-      createdAt: mockDate,
-      user: baseUser,
-      targetUser: { fullName: 'María García', avatarUrl: '' },
+describe('ActivityCard', () => {
+    const mockActivity: Activity = {
+        id: 'act-1',
+        type: ActivityType.POST,
+        content: 'Hola mundo',
+        createdAt: new Date().toISOString(),
+        user: {
+            id: 'user-123',
+            fullName: 'Test User',
+            avatarUrl: 'https://test.com/avatar.jpg'
+        },
+        likesCount: 0,
+        isLiked: false,
+        commentsCount: 0,
+        comments: [],
     };
 
-    render(<ActivityCard activity={activity} />);
-
-    expect(screen.getByText('Juan Pérez')).toBeInTheDocument();
-    expect(screen.getByText(/ahora sigue a/i)).toBeInTheDocument();
-    expect(screen.getByText('María García')).toBeInTheDocument();
-    expect(screen.getByText('hace 2 horas')).toBeInTheDocument();
-  });
-
-  it('debe renderizar correctamente BOOK_ADDED con miniatura y lista de autores', () => {
-    const activity: Activity = {
-      id: '2',
-      type: ActivityType.BOOK_ADDED,
-      createdAt: mockDate,
-      user: baseUser,
-      targetBook: {
-        id: 101,
-        title: 'Cien años de soledad',
-        authors: ['Gabriel García Márquez'],
-        thumbnail: 'https://libro.com/portada.jpg',
-      },
+    const props: ActivityCardProps = {
+        activity: mockActivity,
+        onLike: vi.fn(),
+        onIgnore: vi.fn(),
+        onComment: vi.fn(),
+        onUpdate: vi.fn(),
+        onDelete: vi.fn(),
     };
 
-    render(<ActivityCard activity={activity} />);
+    it('debe renderizar el contenido de la actividad correctamente', () => {
+        render(
+            <MemoryRouter>
+                <ActivityCard {...props} />
+            </MemoryRouter>
+        );
+        expect(screen.getByText('Hola mundo')).toBeInTheDocument();
+    });
 
-    expect(screen.getByText('Juan Pérez')).toBeInTheDocument();
-    expect(screen.getByText(/añadió un nuevo libro/i)).toBeInTheDocument();
-    expect(screen.getByText('Cien años de soledad')).toBeInTheDocument();
-    expect(screen.getByText('Gabriel García Márquez')).toBeInTheDocument();
-    
-    const img = screen.getByAltText('Cien años de soledad');
-    expect(img).toHaveAttribute('src', 'https://libro.com/portada.jpg');
-  });
+    it('debe llamar a onLike al hacer clic en el botón de corazón', () => {
+        render(<ActivityCard {...props} />, { wrapper: AllTheProviders });
+        const buttons = screen.getAllByText('0');
+        fireEvent.click(buttons[0]);
+        expect(props.onLike).toHaveBeenCalledWith('act-1');
+    });
 
-  it('debe mostrar "Autor desconocido" y no renderizar imagen si faltan datos en el libro', () => {
-    const activity: Activity = {
-      id: '3',
-      type: ActivityType.BOOK_ADDED,
-      createdAt: mockDate,
-      user: baseUser,
-      targetBook: {
-        id: 102,
-        title: 'Libro Misterioso',
-        authors: null as any, 
-        thumbnail: undefined,
-      },
-    };
+    it('debe mostrar los campos de edición cuando se pulsa editar', async () => {
+        render(<ActivityCard {...props} />, { wrapper: AllTheProviders });
 
-    render(<ActivityCard activity={activity} />);
+        fireEvent.click(screen.getByRole('button', { name: 'Abrir menú' }));
 
-    expect(screen.getByText('Autor desconocido')).toBeInTheDocument();
-    const images = screen.queryAllByRole('img');
-    expect(images).toHaveLength(1);
-  });
+        const editBtn = screen.getByText('Editar publicación');
+        fireEvent.click(editBtn);
 
-  it('debe renderizar correctamente una actividad de tipo BOOK_FINISHED', () => {
-    const activity: Activity = {
-      id: '4',
-      type: ActivityType.BOOK_FINISHED,
-      createdAt: mockDate,
-      user: baseUser,
-      targetBook: {
-        id: 101,
-        title: 'El Quijote',
-        authors: ['Cervantes'],
-      },
-    };
+        expect(screen.getByPlaceholderText('Edita tu mensaje...')).toBeDefined();
+    });
 
-    render(<ActivityCard activity={activity} />);
+    it('debe abrir y cerrar la sección de comentarios', () => {
+        render(<ActivityCard {...props} />, { wrapper: AllTheProviders });
+        const buttons = screen.getAllByText('0');
+        fireEvent.click(buttons[1]);
 
-    expect(screen.getByText(/terminó de leer/i)).toBeInTheDocument();
-    expect(screen.getByText(/"El Quijote"/i)).toBeInTheDocument();
-    expect(screen.getByText(/¡Enhorabuena!/i)).toBeInTheDocument();
-  });
+        expect(screen.getByText('No hay comentarios todavía')).toBeInTheDocument();
+    });
 
-  it('debe procesar correctamente la fecha si se pasa como objeto Date', () => {
-    const activity: Activity = {
-      id: '5',
-      type: ActivityType.FOLLOW,
-      createdAt: new Date() as any, 
-      user: baseUser,
-    };
+    it('debe gestionar el envío de comentarios exitoso', async () => {
+        vi.mocked(activityService.addComment).mockResolvedValue({
+            id: 'c2', text: 'Nuevo', user: { fullName: 'Yo' }
+        } as any);
 
-    render(<ActivityCard activity={activity} />);
-    expect(screen.getByText('hace 2 horas')).toBeInTheDocument();
-  });
+        render(<ActivityCard {...props} />, { wrapper: AllTheProviders });
 
-  it('debe usar la URL de DiceBear si el usuario no tiene avatarUrl', () => {
-    const activity: Activity = {
-      id: '6',
-      type: ActivityType.FOLLOW,
-      createdAt: mockDate,
-      user: { ...baseUser, avatarUrl: undefined },
-    };
+        fireEvent.click(screen.getAllByText('0')[1]);
 
-    render(<ActivityCard activity={activity} />);
-    
-    const avatar = screen.getByAltText('Juan Pérez');
-    expect(avatar).toHaveAttribute('src', expect.stringContaining('dicebear.com'));
-  });
+        const input = screen.getByPlaceholderText('Escribe un comentario...');
+        fireEvent.change(input, { target: { value: 'Nuevo comentario' } });
 
-  it('debe retornar null si el tipo de actividad no es reconocido', () => {
-    const activity = {
-      id: '7',
-      createdAt: mockDate,
-      user: baseUser,
-    } as any;
+        const sendButton = screen.getByRole('button', { name: '' });
+        fireEvent.click(sendButton);
 
-    const { container } = render(<ActivityCard activity={activity} />);
+        await waitFor(() => expect(activityService.addComment).toHaveBeenCalled());
+    });
 
-    const content = container.querySelector('.bg-white');
-    expect(content?.children).toHaveLength(1); 
-  });
+    it('debe mostrar el modal de eliminación y confirmar', () => {
+        render(<ActivityCard {...props} />, { wrapper: AllTheProviders });
+        fireEvent.click(screen.getByLabelText('Abrir menú'));
+        fireEvent.click(screen.getByText('Eliminar'));
+
+        expect(screen.getByText('¿Eliminar publicación?')).toBeDefined();
+        fireEvent.click(screen.getByText('Eliminar'));
+        expect(props.onDelete).toHaveBeenCalledWith('act-1');
+    });
+
+    it('debe renderizar tipos de actividad BOOK_ADDED', () => {
+        const bookActivity: Activity = {
+            ...mockActivity,
+            type: ActivityType.BOOK_ADDED,
+            targetBook: { title: 'Libro', author: 'Autor', isbn: '123' } as any
+        };
+
+        const bookProps = { ...props, activity: bookActivity };
+
+        render(<ActivityCard {...bookProps} />, { wrapper: AllTheProviders });
+
+        const bookTitle = screen.getByText((content, element) => {
+            return content.toLowerCase().includes('libro') && element?.tagName.toLowerCase() === 'p';
+        });
+
+        expect(bookTitle).toBeInTheDocument();
+    });
+
+    it('debe manejar error al guardar edición', async () => {
+        vi.mocked(activityService.updateActivity).mockRejectedValue(new Error('Fail'));
+        const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => { });
+
+        render(<ActivityCard {...props} />, { wrapper: AllTheProviders });
+        fireEvent.click(screen.getByLabelText('Abrir menú'));
+        fireEvent.click(screen.getByText('Editar publicación'));
+        fireEvent.click(screen.getByText('Guardar Cambios'));
+
+        await waitFor(() => expect(alertSpy).toHaveBeenCalled());
+        alertSpy.mockRestore();
+    });
 });

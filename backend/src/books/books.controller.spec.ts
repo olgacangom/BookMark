@@ -11,6 +11,7 @@ describe('BooksController', () => {
   const mockBooksService = {
     create: jest.fn(),
     findAll: jest.fn(),
+    search: jest.fn(),
     searchByIsbn: jest.fn(),
     findOne: jest.fn(),
     update: jest.fn(),
@@ -61,10 +62,22 @@ describe('BooksController', () => {
     expect(mockBooksService.findAll).toHaveBeenCalledWith('user-1');
   });
 
-  it('should call search service', async () => {
+  it('should call search (query) service', async () => {
+    const query = 'Harry';
+    await controller.search(query);
+    expect(mockBooksService.search).toHaveBeenCalledWith(query);
+  });
+
+  it('should call searchByIsbn service', async () => {
     const isbn = '9788415594079';
-    await controller.search(isbn);
+    await controller.searchByIsbn(isbn);
     expect(mockBooksService.searchByIsbn).toHaveBeenCalledWith(isbn);
+  });
+
+  it('should return featured book', () => {
+    const feat = controller.getFeatured();
+    expect(feat).toBeDefined();
+    expect(feat.id).toBe(999);
   });
 
   it('should call findOne service', async () => {

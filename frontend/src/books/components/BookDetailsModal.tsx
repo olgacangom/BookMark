@@ -24,7 +24,7 @@ export const BookDetailsModal: React.FC<Props> = ({ isOpen, onClose, book }) => 
         } finally {
             setIsLoadingStores(false);
         }
-    }, [book]); 
+    }, [book]);
 
     useEffect(() => {
         if (isOpen && book) {
@@ -37,7 +37,7 @@ export const BookDetailsModal: React.FC<Props> = ({ isOpen, onClose, book }) => 
     return (
         <div className="fixed inset-0 z-[160] flex items-center justify-center bg-slate-900/50 backdrop-blur-md p-4 animate-in fade-in duration-300">
             <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-2xl overflow-hidden border border-slate-100 animate-in zoom-in-95">
-                
+
                 <div className="relative h-48 bg-teal-600 overflow-hidden">
                     <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
                     <button onClick={onClose} className="absolute top-6 right-6 p-2 bg-white/20 hover:bg-white/40 text-white rounded-full transition-all z-10">
@@ -56,7 +56,7 @@ export const BookDetailsModal: React.FC<Props> = ({ isOpen, onClose, book }) => 
                         <div className="flex-1 text-left pt-20 md:pt-24">
                             <h2 className="text-3xl font-black text-slate-900 leading-tight uppercase mb-1">{book.title}</h2>
                             <p className="text-teal-600 font-bold text-lg mb-4">{book.author}</p>
-                            
+
                             <div className="flex flex-wrap gap-2 mb-6">
                                 <span className="px-3 py-1 bg-slate-100 text-slate-500 rounded-full text-[10px] font-black uppercase">{book.genre || 'General'}</span>
                                 <span className="px-3 py-1 bg-slate-100 text-slate-500 rounded-full text-[10px] font-black uppercase">{book.pageCount} Páginas</span>
@@ -82,7 +82,13 @@ export const BookDetailsModal: React.FC<Props> = ({ isOpen, onClose, book }) => 
                         </div>
 
                         {isLoadingStores ? (
-                            <div className="flex justify-center py-8"><Loader2 className="animate-spin text-teal-600" /></div>
+                            <div
+                                className="flex justify-center py-8"
+                                role="status"
+                                aria-label="Cargando librerías"
+                            >
+                                <Loader2 className="animate-spin text-teal-600" />
+                            </div>
                         ) : stores.length > 0 ? (
                             <div className="grid grid-cols-1 gap-3">
                                 {stores.map((item) => (
@@ -95,11 +101,11 @@ export const BookDetailsModal: React.FC<Props> = ({ isOpen, onClose, book }) => 
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            <button 
+                                            <button
                                                 onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.store.libraryAddress)}`, '_blank')}
                                                 className="p-2 text-slate-400 hover:text-teal-600 transition-colors"
                                             ><ExternalLink size={18} /></button>
-                                            <button 
+                                            <button
                                                 onClick={() => window.location.href = `tel:${item.store.libraryPhone}`}
                                                 className="px-4 py-2 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase hover:bg-teal-600 transition-all"
                                             >Llamar</button>
@@ -113,7 +119,7 @@ export const BookDetailsModal: React.FC<Props> = ({ isOpen, onClose, book }) => 
                             </div>
                         )}
 
-                        <a 
+                        <a
                             href={`https://www.amazon.es/s?k=${encodeURIComponent(book.title + ' ' + book.author)}`}
                             target="_blank"
                             rel="noreferrer"

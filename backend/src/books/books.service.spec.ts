@@ -7,6 +7,8 @@ import { ActivitiesService } from 'src/users/activities.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Repository } from 'typeorm';
 import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException } from '@nestjs/common';
+import { Note } from './entities/note.entity';
 import { BookStatus } from './enum/book-status.enum';
 import { ActivityType } from 'src/users/entities/activity.entity';
 import { jest, describe, it, expect, beforeEach } from '@jest/globals';
@@ -20,6 +22,7 @@ type MockType<T> = {
 describe('BooksService', () => {
   let service: BooksService;
   let repo: MockType<Repository<Book>>;
+  let noteRepo: MockType<Repository<Note>>;
   let googleService: MockType<GoogleBooksService>;
   let activitiesService: MockType<ActivitiesService>;
   let eventEmitter: MockType<EventEmitter2>;
@@ -42,11 +45,20 @@ describe('BooksService', () => {
     remove: jest.fn(),
   });
 
+  const mockNoteRepoFactory = () => ({
+    create: jest.fn(),
+    save: jest.fn(),
+    find: jest.fn(),
+    findOne: jest.fn(),
+    remove: jest.fn(),
+  });
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         BooksService,
         { provide: getRepositoryToken(Book), useValue: mockRepoFactory() },
+        { provide: getRepositoryToken(Note), useValue: mockNoteRepoFactory() },
         {
           provide: GoogleBooksService,
           useValue: { findByIsbn: jest.fn() },
@@ -64,6 +76,7 @@ describe('BooksService', () => {
 
     service = module.get<BooksService>(BooksService);
     repo = module.get(getRepositoryToken(Book));
+    noteRepo = module.get(getRepositoryToken(Note));
     googleService = module.get(GoogleBooksService);
     activitiesService = module.get(ActivitiesService);
     eventEmitter = module.get(EventEmitter2);
@@ -76,6 +89,16 @@ describe('BooksService', () => {
 
     googleService.findByIsbn?.mockResolvedValue({ title: 'Google Book' });
     activitiesService.create?.mockResolvedValue({});
+
+    noteRepo.create?.mockReturnValue({ id: 'note-1', content: 'hola' });
+    noteRepo.save?.mockImplementation((val) => Promise.resolve(val));
+    noteRepo.find?.mockResolvedValue([{ id: 'note-1', content: 'hola' }]);
+    noteRepo.findOne?.mockResolvedValue({
+      id: 'note-1',
+      content: 'hola',
+      book: mockBook,
+    });
+    noteRepo.remove?.mockResolvedValue({ deleted: true });
   });
 
   describe('searchByIsbn', () => {
@@ -83,6 +106,14 @@ describe('BooksService', () => {
       const result = await service.searchByIsbn('12345');
       expect(googleService.findByIsbn).toHaveBeenCalledWith('12345');
       expect(result.title).toBe('Google Book');
+    });
+  });
+
+  describe('search', () => {
+    it('debe llamar a repo.find y devolver resultados cuando la query es válida', async () => {
+      const res = await service.search('Don');
+      expect(repo.find).toHaveBeenCalled();
+      expect(res).toEqual([mockBook]);
     });
   });
 
@@ -99,6 +130,7 @@ describe('BooksService', () => {
     };
 
     it('debe crear un libro y registrar la actividad exitosamente', async () => {
+      repo.findOne?.mockResolvedValue(null);
       repo.create?.mockReturnValue({ ...mockBook, title: 'Nuevo Libro' });
       const result = await service.create(createDto, mockUserId);
       expect(repo.create).toHaveBeenCalled();
@@ -115,6 +147,7 @@ describe('BooksService', () => {
       const consoleSpy = jest
         .spyOn(console, 'error')
         .mockImplementation(() => {});
+      repo.findOne?.mockResolvedValue(null);
       activitiesService.create?.mockRejectedValue(new Error('Fallo'));
 
       await service.create(createDto, mockUserId);
@@ -130,6 +163,7 @@ describe('BooksService', () => {
       const consoleSpy = jest
         .spyOn(console, 'error')
         .mockImplementation(() => {});
+      repo.findOne?.mockResolvedValue(null);
       activitiesService.create?.mockRejectedValue('Error String');
 
       await service.create(createDto, mockUserId);
@@ -207,6 +241,98 @@ describe('BooksService', () => {
 
       expect(repo.remove).toHaveBeenCalledWith(mockBook);
       expect(result).toEqual({ deleted: true });
+    });
+  });
+
+  describe('otros casos', () => {
+    it('search debería devolver [] si la query es muy corta', async () => {
+      const result = await service.search('a');
+      expect(result).toEqual([]);
+    });
+
+    it('create lanza ConflictException si ya existe duplicado', async () => {
+      const createDto: CreateBookDto = {
+        title: 'Nuevo Libro',
+        author: 'Cervantes',
+        genre: 'Novela',
+        isbn: '123456789',
+        status: BookStatus.READ,
+        description: '',
+        pageCount: 0,
+        urlPortada: '',
+      };
+
+      repo.findOne?.mockResolvedValue({ title: 'Dup' });
+
+      await expect(service.create(createDto, mockUserId)).rejects.toThrow(
+        ConflictException,
+      );
+    });
+
+    it('findOne lanza BadRequestException si id no es número', async () => {
+      await expect(service.findOne(NaN, mockUserId)).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('createNote crea y guarda una nota', async () => {
+      repo.findOne?.mockResolvedValue(mockBook);
+      noteRepo.create?.mockReturnValue({ content: 'mi nota', book: mockBook });
+      noteRepo.save?.mockResolvedValue({
+        id: 'n1',
+        content: 'mi nota',
+        book: mockBook,
+      });
+
+      const res = await service.createNote(1, 'mi nota', mockUserId);
+
+      expect(noteRepo.create).toHaveBeenCalled();
+      expect(noteRepo.save).toHaveBeenCalled();
+      expect(res.content).toBe('mi nota');
+    });
+
+    it('findNotesByBook devuelve las notas ordenadas', async () => {
+      repo.findOne?.mockResolvedValue(mockBook);
+      noteRepo.find?.mockResolvedValue([{ id: 'n1', content: 'x' }]);
+
+      const res = await service.findNotesByBook(1, mockUserId);
+      expect(noteRepo.find).toHaveBeenCalled();
+      expect(res).toEqual([{ id: 'n1', content: 'x' }]);
+    });
+
+    it('updateNote lanza NotFoundException si no existe o no es tuya', async () => {
+      noteRepo.findOne?.mockResolvedValue(null);
+      await expect(service.updateNote('nope', 'c', mockUserId)).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('updateNote actualiza la nota correctamente', async () => {
+      noteRepo.findOne?.mockResolvedValue({
+        id: 'n1',
+        content: 'old',
+        book: mockBook,
+      });
+      noteRepo.save?.mockResolvedValue({ id: 'n1', content: 'nuevo' });
+
+      const res = await service.updateNote('n1', 'nuevo', mockUserId);
+      expect(res.content).toBe('nuevo');
+    });
+
+    it('deleteNote lanza NotFoundException si no existe o no es tuya', async () => {
+      noteRepo.findOne?.mockResolvedValue(null);
+      await expect(service.deleteNote('nope', mockUserId)).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('deleteNote elimina la nota correctamente', async () => {
+      noteRepo.findOne?.mockResolvedValue({ id: 'n1', book: mockBook });
+      noteRepo.remove?.mockResolvedValue({});
+
+      const res = await service.deleteNote('n1', mockUserId);
+      expect(noteRepo.remove).toHaveBeenCalled();
+      expect(res).toEqual({ deleted: true });
     });
   });
 });

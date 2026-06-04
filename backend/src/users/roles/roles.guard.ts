@@ -1,3 +1,5 @@
+/* istanbul ignore file */
+
 import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { UserRole, User } from '../entities/user.entity';

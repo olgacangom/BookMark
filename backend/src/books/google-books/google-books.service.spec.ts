@@ -171,4 +171,27 @@ describe('GoogleBooksService', () => {
       NotFoundException,
     );
   });
+
+  it('should default title and authors when missing and no thumbnail', async () => {
+    const apiResponse = {
+      data: {
+        items: [
+          {
+            volumeInfo: {
+              // no title, no authors, no imageLinks
+              description: 'Sin título ni autores',
+            },
+          },
+        ],
+      },
+    };
+
+    mockedAxios.get.mockResolvedValue(apiResponse);
+
+    const result = await service.findByIsbn(mockIsbn);
+
+    expect(result.title).toBe('Título no disponible');
+    expect(result.authors).toEqual(['Autor desconocido']);
+    expect(result.urlPortada).toBeNull();
+  });
 });

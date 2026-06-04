@@ -80,6 +80,7 @@ export const BookCard = ({ book, onEdit, onDelete, statusInfo, onOpenNotes }: Bo
 
       <button
         type="button"
+        aria-label="Borrar libro"
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
