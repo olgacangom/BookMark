@@ -25,7 +25,7 @@ export class AuthService {
     private readonly userRepository: Repository<User>,
     @InjectRepository(UserStats)
     private readonly userStatsRepository: Repository<UserStats>,
-  ) {}
+  ) { }
 
   async validateUser(
     email: string,
@@ -115,7 +115,8 @@ export class AuthService {
       },
     });
 
-    const resetUrl = `http://localhost:5173/reset-password/${token}`;
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL');
+    const resetUrl = `${frontendUrl}/reset-password/${token}`;
     await transporter.sendMail({
       from: '"BookMark Team" <noreply@bookmark.com>',
       to: user.email,
@@ -162,10 +163,12 @@ export class AuthService {
     message: string,
   ) {
     const transporter = nodemailer.createTransport({
-      service: 'gmail',
+      host: 'smtp.gmail.com',
+      port: 465,
+      secure: true,
       auth: {
-        user: this.configService.get<string>('EMAIL_USER'),
-        pass: this.configService.get<string>('EMAIL_PASS'),
+        user: this.configService.getOrThrow<string>('EMAIL_USER'),
+        pass: this.configService.getOrThrow<string>('EMAIL_PASS'),
       },
     });
 
