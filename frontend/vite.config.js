@@ -26,6 +26,8 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov'],
+      reportsDirectory: './coverage',
+      include: ['src/pages/sustainability/pages/SustainabilityView.tsx'],
       exclude: [
         'node_modules/**',
         'dist/**',
@@ -36,7 +38,7 @@ export default defineConfig({
         'src/vite-env.d.ts',
         'src/components/shared/**',
         'src/users/pages',
-        'src/pages/**',
+        //'src/pages/**',
         'src/layouts',
         'src/bookstore',
         'App.tsx'
