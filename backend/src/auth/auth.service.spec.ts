@@ -416,7 +416,7 @@ describe('AuthService', () => {
       (nodemailer.createTransport as jest.Mock).mockReturnValueOnce(
         mockTransporter,
       );
-      configService.get.mockReturnValue('email@gmail.com');
+      configService.getOrThrow = jest.fn().mockReturnValue('email@gmail.com');
 
       await service.sendNotificationEmail(
         'user@example.com',
@@ -441,8 +441,7 @@ describe('AuthService', () => {
       (nodemailer.createTransport as jest.Mock).mockReturnValueOnce(
         mockTransporter,
       );
-      configService.get.mockReturnValue('email@gmail.com');
-
+      configService.getOrThrow = jest.fn().mockReturnValue('email@gmail.com');
       const customMessage = 'Tu librería ha sido aprobada';
 
       await service.sendNotificationEmail(
