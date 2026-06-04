@@ -38,7 +38,7 @@ jobs:
         run: cd frontend && npm run test:coverage
 
       # --- ANÁLISIS GLOBAL ---
-      - name: SonarCloud Scan
+      - name: SonarCloud Scana
         uses: SonarSource/sonarqube-scan-action@v6
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -53,4 +53,4 @@ jobs:
             -Dsonar.exclusions=**/*.spec.ts,**/*.test.tsx,**/*.test.ts,backend/test/**,backend/src/main.ts,frontend/src/main.tsx,frontend/src/vite-env.d.ts
             -Dsonar.javascript.lcov.reportPaths=frontend/coverage/lcov.info
             -Dsonar.cpd.exclusions=**/*.test.tsx,**/*.test.ts
-            -Dsonar.coverage.exclusions=src/pages/**,src/components/shared/**
+            -Dsonar.coverage.exclusions=frontend/src/pages/**/*,frontend/src/components/shared/**/*
