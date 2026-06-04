@@ -353,7 +353,7 @@ const ImpactItem = ({ icon: Icon, color, count, label }: any) => (
 );
 
 // --- SECCIÓN MI INVENTARIO ---
-const MarketplaceSection = ({ listings, onEdit, onAction }: any) => {
+export const MarketplaceSection = ({ listings, onEdit, onAction }: any) => {
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('Todos');
 
@@ -420,7 +420,10 @@ const MarketplaceSection = ({ listings, onEdit, onAction }: any) => {
                                 </div>
 
                                 <div className="absolute top-3 right-3 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0">
-                                    <button onClick={() => onEdit(item)} className="p-2 bg-white text-[#407B75] rounded-lg shadow-xl hover:bg-[#407B75] hover:text-white transition-all">
+                                    <button
+                                        onClick={() => onEdit(item)}
+                                        aria-label='Editar'
+                                        className="p-2 bg-white text-[#407B75] rounded-lg shadow-xl hover:bg-[#407B75] hover:text-white transition-all">
                                         <Edit3 size={14} />
                                     </button>
                                     <button onClick={() => onAction('delete', item)} className="p-2 bg-white text-rose-500 rounded-lg shadow-xl hover:bg-rose-500 hover:text-white transition-all">
@@ -465,7 +468,7 @@ const MarketplaceSection = ({ listings, onEdit, onAction }: any) => {
     );
 };
 
-const HistorySection = ({ items, userId, onReturnSuccess }: any) => {
+export const HistorySection = ({ items, userId, onReturnSuccess }: any) => {
     const [actionId, setActionId] = useState<string | null>(null);
 
     const handleMarkReturned = async (requestId: string) => {
