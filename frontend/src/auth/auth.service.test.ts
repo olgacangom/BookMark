@@ -1,29 +1,51 @@
-import { describe, it, expect, vi, Mocked } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import axios from 'axios';
 import { authService } from './auth.service';
 
-// Simulamos axios para no hacer peticiones reales al backend
 vi.mock('axios');
-const mockedAxios = axios as Mocked<typeof axios>;
 
 describe('authService', () => {
-  it('should call register API with correct data', async () => {
-    const mockData = { fullName: 'Test', email: 't@t.com', password: 'password123' };
-    mockedAxios.post.mockResolvedValue({ data: { id: '1', email: 't@t.com' } });
-
-    const result = await authService.register(mockData);
-    
-    expect(mockedAxios.post).toHaveBeenCalledWith(expect.stringContaining('/register'), mockData);
-    expect(result.email).toBe('t@t.com');
+  beforeEach(() => {
+    vi.clearAllMocks();
   });
 
-  it('should call login API and return a token', async () => {
-    const mockData = { email: 't@t.com', password: 'password123' };
-    mockedAxios.post.mockResolvedValue({ data: { access_token: 'fake-token' } });
+  describe('register', () => {
+    it('debe registrar un usuario correctamente', async () => {
+      const mockData = {
+        fullName: 'Juan Test',
+        email: 'test@test.com',
+        password: 'password123'
+      };
 
-    const result = await authService.login(mockData);
-    
-    expect(mockedAxios.post).toHaveBeenCalledWith(expect.stringContaining('/login'), mockData);
-    expect(result.access_token).toBe('fake-token');
+      const mockResponse = { data: { id: '1', email: 'test@test.com' } };
+
+      vi.mocked(axios.post).mockResolvedValue(mockResponse);
+
+      const result = await authService.register(mockData);
+
+      expect(axios.post).toHaveBeenCalledWith(expect.stringContaining('/auth/register'), mockData);
+      expect(result).toEqual(mockResponse.data);
+    });
+  });
+
+  describe('login', () => {
+    it('debe iniciar sesión y devolver un token', async () => {
+      const mockData = { email: 'test@test.com', password: 'password123' };
+      const mockResponse = { data: { access_token: 'fake-jwt-token' } };
+
+      vi.mocked(axios.post).mockResolvedValue(mockResponse);
+
+      const result = await authService.login(mockData);
+
+      expect(axios.post).toHaveBeenCalledWith(expect.stringContaining('/auth/login'), mockData);
+      expect(result).toEqual(mockResponse.data);
+    });
+
+    it('debe lanzar un error si las credenciales son incorrectas', async () => {
+      vi.mocked(axios.post).mockRejectedValue(new Error('Unauthorized'));
+
+      await expect(authService.login({ email: 'x', password: 'y' }))
+        .rejects.toThrow('Unauthorized');
+    });
   });
 });

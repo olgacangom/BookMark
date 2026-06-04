@@ -1,33 +1,75 @@
-import { Controller, Post, Body, UnauthorizedException } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  UnauthorizedException,
+  UseInterceptors,
+  UploadedFile,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { CreateUserDto } from '../users/dto/create-user.dto';
 import { UsersService } from '../users/users.service';
 import { LoginDto } from './dto/login.dto';
 import { User } from 'src/users/entities/user.entity';
+import { RegisterDto } from './dto/register.dto';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
+import { randomBytes } from 'crypto';
+
+
+export function generateLicenseFilename(file: Express.Multer.File) {
+  const secureSuffix = randomBytes(16).toString('hex');
+  const timestamp = Date.now();
+  const extension = extname(file.originalname);
+  return `${timestamp}-${secureSuffix}${extension}`;
+}
+
+export function multerFilenameCallback() {
+  return (
+    req: any,
+    file: Express.Multer.File,
+    cb: (err: Error | null, filename: string) => void,
+  ) => {
+    cb(null, generateLicenseFilename(file));
+  };
+}
 
 @Controller('auth')
 export class AuthController {
   constructor(
     private authService: AuthService,
     private usersService: UsersService,
-  ) {}
+  ) { }
 
   @Post('register')
+  @UseInterceptors(
+    FileInterceptor('document', {
+      storage: diskStorage({
+        destination: './uploads/licencias',
+        filename: multerFilenameCallback(),
+      }),
+    }),
+  )
   async register(
-    @Body() createUserDto: CreateUserDto,
+    @Body() registerDto: RegisterDto,
+    @UploadedFile() file: Express.Multer.File,
   ): Promise<Omit<User, 'password'>> {
-    return this.usersService.create(createUserDto);
+    if (file) {
+      registerDto.document = file.path;
+    }
+
+    return this.usersService.create(registerDto);
   }
 
   @Post('login')
   async login(@Body() loginDto: LoginDto) {
-    const user = await this.authService.validateUser(
-      loginDto.email,
-      loginDto.password,
-    );
+    const user: Omit<User, 'password'> | null =
+      await this.authService.validateUser(loginDto.email, loginDto.password);
+
     if (!user) {
       throw new UnauthorizedException('Credenciales inválidas');
     }
+
     return this.authService.login(user);
   }
 

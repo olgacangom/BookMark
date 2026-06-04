@@ -15,6 +15,15 @@ import { Follow, FollowStatus } from './follow.entity';
 import { UserStats } from './user-stats.entity';
 import { Badge } from '../badge.entity';
 import { Club } from 'src/club/entities/club.entity';
+import { LibraryEvent } from './library-event.entity';
+import { EventRegistration } from 'src/bookstore/entities/event-registration.entity';
+
+export enum UserRole {
+  USER = 'user',
+  LIBRERO = 'librero',
+  LIBRERO_PENDIENTE = 'librero_pendiente',
+  ADMIN = 'admin',
+}
 
 @Entity('users')
 export class User {
@@ -32,12 +41,37 @@ export class User {
   fullName: string;
 
   @Column({ nullable: true })
-  bio: string;
+  province: string;
+
+  @Column({
+    type: 'enum',
+    enum: UserRole,
+    default: UserRole.USER,
+  })
+  role: UserRole;
 
   @Column({ nullable: true })
-  avatarUrl: string;
+  libraryName: string;
 
-  @Column({ default: true }) // Por defecto el perfil es público
+  @Column({ nullable: true })
+  libraryAddress: string;
+
+  @Column({ nullable: true })
+  document: string;
+
+  @Column({ nullable: true })
+  libraryPhone: string;
+
+  @Column({ nullable: true })
+  librarySchedule: string;
+
+  @Column({ nullable: true })
+  bio: string;
+
+  @Column({ type: 'varchar', nullable: true })
+  avatarUrl: string | null;
+
+  @Column({ default: true })
   isPublic: boolean;
 
   @Column({ default: true })
@@ -68,11 +102,24 @@ export class User {
   @ManyToMany(() => Club, (club) => club.members)
   clubs: Club[];
 
+  @OneToMany(() => EventRegistration, (registration) => registration.user)
+  registrations: EventRegistration[];
+
+  @ManyToMany(() => LibraryEvent, (event) => event.organizer)
+  @JoinTable()
+  events: LibraryEvent[];
+
   @Column({ type: 'varchar', nullable: true })
   resetPasswordToken: string | null;
 
   @Column({ type: 'timestamp', nullable: true })
   resetPasswordExpires: Date | null;
+
+  @Column({ nullable: true })
+  address: string;
+
+  @Column({ nullable: true })
+  city: string;
 
   @Expose()
   get followers() {

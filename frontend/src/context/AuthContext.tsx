@@ -1,15 +1,16 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useState, ReactNode } from 'react';
-import api from '../services/api'; 
+import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import api from '../services/api';
 
 interface AuthContextType {
   user: any;
   token: string | null;
   login: (data: any, userData?: any) => void;
-  register: (name: string, email: string, password: string) => Promise<void>;
+  register: (name: string, email: string, password: string, role: string, extraData?: any) => Promise<void>;
   logout: () => void;
   updateUser: (userData: any) => void;
   isAuthenticated: boolean;
+  loading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -20,14 +21,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const savedUser = localStorage.getItem('user');
     return savedUser ? JSON.parse(savedUser) : null;
   });
+  const [loading, setLoading] = useState(true);
 
-  const register = async (name: string, email: string, password: string) => {
+  useEffect(() => {
+    const savedUser = localStorage.getItem('user');
+    if (savedUser) {
+      setUser(JSON.parse(savedUser));
+    }
+    setLoading(false);
+  }, []);
+
+  const register = async (name: string, email: string, password: string, role: string, extraData?: any) => {
     try {
-      await api.post('/auth/register', { 
-        fullName: name, 
-        email, 
-        password 
+      const formData = new FormData();
+
+      formData.append('fullName', name);
+      formData.append('email', email);
+      formData.append('password', password);
+      formData.append('role', role);
+
+      if (extraData) {
+        if (extraData.libraryName) formData.append('libraryName', extraData.libraryName);
+        if (extraData.libraryAddress) formData.append('libraryAddress', extraData.libraryAddress);
+
+        if (extraData.document) {
+          formData.append('document', extraData.document);
+        }
+      }
+
+      await api.post('/auth/register', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
       });
+
     } catch (error) {
       console.error("Error en registro:", error);
       throw error;
@@ -43,7 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     const userToSave = userData || data.user || {};
-    
+
     localStorage.setItem('token', tokenString);
     localStorage.setItem('user', JSON.stringify(userToSave));
 
@@ -65,14 +92,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const isAuthenticated = !!token;
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      token, 
-      login, 
-      logout, 
-      updateUser, 
-      register, //
-      isAuthenticated 
+    <AuthContext.Provider value={{
+      user,
+      token,
+      login,
+      logout,
+      updateUser,
+      register,
+      isAuthenticated,
+      loading
     }}>
       {children}
     </AuthContext.Provider>

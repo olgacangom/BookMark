@@ -6,9 +6,17 @@ import {
   Param,
   Post,
   Body,
+  Patch,
+  Delete,
+  Req,
 } from '@nestjs/common';
 import { ActivitiesService } from './activities.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CreateActivityDto } from './dto/create-activity.dto';
+import { UpdateActivityDto } from './dto/update-activity.dto';
+import { UserRole } from './entities/user.entity';
+import { Roles } from './roles/roles.decorator';
+import { RolesGuard } from './roles/roles.guard';
 
 interface RequestWithUser {
   user: {
@@ -17,19 +25,40 @@ interface RequestWithUser {
   };
 }
 
-@UseGuards(JwtAuthGuard)
 @Controller('activities')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(UserRole.USER)
 export class ActivitiesController {
   constructor(private readonly activitiesService: ActivitiesService) {}
 
   /**
-   * Obtiene el feed de actividad para el usuario autenticado.
-   * Incluye actividades de los usuarios seguidos y las propias.
+   * Crea una publicación manual del usuario (POST)
    */
+  @Post()
+  async create(
+    @Body() createDto: CreateActivityDto,
+    @Request() req: RequestWithUser,
+  ) {
+    return this.activitiesService.createPost(req.user.id, createDto);
+  }
 
   @Get('feed')
   async getFeed(@Request() req: RequestWithUser) {
     return this.activitiesService.getFeed(req.user.id);
+  }
+
+  @Patch(':id')
+  async update(
+    @Param('id') id: string,
+    @Body() updateDto: UpdateActivityDto,
+    @Request() req: RequestWithUser,
+  ) {
+    return this.activitiesService.update(req.user.id, id, updateDto);
+  }
+
+  @Delete(':id')
+  async remove(@Param('id') id: string, @Request() req: RequestWithUser) {
+    return this.activitiesService.remove(req.user.id, id);
   }
 
   @Post(':id/like')
@@ -52,5 +81,14 @@ export class ActivitiesController {
     @Request() req: RequestWithUser,
   ) {
     return this.activitiesService.ignoreActivity(req.user.id, id);
+  }
+
+  @Post(':id/vote')
+  votePoll(
+    @Param('id') id: string,
+    @Body() body: { optionIndex: number },
+    @Req() req: RequestWithUser,
+  ) {
+    return this.activitiesService.votePoll(id, req.user.id, body.optionIndex);
   }
 }

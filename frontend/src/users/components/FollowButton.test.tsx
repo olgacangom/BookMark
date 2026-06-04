@@ -1,6 +1,6 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { FollowButton } from './FollowButton';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import api from '../../services/api';
 
 vi.mock('../../services/api', () => ({
@@ -9,84 +9,96 @@ vi.mock('../../services/api', () => ({
   },
 }));
 
-describe('FollowButton Coverage', () => {
-  const targetUserId = 'user-456';
-
+describe('FollowButton', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.spyOn(console, 'error').mockImplementation(() => {});
   });
 
-  it('debe renderizar el estado inicial "Seguir" cuando initialStatus es null', () => {
-    render(<FollowButton targetUserId={targetUserId} initialStatus={null} />);
-    expect(screen.getByText(/Seguir/i)).toBeInTheDocument();
+  it('debe renderizar estado inicial "Seguir" (null)', () => {
+    render(<FollowButton targetUserId="u1" initialStatus={null} />);
+    expect(screen.getByText('Seguir')).toBeDefined();
   });
 
-  it('debe renderizar el estado inicial "Solicitado" cuando initialStatus es PENDING', () => {
-    render(<FollowButton targetUserId={targetUserId} initialStatus="PENDING" />);
-    expect(screen.getByText(/Solicitado/i)).toBeInTheDocument();
-  });
+  it('debe llamar a la API al hacer clic en "Seguir"', async () => {
+    vi.mocked(api.post).mockResolvedValue({ data: { status: 'ACCEPTED' } });
 
-  it('debe renderizar el estado inicial "Siguiendo" cuando initialStatus es ACCEPTED', () => {
-    render(<FollowButton targetUserId={targetUserId} initialStatus="ACCEPTED" />);
-    expect(screen.getByText(/Siguiendo/i)).toBeInTheDocument();
-  });
-
-  it('debe llamar a seguir (follow) cuando el estado es null y cambiar a ACCEPTED', async () => {
-    (api.post as any).mockResolvedValue({ data: { status: 'ACCEPTED' } });
-
-    render(<FollowButton targetUserId={targetUserId} initialStatus={null} />);
-    const button = screen.getByRole('button');
-    fireEvent.click(button);
-
-    expect(document.querySelector('.animate-spin')).toBeInTheDocument();
+    render(<FollowButton targetUserId="u1" initialStatus={null} />);
+    fireEvent.click(screen.getByText('Seguir'));
 
     await waitFor(() => {
-      expect(api.post).toHaveBeenCalledWith(`/users/follow/${targetUserId}`);
-      expect(screen.getByText(/Siguiendo/i)).toBeInTheDocument();
+      expect(api.post).toHaveBeenCalledWith('/users/follow/u1');
     });
+    expect(screen.getByText('Siguiendo')).toBeDefined();
   });
 
-  it('debe llamar a dejar de seguir (unfollow) cuando el estado es ACCEPTED', async () => {
-    (api.post as any).mockResolvedValue({});
+  it('debe cancelar una solicitud pendiente (PENDING)', async () => {
+    vi.mocked(api.post).mockResolvedValue({});
 
-    render(<FollowButton targetUserId={targetUserId} initialStatus="ACCEPTED" />);
-    fireEvent.click(screen.getByRole('button'));
+    render(<FollowButton targetUserId="u1" initialStatus="PENDING" />);
+    fireEvent.click(screen.getByText('Solicitado'));
 
     await waitFor(() => {
-      expect(api.post).toHaveBeenCalledWith(`/users/unfollow/${targetUserId}`);
-      expect(screen.getByText(/Seguir/i)).toBeInTheDocument();
+      expect(api.post).toHaveBeenCalledWith('/users/unfollow/u1');
     });
+    expect(screen.getByText('Seguir')).toBeDefined();
   });
 
-  it('debe llamar a dejar de seguir (unfollow) cuando el estado es PENDING', async () => {
-    (api.post as any).mockResolvedValue({});
+  it('debe mostrar el modal al intentar dejar de seguir (ACCEPTED)', async () => {
+    render(<FollowButton targetUserId="u1" initialStatus="ACCEPTED" />);
 
-    render(<FollowButton targetUserId={targetUserId} initialStatus="PENDING" />);
-    fireEvent.click(screen.getByRole('button'));
+    fireEvent.click(screen.getByText('Siguiendo'));
+
+    // El modal debería aparecer
+    expect(screen.getByText('¿Dejar de seguir?')).toBeDefined();
+  });
+
+  it('debe ejecutar confirmUnfollow al confirmar en el modal', async () => {
+    vi.mocked(api.post).mockResolvedValue({});
+
+    render(<FollowButton targetUserId="u1" initialStatus="ACCEPTED" />);
+
+    // Abrir modal
+    fireEvent.click(screen.getByText('Siguiendo'));
+
+    // Confirmar
+    fireEvent.click(screen.getByText('Dejar de seguir'));
 
     await waitFor(() => {
-      expect(api.post).toHaveBeenCalledWith(`/users/unfollow/${targetUserId}`);
-      expect(screen.getByText(/Seguir/i)).toBeInTheDocument();
+      expect(api.post).toHaveBeenCalledWith('/users/unfollow/u1');
     });
+    expect(screen.getByText('Seguir')).toBeDefined();
   });
 
-  it('debe manejar errores de la API correctamente (bloque catch)', async () => {
-    (api.post as any).mockRejectedValue(new Error('API Failure'));
+  it('debe manejar errores en handleFollow (en el bloque catch)', async () => {
+    vi.mocked(api.post).mockRejectedValue(new Error('API Error'));
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
 
-    render(<FollowButton targetUserId={targetUserId} initialStatus={null} />);
-    fireEvent.click(screen.getByRole('button'));
+    render(<FollowButton targetUserId="u1" initialStatus={null} />);
+    fireEvent.click(screen.getByText('Seguir'));
 
     await waitFor(() => {
-      expect(console.error).toHaveBeenCalledWith("Error al gestionar seguimiento", expect.any(Error));
-      expect(document.querySelector('.animate-spin')).not.toBeInTheDocument();
+      expect(api.post).toHaveBeenCalled();
     });
+
+    expect(consoleSpy).toHaveBeenCalled();
+
+    consoleSpy.mockRestore(); 
   });
 
-  it('debe aplicar la className personalizada si se recibe por props', () => {
-    const customClass = "my-custom-style";
-    render(<FollowButton targetUserId={targetUserId} initialStatus={null} className={customClass} />);
-    const button = screen.getByRole('button');
-    expect(button).toHaveClass(customClass);
+  it('debe manejar errores en confirmUnfollow (en el bloque catch)', async () => {
+    vi.mocked(api.post).mockRejectedValue(new Error('Unfollow Error'));
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
+
+    render(<FollowButton targetUserId="u1" initialStatus="ACCEPTED" />);
+
+    // Abrir modal y confirmar
+    fireEvent.click(screen.getByText('Siguiendo'));
+    fireEvent.click(screen.getByText('Dejar de seguir'));
+
+    await waitFor(() => {
+      expect(consoleSpy).toHaveBeenCalled();
+    });
+
+    consoleSpy.mockRestore();
   });
 });

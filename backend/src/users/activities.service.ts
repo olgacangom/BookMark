@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In, Not } from 'typeorm';
 import { Activity, ActivityType } from './entities/activity.entity';
@@ -8,6 +12,9 @@ import { Book } from 'src/books/entities/book.entity';
 import { ActivityLike } from './entities/activity-like.entity';
 import { ActivityIgnore } from './entities/activity-ignore.entity';
 import { ActivityComment } from './entities/activity-comment';
+import { CreateActivityDto } from './dto/create-activity.dto';
+import { UpdateActivityDto } from './dto/update-activity.dto';
+import { PollVote } from './entities/poll-vote.entity';
 
 @Injectable()
 export class ActivitiesService {
@@ -22,13 +29,111 @@ export class ActivitiesService {
     private readonly commentsRepository: Repository<ActivityComment>,
     @InjectRepository(ActivityIgnore)
     private readonly ignoresRepository: Repository<ActivityIgnore>,
+    @InjectRepository(PollVote)
+    private readonly pollVoteRepository: Repository<PollVote>,
   ) {}
 
+  /**
+   * Usuario crea una publicación
+   */
+  async createPost(userId: string, dto: CreateActivityDto) {
+    const user = await this.userRepository.findOneBy({ id: userId });
+    if (!user) throw new NotFoundException(`Usuario no encontrado`);
+
+    const activity = new Activity();
+    activity.user = user;
+    activity.type = ActivityType.POST;
+    activity.content = dto.content;
+    activity.imageUrl = dto.imageUrl ?? null;
+    activity.poll = dto.pollOptions?.length
+      ? {
+          options: dto.pollOptions.map((opt) => ({
+            text: opt,
+            votes: 0,
+          })),
+        }
+      : null;
+    activity.likesCount = 0;
+    activity.commentsCount = 0;
+
+    if (dto.bookId) {
+      activity.targetBook = { id: dto.bookId } as Book;
+    }
+
+    const savedActivity = await this.activityRepository.save(activity);
+
+    const fullActivity = await this.activityRepository.findOne({
+      where: { id: savedActivity.id },
+      relations: ['user', 'targetBook'],
+    });
+
+    return {
+      ...fullActivity,
+      isLiked: false,
+      comments: [],
+    };
+  }
+
+  async update(userId: string, activityId: string, dto: UpdateActivityDto) {
+    const activity = await this.activityRepository.findOne({
+      where: { id: activityId },
+      relations: ['user', 'targetBook'],
+    });
+
+    if (!activity) throw new NotFoundException('Actividad no encontrada');
+    if (activity.user.id !== userId)
+      throw new ForbiddenException('No tienes permiso');
+
+    if (dto.content !== undefined) activity.content = dto.content;
+    if (dto.imageUrl !== undefined) activity.imageUrl = dto.imageUrl;
+    if (dto.pollOptions?.length) {
+      activity.poll = {
+        options: dto.pollOptions.map((opt, idx) => ({
+          text: opt,
+          votes: activity.poll?.options?.[idx]?.votes ?? 0,
+        })),
+      };
+    } else {
+      activity.poll = null;
+    }
+    if (dto.bookId !== undefined) {
+      activity.targetBook = dto.bookId ? ({ id: dto.bookId } as Book) : null;
+    }
+
+    await this.activityRepository.save(activity);
+
+    return this.activityRepository.findOne({
+      where: { id: activityId },
+      relations: ['user', 'targetBook'],
+    });
+  }
+
+  async remove(userId: string, activityId: string) {
+    const activity = await this.activityRepository.findOne({
+      where: { id: activityId },
+      relations: ['user'],
+    });
+
+    if (!activity) throw new NotFoundException(`La actividad no existe`);
+
+    if (String(activity.user.id) !== String(userId)) {
+      throw new ForbiddenException('No puedes borrar un post ajeno');
+    }
+
+    await this.activityRepository.remove(activity);
+    return { success: true };
+  }
+
+  /**
+   * Crea una actividad automática del sistema (FOLLOW, BOOK_ADDED, etc.)
+   */
   async create(userId: string, type: ActivityType, targetId?: string) {
     const user = await this.userRepository.findOneBy({ id: userId });
     if (!user) throw new NotFoundException(`Usuario no encontrado`);
 
-    const activity = this.activityRepository.create({ user, type });
+    const activity = new Activity();
+    activity.user = user;
+    activity.type = type;
 
     if (targetId) {
       if (type === ActivityType.FOLLOW) {
@@ -37,9 +142,13 @@ export class ActivitiesService {
         activity.targetBook = { id: Number(targetId) } as unknown as Book;
       }
     }
+
     return await this.activityRepository.save(activity);
   }
 
+  /**
+   * Obtiene el feed personalizado para el usuario
+   */
   async getFeed(userId: string) {
     const userWithFollowing = await this.userRepository.findOne({
       where: { id: userId },
@@ -57,12 +166,13 @@ export class ActivitiesService {
       where: { user: { id: userId } },
       relations: ['activity'],
     });
+
     const ignoredIds = ignoredRecords.map((rec) => rec.activity.id);
 
     const activities = await this.activityRepository.find({
       where: {
         user: { id: In(idsToFetch) },
-        id: ignoredIds.length > 0 ? Not(In(ignoredIds)) : undefined,
+        ...(ignoredIds.length > 0 && { id: Not(In(ignoredIds)) }),
       },
       relations: [
         'user',
@@ -75,23 +185,33 @@ export class ActivitiesService {
       take: 20,
     });
 
-    return Promise.all(
-      activities.map(async (activity) => {
-        const like = await this.likesRepository.findOne({
-          where: { user: { id: userId }, activity: { id: activity.id } },
-        });
-        return {
-          ...activity,
-          isLiked: !!like,
-          likesCount: Number(activity.likesCount) || 0,
-          commentsCount: Number(activity.commentsCount) || 0,
-          comments:
-            activity.comments?.sort(
-              (a, b) => a.createdAt.getTime() - b.createdAt.getTime(),
-            ) || [],
-        };
-      }),
-    );
+    const likes = await this.likesRepository.find({
+      where: { user: { id: userId } },
+      relations: ['activity'],
+    });
+
+    const likedSet = new Set(likes.map((l) => l.activity.id));
+
+    const votes = await this.pollVoteRepository.find({
+      where: {
+        user: { id: userId },
+      },
+      relations: ['activity'],
+    });
+
+    const votedSet = new Set(votes.map((v) => v.activity.id));
+
+    return activities.map((activity) => ({
+      ...activity,
+      hasVoted: votedSet.has(activity.id),
+      isLiked: likedSet.has(activity.id),
+      likesCount: Number(activity.likesCount) || 0,
+      commentsCount: Number(activity.commentsCount) || 0,
+      comments:
+        activity.comments?.sort(
+          (a, b) => a.createdAt.getTime() - b.createdAt.getTime(),
+        ) || [],
+    }));
   }
 
   async toggleLike(userId: string, activityId: string) {
@@ -154,5 +274,53 @@ export class ActivitiesService {
       activity: { id: activityId },
     });
     await this.ignoresRepository.save(ignore);
+  }
+
+  async votePoll(activityId: string, userId: string, optionIndex: number) {
+    const existingVote = await this.pollVoteRepository.findOne({
+      where: { user: { id: userId }, activity: { id: activityId } },
+    });
+
+    if (existingVote) {
+      return await this.activityRepository.findOne({
+        where: { id: activityId },
+        relations: ['user', 'targetBook', 'comments', 'comments.user'],
+      });
+    }
+    const activity = await this.activityRepository.findOne({
+      where: { id: activityId },
+      relations: ['user'],
+    });
+
+    if (!activity) throw new NotFoundException('Actividad no encontrada');
+
+    if (!activity.poll || !activity.poll.options) {
+      throw new NotFoundException('Encuesta no válida');
+    }
+
+    return await this.activityRepository.manager.transaction(
+      async (manager) => {
+        const poll = activity.poll!;
+
+        const updatedPoll = {
+          ...poll,
+          options: poll.options.map((opt, i) =>
+            i === optionIndex ? { ...opt, votes: opt.votes + 1 } : { ...opt },
+          ),
+        };
+
+        activity.poll = updatedPoll;
+        await manager.save(activity);
+
+        const vote = this.pollVoteRepository.create({
+          user: { id: userId },
+          activity: { id: activityId },
+          optionIndex,
+        });
+        await manager.save(vote);
+
+        return activity;
+      },
+    );
   }
 }

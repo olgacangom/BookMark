@@ -1,208 +1,193 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
 import { jest, describe, it, expect, beforeEach } from '@jest/globals';
+import { UpdateUserDto } from './dto/update-user.dto';
+import { RegisterDto } from 'src/auth/dto/register.dto';
+import { User, UserRole } from './entities/user.entity';
 
-interface RequestWithUser {
+interface MockRequest {
   user: {
     id: string;
     email: string;
   };
 }
 
-interface GrowthData {
-  month: string;
-  count: number | string;
-}
-
-type MockType<T> = {
-  [P in keyof T]?: jest.Mock<(...args: any[]) => any>;
-};
+const USER_ID = 'abc';
+const TARGET_ID = 'target-1';
 
 describe('UsersController', () => {
   let controller: UsersController;
+  let service: jest.Mocked<UsersService>;
 
-  const mockUsersService: MockType<UsersService> = {
-    create: jest.fn(),
-    findAll: jest.fn(),
-    findOne: jest.fn(),
-    update: jest.fn(),
-    remove: jest.fn(),
-    searchUsers: jest.fn(),
+  const usersServiceMock = {
     getPendingRequests: jest.fn(),
+    searchUsers: jest.fn(),
+    update: jest.fn(),
+    updateAvatar: jest.fn(),
+    deleteAvatar: jest.fn(),
+    deactivateAccount: jest.fn(),
     followUser: jest.fn(),
     unfollowUser: jest.fn(),
     acceptFollowRequest: jest.fn(),
     declineFollowRequest: jest.fn(),
     findOneProfile: jest.fn(),
+    findAll: jest.fn(),
+    findOne: jest.fn(),
+    remove: jest.fn(),
+    create: jest.fn(),
     getBooksGrowth: jest.fn(),
   };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [UsersController],
-      providers: [
-        {
-          provide: UsersService,
-          useValue: mockUsersService,
-        },
-      ],
+      providers: [{ provide: UsersService, useValue: usersServiceMock }],
     }).compile();
 
     controller = module.get<UsersController>(UsersController);
+    service = module.get(UsersService);
+    jest.clearAllMocks();
   });
 
-  it('should be defined', () => {
-    expect(controller).toBeDefined();
+  it('should call getPendingRequests with user id', async () => {
+    const req: MockRequest = {
+      user: {
+        id: 'abc',
+        email: 'test@test.com',
+      },
+    };
+    await controller.getRequests(req);
+    expect(service.getPendingRequests).toHaveBeenCalledWith('abc');
   });
 
-  describe('Rutas Estáticas y Perfil', () => {
-    it('getRequests: should call getPendingRequests with user id', async () => {
-      const mockReq = {
-        user: { id: 'uuid-1', email: 'olga@test.com' },
-      } as unknown as RequestWithUser;
-      mockUsersService.getPendingRequests?.mockResolvedValue([]);
-      const result = await controller.getRequests(mockReq);
-      expect(result).toEqual([]);
-      expect(mockUsersService.getPendingRequests).toHaveBeenCalledWith(
-        'uuid-1',
-      );
-    });
+  it('should search users', async () => {
+    await controller.search('term');
 
-    it('search: should call searchUsers with query string', async () => {
-      const query = 'olga';
-      mockUsersService.searchUsers?.mockResolvedValue([]);
-      const result = await controller.search(query);
-      expect(result).toEqual([]);
-      expect(mockUsersService.searchUsers).toHaveBeenCalledWith(query);
-    });
-
-    it('updateProfile: should call service update with authenticated user id', async () => {
-      const mockReq = {
-        user: { id: 'uuid-auth', email: 'olga@test.com' },
-      } as unknown as RequestWithUser;
-      const dto: UpdateUserDto = { fullName: 'Nuevo Nombre' };
-      mockUsersService.update?.mockResolvedValue({ id: 'uuid-auth', ...dto });
-      const result = await controller.updateProfile(mockReq, dto);
-      expect(result).toBeDefined();
-      expect(mockUsersService.update).toHaveBeenCalledWith('uuid-auth', dto);
-    });
+    expect(service.searchUsers).toHaveBeenCalledWith('term');
   });
 
-  describe('Rutas de Acción Social (Follow System)', () => {
-    const mockReq = {
-      user: { id: 'my-id', email: 'olga@test.com' },
-    } as unknown as RequestWithUser;
-    const targetId = 'target-id';
+  it('should update profile', async () => {
+    const req: MockRequest = {
+      user: {
+        id: 'abc',
+        email: 'test@test.com',
+      },
+    };
+    const dto = { fullName: 'New Name' };
 
-    it('follow: should call followUser', async () => {
-      mockUsersService.followUser?.mockResolvedValue({ status: 'PENDING' });
-      await controller.follow(mockReq, targetId);
-      expect(mockUsersService.followUser).toHaveBeenCalledWith(
-        'my-id',
-        targetId,
-      );
-    });
-
-    it('unfollow: should call unfollowUser', async () => {
-      mockUsersService.unfollowUser?.mockResolvedValue({ message: 'OK' });
-      await controller.unfollow(mockReq, targetId);
-      expect(mockUsersService.unfollowUser).toHaveBeenCalledWith(
-        'my-id',
-        targetId,
-      );
-    });
-
-    it('acceptRequest: should call acceptFollowRequest', async () => {
-      const requestId = 'req-123';
-      mockUsersService.acceptFollowRequest?.mockResolvedValue({
-        status: 'ACCEPTED',
-      });
-      await controller.acceptRequest(requestId);
-      expect(mockUsersService.acceptFollowRequest).toHaveBeenCalledWith(
-        requestId,
-      );
-    });
-
-    it('declineRequest: should call declineFollowRequest', async () => {
-      const requestId = 'req-123';
-      mockUsersService.declineFollowRequest?.mockResolvedValue({
-        deleted: true,
-      });
-      await controller.declineRequest(requestId);
-      expect(mockUsersService.declineFollowRequest).toHaveBeenCalledWith(
-        requestId,
-      );
-    });
+    await controller.updateProfile(req, dto);
+    expect(service.update).toHaveBeenCalledWith('abc', dto);
   });
 
-  describe('Estadísticas y Analítica', () => {
-    it('getGrowth: should call getBooksGrowth with user id from req', async () => {
-      const mockReq = {
-        user: { id: 'user-stats-1', email: 'stats@test.com' },
-      } as unknown as RequestWithUser;
-
-      const mockData: GrowthData[] = [{ month: '2026-04', count: 5 }];
-      mockUsersService.getBooksGrowth?.mockResolvedValue(mockData);
-
-      const result = await controller.getGrowth(mockReq);
-
-      expect(result).toEqual(mockData);
-      expect(mockUsersService.getBooksGrowth).toHaveBeenCalledWith(
-        'user-stats-1',
-      );
-    });
+  it('should upload avatar', async () => {
+    const file: Partial<Express.Multer.File> = {
+      filename: 'avatar.png',
+    };
+    const req: MockRequest = {
+      user: {
+        id: USER_ID,
+        email: 'test@test.com',
+      },
+    };
+    await controller.uploadAvatar(file as Express.Multer.File, req);
+    expect(service.updateAvatar).toHaveBeenCalledWith(
+      USER_ID,
+      expect.stringContaining('avatar.png'),
+    );
   });
 
-  describe('Rutas Dinámicas y CRUD', () => {
-    it('getProfile: should call findOneProfile with requester id', async () => {
-      const mockReq = {
-        user: { id: 'my-id', email: 'olga@test.com' },
-      } as unknown as RequestWithUser;
-      const targetId = 'target-id';
-      mockUsersService.findOneProfile?.mockResolvedValue({ id: targetId });
-      await controller.getProfile(mockReq, targetId);
-      expect(mockUsersService.findOneProfile).toHaveBeenCalledWith(
-        targetId,
-        'my-id',
-      );
-    });
+  it('should delete avatar', async () => {
+    const req = {
+      user: {
+        id: USER_ID,
+      } as User,
+    };
+    await controller.deleteAvatar(req);
+    expect(service.deleteAvatar).toHaveBeenCalledWith(USER_ID);
+  });
 
-    it('findAll: should return all users', async () => {
-      mockUsersService.findAll?.mockResolvedValue([]);
-      expect(await controller.findAll()).toEqual([]);
-    });
+  it('should deactivate account', async () => {
+    const req = {
+      user: {
+        id: USER_ID,
+      } as User,
+    };
+    await controller.deactivateMyAccount(req);
+    expect(service.deactivateAccount).toHaveBeenCalledWith(USER_ID);
+  });
 
-    it('findOne: should return a user by id', async () => {
-      mockUsersService.findOne?.mockResolvedValue({ id: '1' });
-      expect(await controller.findOne('1')).toEqual({ id: '1' });
-    });
+  it('should follow and unfollow users', async () => {
+    const req: MockRequest = {
+      user: {
+        id: USER_ID,
+        email: 'test@test.com',
+      },
+    };
+    await controller.follow(req, TARGET_ID);
+    await controller.unfollow(req, TARGET_ID);
 
-    it('update: should call service update for a specific id', async () => {
-      const dto: UpdateUserDto = { fullName: 'Test' };
-      mockUsersService.update?.mockResolvedValue({ id: '1', ...dto });
-      const result = await controller.update('1', dto);
-      expect(result).toBeDefined();
-      expect(mockUsersService.update).toHaveBeenCalledWith('1', dto);
-    });
+    expect(service.followUser).toHaveBeenCalledWith(USER_ID, TARGET_ID);
+    expect(service.unfollowUser).toHaveBeenCalledWith(USER_ID, TARGET_ID);
+  });
 
-    it('remove: should call service remove', async () => {
-      mockUsersService.remove?.mockResolvedValue({ success: true });
-      expect(await controller.remove('1')).toEqual({ success: true });
-    });
+  it('should accept and decline follow requests', async () => {
+    await controller.acceptRequest('req-1');
+    await controller.declineRequest('req-2');
 
-    it('create: should call service create', async () => {
-      const dto: CreateUserDto = {
+    expect(service.acceptFollowRequest).toHaveBeenCalledWith('req-1');
+    expect(service.declineFollowRequest).toHaveBeenCalledWith('req-2');
+  });
+
+  it('should get profile correctly', async () => {
+    const req: MockRequest = {
+      user: {
+        id: USER_ID,
+        email: 'test@test.com',
+      },
+    };
+    await controller.getProfile(req, 'target');
+    expect(service.findOneProfile).toHaveBeenCalledWith('target', USER_ID);
+  });
+
+  it('should call CRUD methods', async () => {
+    await controller.findAll();
+    await controller.findOne('1');
+
+    const updateDto: UpdateUserDto = { bio: 'test' };
+    await controller.update('2', updateDto);
+    await controller.remove('3');
+
+    const registerDto: RegisterDto = {
+      email: 'a@a.com',
+      password: '123',
+      fullName: 'Test',
+      province: 'Sevilla',
+      role: UserRole.USER,
+    };
+    await controller.create(registerDto);
+
+    expect(service.findAll).toHaveBeenCalled();
+    expect(service.findOne).toHaveBeenCalledWith('1');
+    expect(service.update).toHaveBeenCalledWith('2', updateDto);
+    expect(service.remove).toHaveBeenCalledWith('3');
+
+    expect(service.create).toHaveBeenCalledWith(
+      expect.objectContaining({
         email: 'a@a.com',
         password: '123',
-        fullName: 'A',
-      };
-      mockUsersService.create?.mockResolvedValue({ id: '1', ...dto });
-      const result = await controller.create(dto);
-      expect(result).toBeDefined();
-      expect(mockUsersService.create).toHaveBeenCalledWith(dto);
-    });
+      }),
+    );
+  });
+
+  it('should get growth stats', async () => {
+    const req: MockRequest = {
+      user: {
+        id: USER_ID,
+        email: 'test@test.com',
+      },
+    };
+    await controller.getGrowth(req);
+    expect(service.getBooksGrowth).toHaveBeenCalledWith(USER_ID);
   });
 });

@@ -10,6 +10,7 @@ import { BooksModule } from './books/books.module';
 import { ClubsModule } from './club/club.module';
 import { BookstoreModule } from './bookstore/bookstore.module';
 import { ChatModule } from './chat/chat.module';
+import { AIModule } from './ai/ai.module';
 
 @Module({
   imports: [
@@ -18,18 +19,23 @@ import { ChatModule } from './chat/chat.module';
     ClubsModule,
     BookstoreModule,
     ChatModule,
+    AuthModule,
+    UsersModule,
+    BooksModule,
+    AIModule,
 
     TypeOrmModule.forRoot({
       type: 'postgres',
       url: process.env.DATABASE_URL,
       autoLoadEntities: true,
       synchronize: true,
+      extra: {
+        statement_timeout: 60000,
+        query_timeout: 60000,
+        connection_timeout_millis: 60000,
+      },
+      poolSize: 10,
     }),
-
-    UsersModule,
-
-    AuthModule,
-    BooksModule,
   ],
   controllers: [AppController],
   providers: [AppService],

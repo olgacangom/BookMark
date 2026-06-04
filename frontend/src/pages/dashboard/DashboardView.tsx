@@ -7,7 +7,7 @@ import {
     BarChart3, Award, History,
     TrendingUp, BookCheck, Bookmark
 } from "lucide-react";
-import { BooksGrowthChart } from '../../components/stats/BooksGrowthChart';
+import { BooksGrowthChart } from '../../users/components/BooksGrowthChart';
 
 export const DashboardView = () => {
     const { user } = useAuth();

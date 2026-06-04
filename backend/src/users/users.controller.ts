@@ -15,12 +15,16 @@ import {
   ClassSerializerInterceptor,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
-import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
+import { RegisterDto } from 'src/auth/dto/register.dto';
+import { User, UserRole } from './entities/user.entity';
+import { Roles } from './roles/roles.decorator';
+import { RolesGuard } from './roles/roles.guard';
+import { randomUUID } from 'crypto';
 
 interface RequestWithUser {
   user: {
@@ -37,11 +41,12 @@ interface GrowthData {
 @Controller('users')
 @UseInterceptors(ClassSerializerInterceptor)
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(private readonly usersService: UsersService) { }
 
   // RUTAS ESTÁTICAS
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.USER)
   @Get('follow/requests')
   async getRequests(@Request() req: RequestWithUser) {
     return this.usersService.getPendingRequests(req.user.id);
@@ -53,8 +58,9 @@ export class UsersController {
     return this.usersService.searchUsers(q);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Patch('profile')
+  @Roles(UserRole.USER, UserRole.LIBRERO, UserRole.ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   updateProfile(
     @Request() req: RequestWithUser,
     @Body() updateUserDto: UpdateUserDto,
@@ -69,8 +75,7 @@ export class UsersController {
       storage: diskStorage({
         destination: './uploads/avatars',
         filename: (req, file, cb) => {
-          const uniqueSuffix =
-            Date.now() + '-' + Math.round(Math.random() * 1e9);
+          const uniqueSuffix = `${Date.now()}-${randomUUID()}`;
           cb(null, `${uniqueSuffix}${extname(file.originalname)}`);
         },
       }),
@@ -93,28 +98,41 @@ export class UsersController {
     return this.usersService.updateAvatar(userId, url);
   }
 
+  @Delete('avatar')
+  async deleteAvatar(@Req() req: { user: User }): Promise<User> {
+    return this.usersService.deleteAvatar(req.user.id);
+  }
+
+  @Patch('deactivate-me')
+  @Roles(UserRole.USER)
+  async deactivateMyAccount(@Req() req: { user: User }): Promise<User> {
+    return this.usersService.deactivateAccount(req.user.id);
+  }
+
   // RUTAS DE ACCIÓN SOCIAL
 
-  @Post('follow/:id')
   @UseGuards(JwtAuthGuard)
+  @Post('follow/:id')
+  @Roles(UserRole.USER)
   async follow(@Request() req: RequestWithUser, @Param('id') id: string) {
     return this.usersService.followUser(req.user.id, id);
   }
 
-  @Post('unfollow/:id')
   @UseGuards(JwtAuthGuard)
+  @Post('unfollow/:id')
+  @Roles(UserRole.USER)
   async unfollow(@Request() req: RequestWithUser, @Param('id') id: string) {
     return this.usersService.unfollowUser(req.user.id, id);
   }
 
   @Post('follow/accept/:id')
-  @UseGuards(JwtAuthGuard)
+  @Roles(UserRole.USER)
   async acceptRequest(@Param('id') id: string) {
     return this.usersService.acceptFollowRequest(id);
   }
 
   @Delete('follow/decline/:id')
-  @UseGuards(JwtAuthGuard)
+  @Roles(UserRole.USER)
   async declineRequest(@Param('id') id: string) {
     return this.usersService.declineFollowRequest(id);
   }
@@ -122,38 +140,50 @@ export class UsersController {
   // RUTAS CON PARÁMETROS DINÁMICOS
 
   @Get('profile/:id')
-  @UseGuards(JwtAuthGuard)
-  async getProfile(@Request() req: RequestWithUser, @Param('id') id: string) {
+  @Roles(UserRole.USER, UserRole.LIBRERO, UserRole.ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  async getProfile(
+    @Request() req: RequestWithUser,
+    @Param('id') id: string,
+  ): Promise<any> {
     return this.usersService.findOneProfile(id, req.user.id);
   }
 
   @Get()
+  @Roles(UserRole.USER)
   findAll() {
     return this.usersService.findAll();
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
+  @Roles(UserRole.USER)
+  findOne(@Param('id') id: string): Promise<User> {
     return this.usersService.findOne(id);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
+  @Roles(UserRole.USER)
+  update(
+    @Param('id') id: string,
+    @Body() updateUserDto: UpdateUserDto,
+  ): Promise<User> {
     return this.usersService.update(id, updateUserDto);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
+  @Roles(UserRole.USER)
+  remove(@Param('id') id: string): Promise<User> {
     return this.usersService.remove(id);
   }
 
   @Post()
-  create(@Body() createUserDto: CreateUserDto) {
-    return this.usersService.create(createUserDto);
+  create(@Body() registerDto: RegisterDto): Promise<User> {
+    return this.usersService.create(registerDto);
   }
 
   @Get('stats/growth')
-  @UseGuards(JwtAuthGuard)
+  @Roles(UserRole.USER, UserRole.LIBRERO)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   async getGrowth(@Req() req: RequestWithUser): Promise<GrowthData[]> {
     return this.usersService.getBooksGrowth(req.user.id);
   }

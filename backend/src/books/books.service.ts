@@ -1,6 +1,11 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { ILike, Repository } from 'typeorm';
 import { Book } from './entities/book.entity';
 import { CreateBookDto } from './dto/create-book.dto';
 import { UpdateBookDto } from './dto/update-book.dto';
@@ -27,26 +32,56 @@ export class BooksService {
     return this.googleBooksService.findByIsbn(isbn);
   }
 
+  async search(query: string) {
+    if (!query || query.length < 2) return [];
+
+    return await this.bookRepository.find({
+      where: [{ title: ILike(`%${query}%`) }, { author: ILike(`%${query}%`) }],
+      take: 10,
+    });
+  }
+
   async create(createBookDto: CreateBookDto, userId: string) {
-    const newBook = this.bookRepository.create({
-      ...createBookDto,
-      userId: userId,
+    const duplicate = await this.bookRepository.findOne({
+      where: [
+        // mismo usuario + mismo título + autor
+        {
+          userId,
+          title: createBookDto.title,
+          author: createBookDto.author,
+        },
+        // mismo ISBN si existe
+        ...(createBookDto.isbn ? [{ userId, isbn: createBookDto.isbn }] : []),
+      ],
     });
 
-    const savedBook = await this.bookRepository.save(newBook);
+    if (duplicate) {
+      throw new ConflictException(
+        `Ya tienes este libro en tu biblioteca (${duplicate.title})`,
+      );
+    }
+
+    const newBook = this.bookRepository.create({
+      ...createBookDto,
+      userId,
+    });
+
+    const saved = await this.bookRepository.save(newBook);
 
     try {
       await this.activitiesService.create(
         userId,
         ActivityType.BOOK_ADDED,
-        savedBook.id.toString(),
+        saved.id?.toString(),
       );
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : String(error);
-      console.error('Error al registrar actividad:', message);
+    } catch (err) {
+      console.error(
+        'Error al registrar actividad:',
+        err instanceof Error ? err.message : err,
+      );
     }
 
-    return savedBook;
+    return saved;
   }
 
   async findAll(userId: string) {
@@ -57,10 +92,20 @@ export class BooksService {
   }
 
   async findOne(id: number, userId: string) {
+    if (isNaN(id)) {
+      throw new BadRequestException(
+        'El ID del libro debe ser un número válido',
+      );
+    }
+
     const book = await this.bookRepository.findOne({
       where: { id, userId },
     });
-    if (!book) throw new NotFoundException(`Libro con ID ${id} no encontrado`);
+
+    if (!book) {
+      throw new NotFoundException(`Libro con ID ${id} no encontrado`);
+    }
+
     return book;
   }
 

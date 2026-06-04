@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UsersService } from './users.service';
 import { UsersController } from './users.controller';
@@ -14,6 +14,20 @@ import { ActivityLike } from './entities/activity-like.entity';
 import { ActivityComment } from './entities/activity-comment';
 import { ActivityIgnore } from './entities/activity-ignore.entity';
 import { Club } from 'src/club/entities/club.entity';
+import { AdminController, LibreroController } from './roles/roles.controller';
+import { AdminService } from './roles/admin.service';
+import { Book } from 'src/books/entities/book.entity';
+import { StoreInventory } from './entities/store-inventory.entity';
+import { LibraryEvent } from './entities/library-event.entity';
+import { LibrerosService } from './roles/libreros.service';
+import { EventRegistration } from 'src/bookstore/entities/event-registration.entity';
+import { BookListing } from './entities/book-listing.entity';
+import { DonationPoint } from './entities/donation-point.entity';
+import { SustainabilityService } from './sustainability/sustainability.service';
+import { SustainabilityController } from './sustainability/sustainability.controller';
+import { SustainabilityRequest } from './entities/sustainability-request.entity';
+import { PollVote } from './entities/poll-vote.entity';
+import { AuthModule } from 'src/auth/auth.module';
 
 @Module({
   imports: [
@@ -22,15 +36,37 @@ import { Club } from 'src/club/entities/club.entity';
       Follow,
       Activity,
       UserStats,
+      StoreInventory,
+      LibraryEvent,
+      EventRegistration,
       Badge,
       ActivityLike,
       ActivityComment,
       ActivityIgnore,
       Club,
+      Book,
+      BookListing,
+      DonationPoint,
+      SustainabilityRequest,
+      PollVote,
     ]),
+    forwardRef(() => AuthModule),
   ],
-  controllers: [UsersController, ActivitiesController],
-  providers: [UsersService, ActivitiesService, GamificationListener],
-  exports: [UsersService, ActivitiesService],
+  controllers: [
+    UsersController,
+    ActivitiesController,
+    AdminController,
+    LibreroController,
+    SustainabilityController,
+  ],
+  providers: [
+    UsersService,
+    ActivitiesService,
+    GamificationListener,
+    AdminService,
+    LibrerosService,
+    SustainabilityService,
+  ],
+  exports: [UsersService, ActivitiesService, AdminService],
 })
 export class UsersModule {}

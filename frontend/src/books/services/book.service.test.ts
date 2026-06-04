@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import api from '../../services/api'; // Ruta real
-import { bookService } from './book.service';
+import { bookService, Book } from './book.service';
+import api from '../../services/api';
 
 vi.mock('../../services/api', () => ({
   default: {
     get: vi.fn(),
-    patch: vi.fn(),
     post: vi.fn(),
+    patch: vi.fn(),
     delete: vi.fn(),
   },
 }));
@@ -16,40 +16,42 @@ describe('bookService', () => {
     vi.clearAllMocks();
   });
 
-  it('getMyBooks debe llamar a /books y devolver los datos', async () => {
-    const mockBooks = [{ id: 1, title: 'Test Book', author: 'Author', status: 'Read' }];
+  it('getMyBooks: debería obtener la lista de libros', async () => {
+    const mockBooks: Book[] = [{ id: 1, title: 'Test Book', author: 'Author' } as Book];
     vi.mocked(api.get).mockResolvedValue({ data: mockBooks });
 
     const result = await bookService.getMyBooks();
-
     expect(api.get).toHaveBeenCalledWith('/books');
     expect(result).toEqual(mockBooks);
   });
 
-  it('updateBookStatus debe hacer un patch a la ruta correcta', async () => {
-    const updatedBook = { id: 1, status: 'Reading' };
-    vi.mocked(api.patch).mockResolvedValue({ data: updatedBook });
-
-    const result = await bookService.update(1, { status: 'Reading' });
-
-    expect(api.patch).toHaveBeenCalledWith('/books/1', { status: 'Reading' });
-    expect(result).toEqual(updatedBook);
-  });
-
-  it('create debe enviar los datos correctamente y devolver el nuevo libro', async () => {
-    const newBook = { title: 'Quijote', author: 'Cervantes', status: 'Want to Read', genre: 'Clásico' };
-    const mockResponse = { id: 10, ...newBook };
-
-    vi.mocked(api.post).mockResolvedValue({ data: mockResponse });
+  it('create: debería enviar los datos correctamente para crear un libro', async () => {
+    const newBook = { title: 'New Book', author: 'Author' };
+    vi.mocked(api.post).mockResolvedValue({ data: { id: 1, ...newBook } });
 
     const result = await bookService.create(newBook);
-
     expect(api.post).toHaveBeenCalledWith('/books', newBook);
-    expect(result.id).toBe(10);
+    expect(result.title).toBe('New Book');
   });
 
-  it('remove debe llamar a delete con la ruta correcta', async () => {
-    vi.mocked(api.delete).mockResolvedValue({ data: {} });
+  it('update: debería limpiar los datos antes de enviar la petición', async () => {
+    const bookId = 1;
+    const updates = { 
+        title: 'Updated Title', 
+        invalidField: 'shouldBeRemoved' // Este campo no debería enviarse
+    };
+    
+    vi.mocked(api.patch).mockResolvedValue({ data: { id: bookId, title: 'Updated Title' } });
+
+    await bookService.update(bookId, updates as any);
+
+    expect(api.patch).toHaveBeenCalledWith(`/books/${bookId}`, expect.not.objectContaining({
+        invalidField: 'shouldBeRemoved'
+    }));
+  });
+
+  it('remove: debería llamar a la API para eliminar un libro', async () => {
+    vi.mocked(api.delete).mockResolvedValue({});
     await bookService.remove(1);
     expect(api.delete).toHaveBeenCalledWith('/books/1');
   });

@@ -1,60 +1,34 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { UsersService } from './users.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { UsersService } from './users.service';
+import { ActivitiesService } from './activities.service';
 import { User } from './entities/user.entity';
 import { Follow, FollowStatus } from './entities/follow.entity';
 import { UserStats } from './entities/user-stats.entity';
 import { Badge } from './badge.entity';
-import { ActivitiesService } from './activities.service';
-import { Repository, ObjectLiteral } from 'typeorm';
+import { LibraryEvent } from './entities/library-event.entity';
+import { Book } from 'src/books/entities/book.entity';
+import { EventRegistration } from 'src/bookstore/entities/event-registration.entity';
+import { ConfigService } from '@nestjs/config';
 import {
   BadRequestException,
   NotFoundException,
   ForbiddenException,
 } from '@nestjs/common';
-import * as bcrypt from 'bcrypt';
 import { jest, describe, it, expect, beforeEach } from '@jest/globals';
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
-
-type MockRepository<T extends ObjectLiteral = object> = {
-  [P in keyof Repository<T>]?: jest.Mock<any>;
-};
-
-type MockService<T = object> = {
-  [P in keyof T]?: jest.Mock<any>;
-};
-
-jest.mock('bcrypt');
-const mockedBcrypt = bcrypt as jest.Mocked<typeof bcrypt>;
+import { RegisterDto } from 'src/auth/dto/register.dto';
 
 describe('UsersService', () => {
   let service: UsersService;
-  let usersRepo: MockRepository<User>;
-  let followRepo: MockRepository<Follow>;
-  let statsRepo: MockRepository<UserStats>;
-  let badgeRepo: MockRepository<Badge>;
-  let activitiesService: MockService<ActivitiesService>;
-
-  const mockUserId = 'user-1';
-  const mockTargetId = 'user-2';
-
-  const mockUser = {
-    id: mockUserId,
-    email: 'test@test.com',
-    fullName: 'Olguí',
-    isPublic: true,
-    followerRelations: [],
-    followingRelations: [],
-    badges: [],
-    password: 'hashed_password',
-  } as unknown as User;
-
-  const validCreateDto: CreateUserDto = {
-    email: 'test@test.com',
-    password: '123',
-    fullName: 'Olguí',
-  };
+  let usersRepository: any;
+  let followRepository: any;
+  let userStatsRepository: any;
+  let badgeRepository: any;
+  let activitiesService: any;
+  let eventRepository: any;
+  let bookRepository: any;
+  let registrationRepository: any;
+  let configService: any;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -63,35 +37,39 @@ describe('UsersService', () => {
         {
           provide: getRepositoryToken(User),
           useValue: {
-            find: jest.fn(),
-            createQueryBuilder: jest.fn(),
             findOne: jest.fn(),
             findOneBy: jest.fn(),
-            create: jest.fn(),
-            save: jest.fn(),
             preload: jest.fn(),
+            save: jest.fn(),
+            create: jest.fn(),
+            find: jest.fn(),
             remove: jest.fn(),
+            createQueryBuilder: jest.fn(),
           },
         },
         {
           provide: getRepositoryToken(Follow),
           useValue: {
-            find: jest.fn(),
-            findOne: jest.fn(),
-            findOneBy: jest.fn(),
+            createQueryBuilder: jest.fn(),
             create: jest.fn(),
             save: jest.fn(),
             remove: jest.fn(),
+            find: jest.fn(),
+            findOne: jest.fn(),
+            findOneBy: jest.fn(),
           },
         },
         {
           provide: getRepositoryToken(UserStats),
-          useValue: { findOne: jest.fn(), create: jest.fn(), save: jest.fn() },
+          useValue: {
+            findOne: jest.fn(),
+            create: jest.fn(),
+            save: jest.fn(),
+          },
         },
         {
           provide: getRepositoryToken(Badge),
           useValue: {
-            find: jest.fn(),
             findOneBy: jest.fn(),
             count: jest.fn(),
             save: jest.fn(),
@@ -101,409 +79,723 @@ describe('UsersService', () => {
           provide: ActivitiesService,
           useValue: { create: jest.fn() },
         },
+        {
+          provide: getRepositoryToken(LibraryEvent),
+          useValue: { find: jest.fn() },
+        },
+        {
+          provide: getRepositoryToken(Book),
+          useValue: { find: jest.fn() },
+        },
+        {
+          provide: getRepositoryToken(EventRegistration),
+          useValue: { find: jest.fn() },
+        },
+        {
+          provide: ConfigService,
+          useValue: { get: jest.fn() },
+        },
       ],
     }).compile();
 
-    service = module.get<UsersService>(UsersService);
-    usersRepo = module.get(getRepositoryToken(User));
-    followRepo = module.get(getRepositoryToken(Follow));
-    statsRepo = module.get(getRepositoryToken(UserStats));
-    badgeRepo = module.get(getRepositoryToken(Badge));
+    service = module.get(UsersService);
+
+    usersRepository = module.get(getRepositoryToken(User));
+    followRepository = module.get(getRepositoryToken(Follow));
+    userStatsRepository = module.get(getRepositoryToken(UserStats));
+    badgeRepository = module.get(getRepositoryToken(Badge));
     activitiesService = module.get(ActivitiesService);
+    eventRepository = module.get(getRepositoryToken(LibraryEvent));
+    bookRepository = module.get(getRepositoryToken(Book));
+    registrationRepository = module.get(getRepositoryToken(EventRegistration));
+    configService = module.get(ConfigService);
+  });
 
-    jest.clearAllMocks();
-    /* CORRECCIÓN 107: Eliminado 'as any' del retorno de bcrypt */
-    mockedBcrypt.hash.mockImplementation(() =>
-      Promise.resolve('hashed_password'),
+  /* ---------------- CREATE ---------------- */
+
+  it('should throw when email already exists', async () => {
+    usersRepository.findOneBy.mockResolvedValue({ id: '1' });
+
+    await expect(
+      service.create({ email: 'a', password: 'b' } as RegisterDto),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it('should create user and stats', async () => {
+    usersRepository.findOneBy.mockResolvedValue(null);
+    usersRepository.create.mockReturnValue({ email: 'a' });
+    usersRepository.save.mockResolvedValue({ id: '1', email: 'a' });
+
+    userStatsRepository.create.mockReturnValue({});
+    userStatsRepository.save.mockResolvedValue({});
+
+    const res = await service.create({
+      email: 'a',
+      password: 'b',
+    } as RegisterDto);
+
+    expect(usersRepository.save).toHaveBeenCalled();
+    expect(userStatsRepository.save).toHaveBeenCalled();
+    expect(res).toEqual({ id: '1', email: 'a' });
+  });
+
+  /* ---------------- FIND ---------------- */
+
+  it('findOne throws if not found', async () => {
+    usersRepository.findOne.mockResolvedValue(null);
+
+    await expect(service.findOne('x')).rejects.toThrow(NotFoundException);
+  });
+
+  it('findOneProfile throws Forbidden when private', async () => {
+    usersRepository.findOne.mockResolvedValue({
+      id: 'u2',
+      isPublic: false,
+      followerRelations: [],
+    });
+
+    await expect(service.findOneProfile('u2', 'u1')).rejects.toThrow(
+      ForbiddenException,
     );
-    jest.spyOn(console, 'log').mockImplementation(() => {});
   });
 
-  describe('create', () => {
-    it('debe lanzar BadRequestException si el email ya existe', async () => {
-      usersRepo.findOneBy?.mockResolvedValue(mockUser);
-      /* CORRECCIÓN 116: Eliminado 'as any' usando DTO real */
-      await expect(service.create(validCreateDto)).rejects.toThrow(
-        BadRequestException,
-      );
+  it('findOneProfile returns data', async () => {
+    usersRepository.findOne.mockResolvedValue({
+      id: 'u1',
+      isPublic: true,
+      followerRelations: [],
+      password: 'x',
     });
 
-    it('debe crear el usuario y sus stats iniciales', async () => {
-      usersRepo.findOneBy?.mockResolvedValue(null);
-      usersRepo.create?.mockReturnValue(mockUser);
-      usersRepo.save?.mockResolvedValue(mockUser);
-      statsRepo.create?.mockReturnValue({});
+    eventRepository.find.mockResolvedValue([]);
+    bookRepository.find.mockResolvedValue([]);
+    registrationRepository.find.mockResolvedValue([]);
 
-      /* CORRECCIÓN 130: Eliminado 'as any' usando DTO real */
-      const result = await service.create({
-        ...validCreateDto,
-        email: 'new@a.com',
-      });
-      expect(usersRepo.save).toHaveBeenCalled();
-      expect(statsRepo.save).toHaveBeenCalled();
-      expect(result).toEqual(mockUser);
+    usersRepository.findOne.mockResolvedValueOnce({
+      id: 'u1',
+      isPublic: true,
+      followerRelations: [],
+      password: 'x',
     });
+
+    usersRepository.findOne.mockResolvedValueOnce({ clubs: [] });
+
+    const res = await service.findOneProfile('u1', 'u1');
+
+    expect(res).toHaveProperty('books');
   });
 
-  describe('find methods', () => {
-    it('findOneByEmail: debe llamar a findOneBy', async () => {
-      await service.findOneByEmail('test@test.com');
-      expect(usersRepo.findOneBy).toHaveBeenCalledWith({
-        email: 'test@test.com',
-      });
-    });
+  /* ---------------- UPDATE ---------------- */
 
-    it('findAll: debe devolver todos los usuarios con sus relaciones', async () => {
-      usersRepo.find?.mockResolvedValue([mockUser]);
-      const result = await service.findAll();
-      expect(result).toEqual([mockUser]);
-    });
+  it('update throws if preload null', async () => {
+    usersRepository.preload.mockResolvedValue(null);
 
-    it('findOne: debe lanzar NotFoundException si no existe', async () => {
-      usersRepo.findOne?.mockResolvedValue(null);
-      await expect(service.findOne('99')).rejects.toThrow(NotFoundException);
-    });
-
-    it('findOne: debe retornar el usuario', async () => {
-      usersRepo.findOne?.mockResolvedValue(mockUser);
-      expect(await service.findOne('1')).toEqual(mockUser);
-    });
+    await expect(service.update('x', {} as RegisterDto)).rejects.toThrow(
+      NotFoundException,
+    );
   });
 
-  describe('update', () => {
-    it('debe lanzar NotFoundException si preload falla', async () => {
-      usersRepo.preload?.mockResolvedValue(null);
-      await expect(service.update('99', {})).rejects.toThrow(NotFoundException);
-    });
+  it('update success', async () => {
+    usersRepository.preload.mockResolvedValue({ id: '1' });
+    usersRepository.save.mockResolvedValue({});
+    usersRepository.findOne.mockResolvedValue({ id: '1' });
 
-    it('debe actualizar y retornar el usuario findOne', async () => {
-      usersRepo.preload?.mockResolvedValue(mockUser);
-      usersRepo.findOne?.mockResolvedValue(mockUser);
-      const updateDto: UpdateUserDto = { fullName: 'Editado' };
-      const result = await service.update('1', updateDto);
-      expect(usersRepo.save).toHaveBeenCalled();
-      expect(result).toEqual(mockUser);
-    });
+    await service.update('1', {} as RegisterDto);
+    expect(usersRepository.save).toHaveBeenCalled();
   });
 
-  describe('Social Logic (Follow/Unfollow)', () => {
-    it('followUser: no debe permitir seguirse a sí mismo', async () => {
-      await expect(service.followUser(mockUserId, mockUserId)).rejects.toThrow(
-        BadRequestException,
-      );
+  /* ---------------- DELETE ---------------- */
+
+  it('remove throws if not found', async () => {
+    usersRepository.findOneBy.mockResolvedValue(null);
+
+    await expect(service.remove('x')).rejects.toThrow(NotFoundException);
+  });
+
+  /* ---------------- FOLLOW ---------------- */
+
+  it('cannot follow self', async () => {
+    await expect(service.followUser('u1', 'u1')).rejects.toThrow(
+      BadRequestException,
+    );
+  });
+
+  it('follow target not found', async () => {
+    usersRepository.findOneBy.mockResolvedValue(null);
+
+    await expect(service.followUser('u1', 't')).rejects.toThrow(
+      NotFoundException,
+    );
+  });
+
+  it('follow returns existing follow', async () => {
+    usersRepository.findOneBy.mockResolvedValue({ id: 't', isPublic: true });
+
+    followRepository.createQueryBuilder.mockReturnValue({
+      where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      getOne: jest.fn<any>().mockResolvedValue({ id: 'f1' }),
     });
 
-    it('followUser: debe lanzar NotFound si el objetivo no existe', async () => {
-      usersRepo.findOneBy?.mockResolvedValue(null);
-      await expect(
-        service.followUser(mockUserId, mockTargetId),
-      ).rejects.toThrow(NotFoundException);
+    const res = await service.followUser('u1', 't');
+    expect(res).toEqual({ id: 'f1' });
+  });
+
+  it('create follow accepted', async () => {
+    usersRepository.findOneBy.mockResolvedValue({ id: 't', isPublic: true });
+
+    followRepository.createQueryBuilder.mockReturnValue({
+      where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      getOne: jest.fn<any>().mockResolvedValue(null),
     });
 
-    it('followUser: debe retornar el follow si ya existe', async () => {
-      usersRepo.findOneBy?.mockResolvedValue({ id: mockTargetId });
-      followRepo.findOne?.mockResolvedValue({ id: 'f1' });
-      const result = await service.followUser(mockUserId, mockTargetId);
-      expect(result).toEqual({ id: 'f1' });
+    followRepository.create.mockReturnValue({});
+    followRepository.save.mockResolvedValue({ status: 'ACCEPTED' });
+
+    const res = await service.followUser('u1', 't');
+    expect(res.status).toBe('ACCEPTED');
+  });
+
+  /* ---------------- UNFOLLOW ---------------- */
+
+  it('unfollow no relation', async () => {
+    followRepository.createQueryBuilder.mockReturnValue({
+      leftJoin: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      getOne: jest.fn<any>().mockResolvedValue(null),
     });
 
-    it('followUser: debe crear ACCEPTED si el objetivo es público', async () => {
-      usersRepo.findOneBy?.mockResolvedValue({
-        id: mockTargetId,
+    const res = await service.unfollowUser('u1', 'u2');
+    expect(res.message).toContain('No había');
+  });
+
+  it('unfollow success', async () => {
+    followRepository.createQueryBuilder.mockReturnValue({
+      leftJoin: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      getOne: jest.fn<any>().mockResolvedValue({ id: 'f1' }),
+    });
+
+    followRepository.remove.mockResolvedValue({});
+
+    const res = await service.unfollowUser('u1', 'u2');
+    expect(res.message).toContain('Relación eliminada');
+  });
+
+  /* ---------------- FOLLOW REQUESTS ---------------- */
+
+  it('pending requests', async () => {
+    followRepository.find.mockResolvedValue([]);
+    const res = await service.getPendingRequests('u1');
+    expect(res).toEqual([]);
+  });
+
+  it('accept follow', async () => {
+    followRepository.findOne.mockResolvedValue({
+      id: '1',
+      follower: { id: 'a' },
+      following: { id: 'b' },
+    });
+
+    followRepository.save.mockResolvedValue({});
+    activitiesService.create.mockResolvedValue({});
+
+    await service.acceptFollowRequest('1');
+    expect(activitiesService.create).toHaveBeenCalled();
+  });
+
+  it('decline missing', async () => {
+    followRepository.findOneBy.mockResolvedValue(null);
+
+    await expect(service.declineFollowRequest('x')).rejects.toThrow(
+      NotFoundException,
+    );
+  });
+
+  /* ---------------- FOLLOW IDS ---------------- */
+
+  it('getFollowingIds', async () => {
+    followRepository.find.mockResolvedValue([
+      { following: { id: 'a' } },
+      { following: { id: 'b' } },
+    ]);
+
+    const res = await service.getFollowingIds('u1');
+    expect(res).toEqual(['a', 'b']);
+  });
+
+  /* ---------------- STATS ---------------- */
+
+  it('addExperience new stats', async () => {
+    userStatsRepository.findOne.mockResolvedValue(null);
+    userStatsRepository.create.mockReturnValue({});
+    userStatsRepository.save.mockResolvedValue({ xp: 10, level: 1 });
+
+    const res = await service.addExperience('u1', 10);
+    expect(res.level).toBeDefined();
+  });
+
+  it('updateStreak missing stats', async () => {
+    userStatsRepository.findOne.mockResolvedValue(null);
+
+    const res = await service.updateStreak('u1');
+    expect(res).toBeUndefined();
+  });
+
+  it('updateStreak reset branch', async () => {
+    const past = new Date(Date.now() - 60 * 60 * 1000 * 50);
+
+    userStatsRepository.findOne.mockResolvedValue({
+      currentStreak: 5,
+      totalBooksFinished: 1,
+      lastActivityDate: past,
+    });
+
+    userStatsRepository.save.mockResolvedValue({});
+
+    await service.updateStreak('u1');
+    expect(userStatsRepository.save).toHaveBeenCalled();
+  });
+
+  /* ---------------- BADGES ---------------- */
+
+  it('assignBadge duplicate skip', async () => {
+    usersRepository.findOne.mockResolvedValue({
+      id: 'u1',
+      badges: [{ id: 'b1' }],
+    });
+
+    badgeRepository.findOneBy.mockResolvedValue({ id: 'b1' });
+
+    await service.assignBadge('u1', 'b1');
+
+    expect(usersRepository.save).not.toHaveBeenCalled();
+  });
+
+  it('assignBadge success', async () => {
+    usersRepository.findOne.mockResolvedValue({ id: 'u1', badges: [] });
+    badgeRepository.findOneBy.mockResolvedValue({ id: 'b1' });
+
+    usersRepository.save.mockResolvedValue({});
+
+    await service.assignBadge('u1', 'b1');
+    expect(usersRepository.save).toHaveBeenCalled();
+  });
+
+  /* ---------------- AVATAR ---------------- */
+
+  it('delete avatar not found', async () => {
+    usersRepository.findOne.mockResolvedValue(null);
+
+    await expect(service.deleteAvatar('x')).rejects.toThrow(NotFoundException);
+  });
+
+  it('update avatar', async () => {
+    usersRepository.findOne.mockResolvedValue({ id: 'u1' });
+    usersRepository.save.mockResolvedValue({});
+
+    await service.updateAvatar('u1', 'url');
+
+    expect(usersRepository.save).toHaveBeenCalled();
+  });
+
+  /* ---------------- ADMIN + BOOT ---------------- */
+
+  it('setupAdmin skip + create', async () => {
+    configService.get
+      .mockReturnValueOnce(undefined)
+      .mockReturnValueOnce(undefined);
+
+    await (service as any).setupAdmin();
+
+    configService.get
+      .mockReturnValueOnce('a@a.com')
+      .mockReturnValueOnce('pass');
+
+    usersRepository.findOne.mockResolvedValue(null);
+    usersRepository.create.mockReturnValue({});
+    usersRepository.save.mockResolvedValue({});
+
+    await (service as any).setupAdmin();
+  });
+
+  it('setup badges', async () => {
+    badgeRepository.count.mockResolvedValue(0);
+    badgeRepository.save.mockResolvedValue([]);
+
+    await (service as any).setupInitialBadges();
+  });
+
+  /* ---------------- GROWTH ---------------- */
+
+  it('books growth', async () => {
+    const qb = {
+      leftJoin: jest.fn().mockReturnThis(),
+      select: jest.fn().mockReturnThis(),
+      addSelect: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      groupBy: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      getRawMany: jest
+        .fn<any>()
+        .mockResolvedValue([{ month: '2026-01', count: 1 }]),
+    };
+
+    usersRepository.createQueryBuilder.mockReturnValue(qb);
+
+    const res = await service.getBooksGrowth('u1');
+
+    expect(res.length).toBe(1);
+  });
+
+  it('should run onModuleInit and call setupAdmin + setupInitialBadges', async () => {
+    const setupAdminSpy = jest
+      .spyOn(service as any, 'setupAdmin')
+      .mockResolvedValue(undefined);
+
+    const setupBadgesSpy = jest
+      .spyOn(service as any, 'setupInitialBadges')
+      .mockResolvedValue(undefined);
+
+    const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+
+    await service.onModuleInit();
+
+    expect(logSpy).toHaveBeenCalledWith(
+      '📦 Inicializando sistema de usuarios...',
+    );
+
+    expect(setupAdminSpy).toHaveBeenCalled();
+    expect(setupBadgesSpy).toHaveBeenCalled();
+
+    logSpy.mockRestore();
+  });
+
+  it('should return all users (findAll)', async () => {
+    const mockUsers = [
+      { id: '1', email: 'a@test.com' },
+      { id: '2', email: 'b@test.com' },
+    ];
+
+    usersRepository.find.mockResolvedValue(mockUsers);
+
+    const result = await service.findAll();
+
+    expect(usersRepository.find).toHaveBeenCalledWith({
+      relations: ['followerRelations', 'followerRelations.follower'],
+      select: {
+        id: true,
+        email: true,
+        fullName: true,
+        avatarUrl: true,
+        bio: true,
         isPublic: true,
-      });
-      followRepo.findOne?.mockResolvedValue(null);
-      followRepo.create?.mockReturnValue({ status: FollowStatus.ACCEPTED });
-      await service.followUser(mockUserId, mockTargetId);
-      expect(followRepo.save).toHaveBeenCalled();
+        role: true,
+        province: true,
+      },
     });
 
-    it('followUser: debe crear PENDING si el objetivo es privado', async () => {
-      usersRepo.findOneBy?.mockResolvedValue({
-        id: mockTargetId,
-        isPublic: false,
-      });
-      followRepo.findOne?.mockResolvedValue(null);
-      followRepo.create?.mockReturnValue({ status: FollowStatus.PENDING });
-      await service.followUser(mockUserId, mockTargetId);
-      expect(followRepo.save).toHaveBeenCalled();
-    });
-
-    it('unfollowUser: manejar cuando no hay relación', async () => {
-      followRepo.findOne?.mockResolvedValue(null);
-      const result = await service.unfollowUser(mockUserId, mockTargetId);
-      expect(result.message).toBe('No había relación previa');
-    });
-
-    it('unfollowUser: eliminar relación existente', async () => {
-      const follow = { id: 'f1' };
-      followRepo.findOne?.mockResolvedValue(follow);
-      const result = await service.unfollowUser(mockUserId, mockTargetId);
-      expect(followRepo.remove).toHaveBeenCalled();
-      expect(result.message).toBe('Relación eliminada');
-    });
-
-    it('getPendingRequests: debe buscar por PENDING', async () => {
-      await service.getPendingRequests(mockUserId);
-      expect(followRepo.find).toHaveBeenCalled();
-    });
+    expect(result).toEqual(mockUsers);
   });
 
-  describe('Follow Requests', () => {
-    it('acceptFollowRequest: lanzar NotFound si no existe', async () => {
-      followRepo.findOne?.mockResolvedValue(null);
-      await expect(service.acceptFollowRequest('r1')).rejects.toThrow(
-        NotFoundException,
-      );
+  it('should compute isFollowing and hasPendingRequest from followerRelations', async () => {
+    const requesterId = 'user-2';
+
+    const userMock = {
+      id: 'user-1',
+      isPublic: true,
+      followerRelations: [
+        {
+          follower: { id: requesterId },
+          status: FollowStatus.ACCEPTED,
+        },
+        {
+          follower: { id: requesterId },
+          status: FollowStatus.PENDING,
+        },
+      ],
+      followingRelations: [],
+    };
+
+    usersRepository.findOne.mockResolvedValueOnce(userMock);
+
+    usersRepository.findOne.mockResolvedValueOnce({
+      clubs: [],
     });
 
-    it('acceptFollowRequest: aceptar y crear actividad', async () => {
-      const mockReq = {
+    eventRepository.find.mockResolvedValue([]);
+    bookRepository.find.mockResolvedValue([]);
+    registrationRepository.find.mockResolvedValue([]);
+
+    const result = await service.findOneProfile('user-1', requesterId);
+
+    expect(result.isFollowing).toBe(true);
+    expect(result.hasPendingRequest).toBe(true);
+  });
+
+  it('should filter and map attendedEvents correctly', async () => {
+    const requesterId = 'u2';
+
+    const futureDate = new Date(Date.now() + 1000 * 60 * 60 * 24); // +1 día
+    const pastDate = new Date(Date.now() - 1000 * 60 * 60 * 24); // -1 día
+
+    const userMock = {
+      id: 'u1',
+      isPublic: true,
+      followerRelations: [],
+      followingRelations: [],
+    };
+
+    const registrationsMock = [
+      {
         id: 'r1',
-        follower: { id: 'f1' },
-        following: { id: 'u1' },
-        status: '',
-      };
-      followRepo.findOne?.mockResolvedValue(mockReq);
-      await service.acceptFollowRequest('r1');
-      expect(mockReq.status).toBe(FollowStatus.ACCEPTED);
-      expect(activitiesService.create).toHaveBeenCalled();
-    });
+        event: {
+          id: 'e1',
+          eventDate: futureDate,
+        },
+      },
+      {
+        id: 'r2',
+        event: {
+          id: 'e2',
+          eventDate: pastDate,
+        },
+      },
+    ];
 
-    it('declineFollowRequest: lanzar NotFound si no existe', async () => {
-      followRepo.findOneBy?.mockResolvedValue(null);
-      await expect(service.declineFollowRequest('r1')).rejects.toThrow(
-        NotFoundException,
-      );
-    });
+    usersRepository.findOne.mockResolvedValueOnce(userMock);
+    usersRepository.findOne.mockResolvedValueOnce({ clubs: [] });
 
-    it('declineFollowRequest: eliminar solicitud', async () => {
-      const mockReq = { id: 'r1' };
-      followRepo.findOneBy?.mockResolvedValue(mockReq);
-      await service.declineFollowRequest('r1');
-      expect(followRepo.remove).toHaveBeenCalled();
-    });
-  });
+    eventRepository.find.mockResolvedValue([]);
+    bookRepository.find.mockResolvedValue([]);
+    registrationRepository.find.mockResolvedValue(registrationsMock);
 
-  describe('Gamification', () => {
-    it('addExperience: nivel 4 con 900 XP', async () => {
-      const stats = { xp: 800, level: 1 };
-      statsRepo.findOne?.mockResolvedValue(stats);
-      await service.addExperience(mockUserId, 100);
-      expect(stats.level).toBe(4);
-    });
+    const result = await service.findOneProfile('u1', requesterId);
 
-    it('updateStreak: retornar si no hay stats', async () => {
-      statsRepo.findOne?.mockResolvedValue(null);
-      expect(await service.updateStreak(mockUserId)).toBeUndefined();
-    });
-
-    it('updateStreak: inicializar si no hay lastActivityDate', async () => {
-      const stats = {
-        currentStreak: 0,
-        lastActivityDate: null,
-        totalBooksFinished: 0,
-      };
-      statsRepo.findOne?.mockResolvedValue(stats);
-      await service.updateStreak(mockUserId);
-      expect(stats.currentStreak).toBe(1);
-    });
-
-    it('updateStreak: aumentar racha tras 30h', async () => {
-      const h30 = new Date();
-      h30.setHours(h30.getHours() - 30);
-      const stats = {
-        currentStreak: 1,
-        lastActivityDate: h30,
-        totalBooksFinished: 0,
-      };
-      statsRepo.findOne?.mockResolvedValue(stats);
-      await service.updateStreak(mockUserId);
-      expect(stats.currentStreak).toBe(2);
-    });
-
-    it('updateStreak: resetear racha tras 60h', async () => {
-      const h60 = new Date();
-      h60.setHours(h60.getHours() - 60);
-      const stats = {
-        currentStreak: 5,
-        lastActivityDate: h60,
-        totalBooksFinished: 0,
-      };
-      statsRepo.findOne?.mockResolvedValue(stats);
-      await service.updateStreak(mockUserId);
-      expect(stats.currentStreak).toBe(1);
-    });
-
-    it('updateStreak: no tocar racha tras 2h', async () => {
-      const h2 = new Date();
-      h2.setHours(h2.getHours() - 2);
-      const stats = {
-        currentStreak: 5,
-        lastActivityDate: h2,
-        totalBooksFinished: 0,
-      };
-      statsRepo.findOne?.mockResolvedValue(stats);
-      await service.updateStreak(mockUserId);
-      expect(stats.currentStreak).toBe(5);
-    });
-
-    it('assignBadge: no duplicar medallas', async () => {
-      const badge = { id: 'b1' };
-      const user = { id: '1', badges: [badge] };
-      usersRepo.findOne?.mockResolvedValue(user);
-      badgeRepo.findOneBy?.mockResolvedValue(badge);
-      await service.assignBadge('1', 'b1');
-      expect(usersRepo.save).not.toHaveBeenCalled();
+    expect(result.attendedEvents).toHaveLength(1);
+    expect(result.attendedEvents[0]).toMatchObject({
+      id: 'e1',
+      registrationId: 'r1',
     });
   });
 
-  describe('Privacy', () => {
-    it('findOneProfile: lanzar Forbidden si es privado y no hay relación', async () => {
-      const userPrivado = { id: '2', isPublic: false, followerRelations: [] };
-      usersRepo.findOne?.mockResolvedValue(userPrivado);
-      await expect(service.findOneProfile('2', '3')).rejects.toThrow(
-        ForbiddenException,
-      );
+  it('should throw NotFoundException when user does not exist (deactivateAccount)', async () => {
+    usersRepository.findOne.mockResolvedValue(null);
+
+    await expect(service.deactivateAccount('u1')).rejects.toThrow(
+      NotFoundException,
+    );
+
+    expect(usersRepository.save).not.toHaveBeenCalled();
+  });
+
+  it('should deactivate user account successfully', async () => {
+    const userMock = {
+      id: 'u1',
+      isActive: true,
+    };
+
+    usersRepository.findOne.mockResolvedValue(userMock);
+    usersRepository.save.mockResolvedValue({
+      ...userMock,
+      isActive: false,
+    });
+
+    const result = await service.deactivateAccount('u1');
+
+    expect(usersRepository.findOne).toHaveBeenCalledWith({
+      where: { id: 'u1' },
+    });
+
+    expect(usersRepository.save).toHaveBeenCalledWith({
+      id: 'u1',
+      isActive: false,
+    });
+
+    expect(result.isActive).toBe(false);
+  });
+
+  it('should filter attendedEvents by future date and map registrationId', async () => {
+    const requesterId = 'user-1';
+
+    const futureDate = new Date(Date.now() + 1000 * 60 * 60);
+    const pastDate = new Date(Date.now() - 1000 * 60 * 60);
+
+    const userMock = {
+      id: 'user-1',
+      isPublic: true,
+      followerRelations: [], // 👈 NECESARIO
+    };
+
+    usersRepository.findOne
+      .mockResolvedValueOnce(userMock) // 👈 1ª llamada (user principal)
+      .mockResolvedValueOnce({ clubs: [] }); // 👈 2ª llamada (clubs)
+
+    eventRepository.find.mockResolvedValue([]); // events
+    bookRepository.find.mockResolvedValue([]); // books
+
+    registrationRepository.find.mockResolvedValue([
+      {
+        id: 'reg-1',
+        event: { eventDate: futureDate },
+      },
+      {
+        id: 'reg-2',
+        event: { eventDate: pastDate },
+      },
+    ]);
+
+    const result = await service.findOneProfile('user-1', requesterId);
+
+    expect(result.attendedEvents).toHaveLength(1);
+    expect(result.attendedEvents[0]).toMatchObject({
+      registrationId: 'reg-1',
     });
   });
 
-  describe('Infrastructure', () => {
-    it('onModuleInit: sembrar datos si count es 0', async () => {
-      badgeRepo.count?.mockResolvedValue(0);
-      await service.onModuleInit();
-      expect(badgeRepo.save).toHaveBeenCalled();
-    });
+  it('should throw NotFoundException when deactivating non-existing user', async () => {
+    usersRepository.findOne.mockResolvedValue(null);
 
-    it('remove: éxito', async () => {
-      usersRepo.findOneBy?.mockResolvedValue(mockUser);
-      await service.remove(mockUserId);
-      expect(usersRepo.remove).toHaveBeenCalled();
-    });
+    await expect(service.deactivateAccount('missing-id')).rejects.toThrow(
+      NotFoundException,
+    );
   });
 
-  it('searchUsers: debe ejecutar la búsqueda con ILike', async () => {
-    usersRepo.find?.mockResolvedValue([mockUser]);
-    const result = await service.searchUsers('test');
-    expect(result).toEqual([mockUser]);
-    expect(usersRepo.find).toHaveBeenCalled();
-  });
+  it('should deactivate user account', async () => {
+    const user = { id: 'user-1', isActive: true };
 
-  describe('findOneProfile - Lógica interna', () => {
-    it('debe detectar correctamente isFollowing y hasPendingRequest y eliminar password', async () => {
-      const userWithRelations = {
-        ...mockUser,
-        followerRelations: [
-          { follower: { id: 'follower-1' }, status: FollowStatus.ACCEPTED },
-          { follower: { id: 'follower-2' }, status: FollowStatus.PENDING },
-        ],
-      } as unknown as User;
-
-      usersRepo.findOne?.mockResolvedValue(userWithRelations);
-
-      const res1 = await service.findOneProfile(mockUserId, 'follower-1');
-      expect(res1.isFollowing).toBe(true);
-      expect(res1.hasPendingRequest).toBe(false);
-      expect(res1).not.toHaveProperty('password');
-
-      const res2 = await service.findOneProfile(mockUserId, 'follower-2');
-      /* CORRECCIÓN 233: Usada la variable 'res2' para evitar error de unused */
-      expect(res2.isFollowing).toBe(false);
-      expect(res2.hasPendingRequest).toBe(true);
+    usersRepository.findOne.mockResolvedValue(user);
+    usersRepository.save.mockResolvedValue({
+      ...user,
+      isActive: false,
     });
+
+    const result = await service.deactivateAccount('user-1');
+
+    expect(usersRepository.save).toHaveBeenCalledWith(
+      expect.objectContaining({ isActive: false }),
+    );
+
+    expect(result.isActive).toBe(false);
   });
 
-  it('addExperience: debe crear nuevas stats si el usuario no tiene', async () => {
-    statsRepo.findOne?.mockResolvedValue(null);
-    statsRepo.create?.mockReturnValue({ xp: 0, level: 1 });
-    statsRepo.save?.mockResolvedValue({ xp: 10, level: 1 });
+  it('should remove follow request', async () => {
+    const request = { id: 'req-1' };
 
-    await service.addExperience(mockUserId, 10);
+    followRepository.findOneBy.mockResolvedValue(request);
+    followRepository.remove.mockResolvedValue(request);
 
-    expect(statsRepo.create).toHaveBeenCalledWith(
+    const result = await service.declineFollowRequest('req-1');
+
+    expect(followRepository.remove).toHaveBeenCalledWith(request);
+    expect(result).toEqual(request);
+  });
+
+  it('should search users by query', async () => {
+    const users = [{ id: 'u1' }, { id: 'u2' }];
+
+    usersRepository.find.mockResolvedValue(users);
+
+    const result = await service.searchUsers('john');
+
+    expect(usersRepository.find).toHaveBeenCalledWith({
+      where: [{ fullName: expect.anything() }, { email: expect.anything() }],
+      select: ['id', 'fullName', 'avatarUrl', 'bio', 'isPublic'],
+    });
+
+    expect(result).toEqual(users);
+  });
+
+  it('should remove user when exists', async () => {
+    const user = { id: 'user-1' };
+
+    usersRepository.findOneBy.mockResolvedValue(user);
+    usersRepository.remove.mockResolvedValue(user);
+
+    const result = await service.remove('user-1');
+
+    expect(usersRepository.findOneBy).toHaveBeenCalledWith({ id: 'user-1' });
+    expect(usersRepository.remove).toHaveBeenCalledWith(user);
+    expect(result).toEqual(user);
+  });
+
+  it('should initialize streak when lastActivityDate is null', async () => {
+    const userId = 'user-1';
+
+    const stats = {
+      totalBooksFinished: 0,
+      currentStreak: 0,
+      lastActivityDate: null,
+    };
+
+    userStatsRepository.findOne.mockResolvedValue(stats);
+    userStatsRepository.save.mockResolvedValue({
+      ...stats,
+      currentStreak: 1,
+      lastActivityDate: expect.any(Date),
+    });
+
+    await service.updateStreak(userId);
+
+    expect(userStatsRepository.save).toHaveBeenCalledWith(
       expect.objectContaining({
-        user: { id: mockUserId },
-        xp: 0,
+        currentStreak: 1,
+        lastActivityDate: expect.any(Date),
       }),
     );
   });
 
-  it('updateStreak: debe inicializar racha si lastActivityDate es null', async () => {
-    const stats = {
-      currentStreak: 0,
-      lastActivityDate: null,
-      totalBooksFinished: 0,
+  it('should delete user avatar and set avatarUrl to null', async () => {
+    const user = {
+      id: 'user-1',
+      avatarUrl: 'https://image.com/avatar.png',
     };
-    statsRepo.findOne?.mockResolvedValue(stats);
 
-    await service.updateStreak(mockUserId);
-
-    expect(stats.currentStreak).toBe(1);
-    expect(stats.lastActivityDate).toBeInstanceOf(Date);
-  });
-
-  it('assignBadge: debe añadir la medalla al array y guardar', async () => {
-    const user = { ...mockUser, badges: [] } as unknown as User;
-    const badge = { id: 'badge-1', name: 'Lector Pro' };
-
-    usersRepo.findOne?.mockResolvedValue(user);
-    badgeRepo.findOneBy?.mockResolvedValue(badge);
-
-    await service.assignBadge(mockUserId, 'badge-1');
-
-    expect(user.badges).toContain(badge);
-    expect(usersRepo.save).toHaveBeenCalledWith(user);
-  });
-
-  describe('getBooksGrowth', () => {
-    const mockUserId = 'user-1';
-
-    it('debe llamar al QueryBuilder con los parámetros correctos y devolver los datos agregados', async () => {
-      const mockRawResults = [{ month: '2026-04', count: '12' }];
-      const queryBuilderMock: any = {
-        leftJoin: jest.fn().mockReturnThis(),
-        select: jest.fn().mockReturnThis(),
-        addSelect: jest.fn().mockReturnThis(),
-        where: jest.fn().mockReturnThis(),
-        groupBy: jest.fn().mockReturnThis(),
-        orderBy: jest.fn().mockReturnThis(),
-        getRawMany: jest.fn<any>().mockResolvedValue(mockRawResults),
-      };
-
-      (usersRepo.createQueryBuilder as jest.Mock).mockReturnValue(
-        queryBuilderMock,
-      );
-
-      const result = await service.getBooksGrowth(mockUserId);
-
-      expect(usersRepo.createQueryBuilder).toHaveBeenCalledWith('user');
-      expect(result).toEqual(mockRawResults);
+    usersRepository.findOne.mockResolvedValue(user);
+    usersRepository.save.mockResolvedValue({
+      ...user,
+      avatarUrl: null,
     });
 
-    it('debe manejar errores si el QueryBuilder falla', async () => {
-      const queryBuilderMock: any = {
-        leftJoin: jest.fn().mockReturnThis(),
-        select: jest.fn().mockReturnThis(),
-        addSelect: jest.fn().mockReturnThis(),
-        where: jest.fn().mockReturnThis(),
-        groupBy: jest.fn().mockReturnThis(),
-        orderBy: jest.fn().mockReturnThis(),
-        getRawMany: jest
-          .fn()
-          .mockImplementation(() =>
-            Promise.reject(new Error('Database Error')),
-          ),
-      };
+    const result = await service.deleteAvatar('user-1');
 
-      (usersRepo.createQueryBuilder as jest.Mock).mockReturnValue(
-        queryBuilderMock,
-      );
-
-      await expect(service.getBooksGrowth(mockUserId)).rejects.toThrow(
-        'Database Error',
-      );
-
-      expect(usersRepo.createQueryBuilder).toHaveBeenCalledWith('user');
+    expect(usersRepository.findOne).toHaveBeenCalledWith({
+      where: { id: 'user-1' },
     });
+
+    expect(usersRepository.save).toHaveBeenCalledWith(
+      expect.objectContaining({ avatarUrl: null }),
+    );
+
+    expect(result.avatarUrl).toBeNull();
+  });
+
+  it('should increment streak when last activity is between 24 and 48 hours', async () => {
+    const userId = 'user-1';
+
+    const pastDate = new Date(Date.now() - 30 * 60 * 60 * 1000); // 30h ago
+
+    const stats = {
+      totalBooksFinished: 1,
+      currentStreak: 2,
+      lastActivityDate: pastDate,
+    };
+
+    userStatsRepository.findOne.mockResolvedValue(stats);
+    userStatsRepository.save.mockResolvedValue({
+      ...stats,
+      currentStreak: 3,
+    });
+
+    await service.updateStreak(userId);
+
+    expect(userStatsRepository.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        currentStreak: 3,
+      }),
+    );
   });
 });

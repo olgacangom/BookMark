@@ -1,129 +1,160 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
-import { 
-    Compass, Sparkles, User, LogOut, Bell, 
-    BarChart3, Bookmark, Library, Club, 
-    Store, MessageCircle 
+import {
+    Compass, Sparkles, User, LogOut, Bell,
+    BarChart3, Bookmark, Library, Club,
+    Store, MessageCircle, Leaf,
+    Calendar
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { io } from "socket.io-client";
+import { BibliosChat } from "../ai/components/BibliosChat";
+import api from "../services/api";
 
 export function MainLayout() {
     const location = useLocation();
     const { user, logout } = useAuth();
     const [totalUnread, setTotalUnread] = useState(0);
     const [totalRequests, setTotalRequests] = useState(0);
+    const isSpecialBackground = ['/admin/users', '/admin/stats'].includes(location.pathname);
 
-    const isActive = (path: string) => location.pathname === path;
+    const mainBackground = isSpecialBackground
+        ? "bg-linear-to-r from-slate-700 via-teal-600 to-emerald-600"
+        : "bg-[#F0F9F9]";
 
-    const refreshAllBadges = async () => {
+    const isActive = (path: string) => location.pathname === path || (path !== '/' && location.pathname.startsWith(path));
+
+    const refreshBadges = useCallback(async () => {
         try {
-            const token = localStorage.getItem('token');
+            const token = localStorage.getItem("token");
             if (!token) return;
 
-            const chatRes = await fetch('http://localhost:3000/chat/conversations', {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            const chats = await chatRes.json();
-            if (Array.isArray(chats)) {
-                const totalM = chats.reduce((acc, c) => acc + (c.unreadCount || 0), 0);
-                setTotalUnread(totalM);
-            }
+            // Solo hacemos peticiones si el rol es 'user'
+            if (user?.role === 'user') {
+                const [chatRes, followRes, bookRes] = await Promise.all([
+                    api.get("chat/conversations"),
+                    api.get("users/follow/requests"),
+                    api.get("sustainability/requests/me"),
+                ]);
 
-            const reqRes = await fetch('http://localhost:3000/users/follow/requests', {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            const reqs = await reqRes.json();
-            if (Array.isArray(reqs)) {
-                setTotalRequests(reqs.length);
+                const chats = chatRes.data;
+                const follows = followRes.data;
+                const books = bookRes.data;
+
+                setTotalUnread(chats.reduce((acc: number, c: any) => acc + (c.unreadCount || 0), 0));
+                const followCount = Array.isArray(follows) ? follows.length : 0;
+                const bookCount = Array.isArray(books) ? books.filter((r: any) => r.isOwner && r.status === "pending").length : 0;
+
+                setTotalRequests(followCount + bookCount);
             }
         } catch (e) {
-            console.error("Error al sincronizar badges:", e);
+            console.warn("No se pudieron cargar los badges (posible 403 esperado para libreros):", e);
         }
-    };
+    }, [user]);
 
     useEffect(() => {
-        refreshAllBadges();
+        if (location.pathname === "/requests") {
+            setTotalRequests(0);
+        } else {
+            refreshBadges();
+        }
+    }, [location.pathname, refreshBadges]);
 
-        const socket = io('http://localhost:3000');
-        
-        socket.on('new_message', (msg) => {
-            const senderId = msg.senderId || msg.sender?.id;
-            if (senderId !== user?.id) {
+
+    useEffect(() => {
+        const handleRefresh = () => refreshBadges();
+        const handleReset = () => setTotalRequests(0);
+
+        window.addEventListener("refresh_badges", handleRefresh);
+        window.addEventListener("reset_requests", handleReset);
+
+        return () => {
+            window.removeEventListener("refresh_badges", handleRefresh);
+            window.removeEventListener("reset_requests", handleReset);
+        };
+    }, [refreshBadges]);
+
+
+    useEffect(() => {
+        const socketUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
+        const socket = io(socketUrl);
+
+        socket.on("new_message", (msg) => {
+            if (msg.senderId !== user?.id) {
                 setTotalUnread(prev => prev + 1);
             }
         });
 
-        const handleRefresh = () => refreshAllBadges();
-        window.addEventListener('refresh_unread_global', handleRefresh);
+        socket.on("notification", refreshBadges);
 
         return () => {
             socket.disconnect();
-            window.removeEventListener('refresh_unread_global', handleRefresh);
         };
-    }, [user?.id]);
+    }, [user?.id, refreshBadges]);
 
-    useEffect(() => {
-        refreshAllBadges();
-    }, [location.pathname]);
 
-    const navItems = [
-        { path: "/explore", icon: Compass, label: "Descubrir" },
-        { path: "/feed", icon: Sparkles, label: "Feed" },
-        { path: "/library", icon: Bookmark, label: "Biblioteca" },
-        { path: "/dashboard", icon: BarChart3, label: "Estadísticas" },
-        { path: "/requests", icon: Bell, label: "Solicitudes", badge: totalRequests },
-        { path: "/chat", icon: MessageCircle, label: "Chat", badge: totalUnread },
-        { path: "/clubs", icon: Club, label: "Clubs" },
-        { path: "/bookstore", icon: Store, label: "Bookstore" },
-        { path: "/myprofile", icon: User, label: "Perfil" },
+
+    const allNavItems = [
+        { path: "/explore", icon: Compass, label: "Descubrir", roles: ['user'] },
+        { path: "/feed", icon: Sparkles, label: "Feed", roles: ['user'] },
+        { path: "/library", icon: Bookmark, label: "Biblioteca", roles: ['user'] },
+        { path: "/requests", icon: Bell, label: "Notificaciones", badge: totalRequests, roles: ['user'] },
+        { path: "/chat", icon: MessageCircle, label: "Chat", badge: totalUnread, roles: ['user'] },
+        { path: "/clubs", icon: Club, label: "Clubes", roles: ['user'] },
+        { path: "/events", icon: Calendar, label: "Eventos", roles: ['user'] },
+        { path: "/bookstore", icon: Store, label: "Bookstore", roles: ['user'] },
+        { path: "/admin/users", icon: User, label: "Gestión Usuarios", roles: ['admin'] },
+        { path: "/admin/stats", icon: BarChart3, label: "Estadísticas Globales", roles: ['admin'] },
+        { path: "/librero/catalog", icon: Library, label: "Mi Catálogo", roles: ['librero'] },
+        { path: "/librero/events", icon: Sparkles, label: "Mis Eventos", roles: ['librero'] },
+        { path: "/sustainability", icon: Leaf, label: "Sostenibilidad", roles: ['user'] },
+
     ];
 
-    return (
-        <div className="min-h-screen bg-[#F0F9F9] flex flex-col lg:flex-row">
+    // Items para el menú inferior en móvil 
+    const mobileBottomItems = allNavItems
+        .filter(item =>
+            ['/explore', '/feed', '/library', '/clubs', '/events', '/sustainability', '/librero/catalog', '/librero/events', '/admin/users', '/admin/stats'].includes(item.path) &&
+            item.roles.includes(user?.role || '')
+        );
 
+    return (
+        <div className="min-h-screen bg-[#F0F9F9] flex flex-col lg:flex-row text-left">
+
+            {/* --- SIDEBAR --- */}
             <aside className="hidden lg:flex fixed left-0 top-0 bottom-0 w-64 bg-white border-r border-slate-100 flex-col z-50 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
                 <div className="p-8">
-                    <Link to="/dashboard" className="flex items-center gap-3">
+                    <Link to="/explore" className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-teal-600 rounded-xl flex items-center justify-center shadow-lg shadow-teal-600/20">
                             <Library className="w-6 h-6 text-white" />
                         </div>
                         <div className="text-left">
-                            <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight leading-none mb-1">
-                                Book<span className="text-teal-600 font-serif italic font-normal">Mark</span>
-                            </h1>
+                            <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight leading-none mb-1">Book<span className="text-teal-600 font-serif italic font-normal">Mark</span></h1>
                             <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">Tu espacio literario</p>
                         </div>
                     </Link>
                 </div>
 
                 <nav className="flex-1 px-4 space-y-1 overflow-y-auto no-scrollbar">
-                    {navItems.map((item) => {
-                        const active = isActive(item.path);
-                        const hasBadge = item.badge !== undefined && item.badge > 0;
-
-                        return (
-                            <Link
-                                key={item.path}
-                                to={item.path}
-                                className={`flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-200 group relative ${
-                                    active 
-                                    ? "bg-teal-600 text-white shadow-lg shadow-teal-600/30" 
-                                    : "text-slate-500 hover:bg-slate-50 hover:text-teal-600"
-                                }`}
-                            >
-                                <div className="relative">
-                                    <item.icon className={`w-5 h-5 ${active ? "text-white" : "group-hover:text-teal-600"}`} />
-                                    {hasBadge && (
-                                        <div className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-rose-500 text-white text-[8px] font-black rounded-full flex items-center justify-center border-2 border-white animate-pulse">
-                                            {item.badge}
-                                        </div>
-                                    )}
-                                </div>
-                                <span className="font-semibold text-sm">{item.label}</span>
-                            </Link>
-                        );
-                    })}
+                    {allNavItems
+                        .filter(item => item.roles.includes(user?.role || 'user'))
+                        .map((item) => {
+                            const active = isActive(item.path);
+                            const hasBadge = item.badge !== undefined && item.badge > 0;
+                            return (
+                                <Link key={item.path} to={item.path} className={`flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-200 group relative ${active ? "bg-teal-600 text-white shadow-lg shadow-teal-600/30" : "text-slate-500 hover:bg-slate-50 hover:text-teal-600"}`}>
+                                    <div className="relative">
+                                        <item.icon className={`w-5 h-5 ${active ? "text-white" : "group-hover:text-teal-600"}`} />
+                                        {hasBadge && (
+                                            <div className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-rose-500 text-white text-[8px] font-black rounded-full flex items-center justify-center border-2 border-white animate-pulse">
+                                                {item.badge}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <span className="font-semibold text-sm">{item.label}</span>
+                                </Link>
+                            );
+                        })}
                 </nav>
 
                 <div className="p-6 border-t border-slate-50">
@@ -132,61 +163,87 @@ export function MainLayout() {
                             {user?.avatarUrl ? <img src={user.avatarUrl} className="w-full h-full object-cover" alt="Avatar" /> : "O"}
                         </div>
                         <div className="flex-1 min-w-0 text-left">
-                            <p className="font-bold text-slate-800 text-sm truncate">{user?.fullName || "Olga"}</p>
+                            <p className="font-bold text-slate-800 text-sm truncate">{user?.fullName || "Usuario"}</p>
                             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">Mi Perfil</p>
                         </div>
                     </Link>
-                    <button 
-                        onClick={logout} 
-                        className="mt-4 w-full flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-rose-500 px-2 transition-colors"
-                    >
-                        <LogOut size={14} /> Cerrar sesión
-                    </button>
+                    <button onClick={logout} className="mt-4 w-full flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-rose-500 px-2 transition-colors"><LogOut size={14} /> Cerrar sesión</button>
                 </div>
             </aside>
 
-            <main className="flex-1 lg:ml-64 min-h-screen relative pb-24 lg:pb-12">
-                <header className="sticky top-0 z-40 bg-[#F0F9F9]/80 backdrop-blur-md px-6 lg:px-8 py-4 lg:py-6 flex justify-between lg:justify-end items-center gap-4">
+            {/* --- CONTENIDO PRINCIPAL --- */}
+            <main className={`flex-1 lg:ml-64 min-h-dvh relative pb-[102px] lg:pb-12 overflow-x-hidden ${mainBackground}`}>                {/* --- HEADER (MÓVIL & PC ) --- */}
+                <header className="sticky top-0 z-[110] backdrop-blur-md px-4 md:px-8 py-4 flex justify-between items-center gap-4">                    {/* Logo Móvil */}
                     <div className="lg:hidden flex items-center gap-2">
-                        <div className="w-8 h-8 bg-teal-600 rounded-lg flex items-center justify-center shadow-lg">
-                            <Library size={18} className="text-white" />
-                        </div>
-                        <span className="font-bold text-slate-900 tracking-tight">BookMark</span>
+                        <div className="w-8 h-8 bg-teal-600 rounded-lg flex items-center justify-center shadow-lg"><Library size={18} className="text-white" /></div>
+                        <span className="font-black text-slate-900 tracking-tighter uppercase text-sm">BookMark</span>
                     </div>
 
-                    <button onClick={logout} className="lg:hidden p-2 text-slate-400">
-                        <LogOut size={20} />
-                    </button>
+                    {/* ICONS GROUP (Solo visible en Móvil) */}
+                    <div className="flex lg:hidden items-center gap-1">
+                        {user && user.role !== 'admin' && user.role !== 'librero' && (
+                            <>
+                                {/* Chat Icon */}
+                                <Link to="/bookstore" className={`p-2.5 rounded-xl relative transition-all ${isActive('/bookstore') ? 'bg-teal-600 text-white shadow-md' : 'text-slate-400'}`}>
+                                    <Store size={20} />
+                                    {totalUnread > 0 && (
+                                        <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-rose-500 text-white text-[8px] font-black rounded-full flex items-center justify-center border-2 border-[#F0F9F9]">{totalUnread}</span>
+                                    )}
+                                </Link>
+
+                                {/* Chat Icon */}
+                                <Link to="/chat" className={`p-2.5 rounded-xl relative transition-all ${isActive('/chat') ? 'bg-teal-600 text-white shadow-md' : 'text-slate-400'}`}>
+                                    <MessageCircle size={20} />
+                                    {totalUnread > 0 && (
+                                        <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-rose-500 text-white text-[8px] font-black rounded-full flex items-center justify-center border-2 border-[#F0F9F9]">{totalUnread}</span>
+                                    )}
+                                </Link>
+
+                                {/* Requests/Bell Icon */}
+                                <Link to="/requests" className={`p-2.5 rounded-xl relative transition-all ${isActive('/requests') ? 'bg-teal-600 text-white shadow-md' : 'text-slate-400'}`}>
+                                    <Bell size={20} />
+                                    {totalRequests > 0 && (
+                                        <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-rose-500 text-white text-[8px] font-black rounded-full flex items-center justify-center border-2 border-[#F0F9F9]">{totalRequests}</span>
+                                    )}
+                                </Link>
+                            </>
+                        )}
+
+                        {/* Profile Small Avatar */}
+                        <Link to="/myprofile" className={`p-1 rounded-full border-2 transition-all ${isActive('/myprofile') ? 'border-teal-600 scale-110' : 'border-transparent'}`}>
+                            <div className="w-7 h-7 rounded-full overflow-hidden bg-slate-200">
+                                <img src={user?.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email}`} className="w-full h-full object-cover" alt="" />
+                            </div>
+                        </Link>
+
+                        {/* Logout */}
+                        <button onClick={logout} className="p-2.5 text-slate-300 hover:text-rose-500 transition-colors">
+                            <LogOut size={20} />
+                        </button>
+                    </div>
+
+
                 </header>
 
-                <div className="px-6 lg:px-8 max-w-7xl mx-auto">
+                <div className="px-4 md:px-8 max-w-7xl mx-auto">
                     <Outlet />
                 </div>
             </main>
 
-            <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-[100] bg-white/90 backdrop-blur-xl border-t border-slate-100 px-2 pb-safe-area-inset-bottom shadow-[0_-10px_25px_rgba(0,0,0,0.03)]">
-                <div className="flex justify-around items-center h-16 max-w-md mx-auto">
-                    {navItems.map((item) => {
-                        const active = isActive(item.path);
-                        const hasBadge = item.badge !== undefined && item.badge > 0;
-
+            {/* --- BOTTOM NAV (SOLO MÓVIL) --- */}
+            <nav className="lg:hidden fixed bottom-0 inset-x-0 z-[1000] h-[78px] bg-white/95 backdrop-blur-xl border-t border-slate-100 pb-[env(safe-area-inset-bottom)] shadow-[0_-5px_15px_rgba(0,0,0,0.05)]">
+                {/* Contenedor con scroll horizontal */}
+                <div className="flex items-center justify-center h-full px-2 gap-4 md:gap-8 overflow-x-auto no-scrollbar">
+                    {mobileBottomItems.map((item) => {
+                        const isActive = location.pathname === item.path;
                         return (
                             <Link
                                 key={item.path}
                                 to={item.path}
-                                className={`flex flex-col items-center justify-center flex-1 gap-1 transition-all duration-300 relative ${
-                                    active ? "text-teal-600" : "text-slate-400"
-                                }`}
+                                className={`flex flex-col items-center justify-center flex-shrink-0 transition-all duration-300 ${isActive ? "text-teal-600" : "text-slate-400"}`}
                             >
-                                <div className={`p-1 rounded-xl transition-all relative ${active ? "bg-teal-50" : ""}`}>
-                                    <item.icon size={20} strokeWidth={active ? 2.5 : 2} />
-                                    {hasBadge && (
-                                        <div className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 text-white text-[8px] font-black rounded-full flex items-center justify-center border border-white">
-                                            {item.badge}
-                                        </div>
-                                    )}
-                                </div>
-                                <span className={`text-[9px] font-bold uppercase tracking-tighter ${active ? "opacity-100" : "opacity-60"}`}>
+                                <item.icon size={20} strokeWidth={isActive ? 2.5 : 2} />
+                                <span className="text-[8px] font-black uppercase mt-1 truncate w-full text-center px-1">
                                     {item.label}
                                 </span>
                             </Link>
@@ -194,6 +251,7 @@ export function MainLayout() {
                     })}
                 </div>
             </nav>
+            <BibliosChat />
         </div>
     );
 }

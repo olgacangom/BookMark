@@ -1,20 +1,14 @@
-name: 🚀 CD - Deploy & Notify
+name: 📧 Notificar Despliegue
 
 on:
-  workflow_run:
-    workflows: ["🐳 CD - Push to Docker Hub"]
-    types: [completed]
+  push:
+    branches:
+      - main 
 
 jobs:
-  deploy:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+  notify:
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger Render Deploy
-        run: |
-          # Aquí pondrías el webhook de tu servicio de hosting
-          curl -f "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
-
       - name: Send Success Email
         uses: dawidd6/action-send-mail@v3
         with:
@@ -22,11 +16,6 @@ jobs:
           server_port: 465
           username: ${{ secrets.MAIL_USERNAME }}
           password: ${{ secrets.MAIL_PASSWORD }}
-          subject: "🚀 BookMark: ¡Despliegue Exitoso!"
+          subject: "🚀 BookMark: Despliegue iniciado en Render"
           to: olgacantalejog@gmail.com
-          html_body: |
-            <div style="border-left: 10px solid #28a745; padding: 20px; background-color: #f8f9fa;">
-              <h2 style="color: #28a745;">✅ PRODUCCIÓN ACTUALIZADA</h2>
-              <p>La nueva versión de <strong>BookMark</strong> ya está online.</p>
-              <p>Imagen Docker generada y desplegada correctamente.</p>
-            </div>
+          html_body: "El nuevo código ha sido subido a GitHub y Render está procesando el despliegue automático."
