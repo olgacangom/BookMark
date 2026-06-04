@@ -11,6 +11,7 @@ import { Book } from '../../books/entities/book.entity';
 import { User } from '../entities/user.entity';
 import { EventRegistration } from 'src/bookstore/entities/event-registration.entity';
 import { LibraryEvent } from '../entities/library-event.entity';
+import { randomInt } from 'crypto';
 
 @Injectable()
 export class LibrerosService {
@@ -127,7 +128,7 @@ export class LibrerosService {
     return {
       totalBooks,
       activeEvents,
-      recentViews: Math.floor(Math.random() * 100),
+      recentViews: randomInt(0, 100),
     };
   }
 

@@ -24,6 +24,7 @@ import { RegisterDto } from 'src/auth/dto/register.dto';
 import { User, UserRole } from './entities/user.entity';
 import { Roles } from './roles/roles.decorator';
 import { RolesGuard } from './roles/roles.guard';
+import { randomUUID } from 'crypto';
 
 interface RequestWithUser {
   user: {
@@ -40,7 +41,7 @@ interface GrowthData {
 @Controller('users')
 @UseInterceptors(ClassSerializerInterceptor)
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(private readonly usersService: UsersService) { }
 
   // RUTAS ESTÁTICAS
 
@@ -74,8 +75,7 @@ export class UsersController {
       storage: diskStorage({
         destination: './uploads/avatars',
         filename: (req, file, cb) => {
-          const uniqueSuffix =
-            Date.now() + '-' + Math.round(Math.random() * 1e9);
+          const uniqueSuffix = `${Date.now()}-${randomUUID()}`;
           cb(null, `${uniqueSuffix}${extname(file.originalname)}`);
         },
       }),

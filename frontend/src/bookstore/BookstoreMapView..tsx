@@ -55,13 +55,18 @@ export const BookstoresMapView = () => {
             setLoading(true);
             let data;
             if (bookId) {
+                const getRandomOffset = () => {
+                    const array = new Uint32Array(1);
+                    window.crypto.getRandomValues(array);
+                    return (array[0] / 0xFFFFFFFF) - 0.5;
+                };
                 const res = await api.get(`/librero/find-stores/${bookId}`);
                 data = res.data.map((item: any) => ({
                     id: item.store.id,
                     name: item.store.libraryName,
                     address: item.store.libraryAddress,
-                    latitude: parseFloat(item.store.libraryAddress.split(',')[0]) || lat + (Math.random() - 0.5) / 100,
-                    longitude: parseFloat(item.store.libraryAddress.split(',')[1]) || lon + (Math.random() - 0.5) / 100,
+                    latitude: parseFloat(item.store.libraryAddress.split(',')[0]) || lat + getRandomOffset() / 100,
+                    longitude: parseFloat(item.store.libraryAddress.split(',')[1]) || lon + getRandomOffset() / 100,
                     phone: item.store.libraryPhone,
                     hasStock: true
                 }));
