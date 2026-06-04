@@ -39,7 +39,7 @@ const ActionModal = ({ isOpen, type, title, onClose, onConfirm }: any) => {
 };
 
 // MODAL DETALLES AMIGOS ---
-const SocialDetailsModal = ({ isOpen, onClose, listing, onToggleRequest, isRequested, currentUserId }: any) => {
+export const SocialDetailsModal = ({ isOpen, onClose, listing, onToggleRequest, isRequested, currentUserId }: any) => {
     if (!isOpen || !listing) return null;
     const isSale = listing.type === 'sale';
     const isOwner = listing.user?.id === currentUserId;
@@ -107,7 +107,7 @@ const SocialDetailsModal = ({ isOpen, onClose, listing, onToggleRequest, isReque
 };
 
 // --- MODAL DE FEEDBACK ---
-const FeedbackModal = ({ isOpen, onClose, type }: any) => {
+export const FeedbackModal = ({ isOpen, onClose, type }: any) => {
     if (!isOpen) return null;
     const isSuccess = type === 'success';
     return (
@@ -199,7 +199,6 @@ export const SustainabilityView = () => {
 
             const listingObj = findListing(listingId as string);
             if (listingObj && listingObj.user && listingObj.user.id === user?.id) {
-                // already owner — ignore action
                 setFeedback({ isOpen: true, type: 'cancel' });
                 return;
             }
@@ -426,7 +425,10 @@ export const MarketplaceSection = ({ listings, onEdit, onAction }: any) => {
                                         className="p-2 bg-white text-[#407B75] rounded-lg shadow-xl hover:bg-[#407B75] hover:text-white transition-all">
                                         <Edit3 size={14} />
                                     </button>
-                                    <button onClick={() => onAction('delete', item)} className="p-2 bg-white text-rose-500 rounded-lg shadow-xl hover:bg-rose-500 hover:text-white transition-all">
+                                    <button 
+                                    onClick={() => onAction('delete', item)} 
+                                    aria-label="Eliminar"
+                                    className="p-2 bg-white text-rose-500 rounded-lg shadow-xl hover:bg-rose-500 hover:text-white transition-all">
                                         <Trash2 size={14} />
                                     </button>
                                 </div>
