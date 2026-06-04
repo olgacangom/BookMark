@@ -29,14 +29,14 @@ export default defineConfig({
       exclude: [
         'node_modules/**',
         'dist/**',
-        '*.config.js',       // Excluye vite.config.js, tailwind.config.js, etc.
+        '*.config.js',       
         '*.config.cjs',
         'eslint.config.js',
         'src/main.tsx',      
         'src/vite-env.d.ts',
         'src/components/shared/**',
         'src/users/pages',
-        'src/pages',
+        'src/pages/**',
         'src/layouts',
         'src/bookstore',
         'App.tsx'
