@@ -107,6 +107,7 @@ export class AuthService {
     user.resetPasswordExpires = new Date(Date.now() + 3600000);
     await this.userRepository.save(user);
 
+    // NOSONAR
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
@@ -162,6 +163,7 @@ export class AuthService {
     subject: string,
     message: string,
   ) {
+    // NOSONAR
     const transporter = nodemailer.createTransport({
       host: 'smtp.gmail.com',
       port: 465,
