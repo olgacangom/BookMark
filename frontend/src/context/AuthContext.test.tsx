@@ -86,15 +86,12 @@ describe('AuthContext', () => {
   it('debe añadir los campos extra al FormData en el registro si se proporcionan', async () => {
     const appendSpy = vi.spyOn(FormData.prototype, 'append');
 
-    // Renderizamos el componente dentro del Provider
     render(
       <AuthProvider>
         <TestComponent />
       </AuthProvider>
     );
 
-    // Disparamos el registro haciendo click en el botón, 
-    // esto asegura que estemos DENTRO del contexto de React
     const registerBtn = screen.getByText('Trigger Register');
     await act(async () => {
       fireEvent.click(registerBtn);
@@ -140,5 +137,31 @@ describe('AuthContext', () => {
     expect(localStorage.getItem('token')).toBeNull();
 
     consoleSpy.mockRestore();
+  });
+
+  it('debe añadir el campo "province" al FormData si se proporciona en extraData', async () => {
+    const appendSpy = vi.spyOn(FormData.prototype, 'append');
+
+    render(
+      <AuthProvider>
+        <TestComponent />
+      </AuthProvider>
+    );
+
+    const { result } = renderHook(() => useAuth(), {
+      wrapper: AuthProvider
+    });
+
+    await act(async () => {
+      await result.current.register(
+        'Test Name',
+        'test@email.com',
+        'password123',
+        'user',
+        { province: 'Sevilla' } 
+      );
+    });
+    expect(appendSpy).toHaveBeenCalledWith('province', 'Sevilla');
+    appendSpy.mockRestore();
   });
 });
