@@ -108,13 +108,16 @@ const DeactivateAccountModal = ({ isOpen, onClose, onConfirm, actionLoading }: a
 
 const FollowModal = ({ isOpen, onClose, activeTab, setActiveTab, data, onStartChat }: any) => {
     if (!isOpen) return null;
+
     const list = activeTab === 'followers'
-        ? data?.followerRelations?.map((f: any) => f.follower) || []
-        : data?.followingRelations?.map((f: any) => f.following) || [];
+        ? (data?.followerRelations?.filter((f: any) => f.status === 'ACCEPTED') || [])
+        : (data?.followingRelations?.filter((f: any) => f.status === 'ACCEPTED') || []);
+
+    const getUser = (item: any) => (activeTab === 'followers' ? item.follower : item.following);
 
     const isReciprocal = (targetUserId: string) => {
-        const followsMe = data?.followerRelations?.some((f: any) => f.follower.id === targetUserId);
-        const iFollowThem = data?.followingRelations?.some((f: any) => f.following.id === targetUserId);
+        const followsMe = data?.followerRelations?.some((f: any) => f.follower.id === targetUserId && f.status === 'ACCEPTED');
+        const iFollowThem = data?.followingRelations?.some((f: any) => f.following.id === targetUserId && f.status === 'ACCEPTED');
         return followsMe && iFollowThem;
     };
 
@@ -123,40 +126,52 @@ const FollowModal = ({ isOpen, onClose, activeTab, setActiveTab, data, onStartCh
             <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md animate-in fade-in" onClick={onClose}></div>
             <div className="bg-white rounded-[3rem] w-full max-w-md max-h-[80vh] flex flex-col shadow-2xl relative animate-in zoom-in-95 overflow-hidden border-[12px] border-white">
                 <div className="flex border-b border-slate-50 bg-white">
-                    <button onClick={() => setActiveTab('followers')} className={`flex-1 py-5 text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'followers' ? 'text-teal-600 bg-teal-50/30' : 'text-slate-400 hover:text-slate-600'}`}>Seguidores ({data?.followerRelations?.length || 0})</button>
-                    <button onClick={() => setActiveTab('following')} className={`flex-1 py-5 text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'following' ? 'text-teal-600 bg-teal-50/30' : 'text-slate-400 hover:text-slate-600'}`}>Siguiendo ({data?.followingRelations?.length || 0})</button>
+                    {/* Botones de pestaña */}
+                    <button onClick={() => setActiveTab('followers')} className={`flex-1 py-5 text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'followers' ? 'text-teal-600 bg-teal-50/30' : 'text-slate-400 hover:text-slate-600'}`}>
+                        Seguidores ({data?.followerRelations?.filter((f: any) => f.status === 'ACCEPTED').length || 0})
+                    </button>
+                    <button onClick={() => setActiveTab('following')} className={`flex-1 py-5 text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'following' ? 'text-teal-600 bg-teal-50/30' : 'text-slate-400 hover:text-slate-600'}`}>
+                        Siguiendo ({data?.followingRelations?.filter((f: any) => f.status === 'ACCEPTED').length || 0})
+                    </button>
                 </div>
-                <div className="flex-1 overflow-y-auto p-6 space-y-3  custom-scrollbar">
-                    {list.length > 0 ? list.map((u: any) => (
-                        <div key={u.id} className="flex items-center justify-between p-4 rounded-[1.5rem] hover:bg-slate-50 transition-all group border border-transparent hover:border-slate-100">
-                            <div className="flex items-center gap-4">
-                                <div className="w-12 h-12 rounded-full bg-slate-100 border-2 border-white shadow-sm overflow-hidden shrink-0">
-                                    <img src={u.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${u.email}`} className="w-full h-full object-cover" alt="" />
-                                </div>
-                                <div>
-                                    <p className="text-sm font-black text-slate-800 leading-none mb-1 uppercase tracking-tight">{u.fullName}</p>
-                                    <p className="text-[10px] text-slate-400 font-bold tracking-widest uppercase">@{u.email.split('@')[0]}</p>
-                                </div>
-                            </div>
 
-                            {isReciprocal(u.id) ? (
-                                <button onClick={() => onStartChat(u.id)} className="p-3 bg-teal-50 text-teal-600 rounded-2xl hover:bg-teal-600 hover:text-white transition-all shadow-sm" title="Enviar mensaje">
-                                    <MessageCircle size={18} />
-                                </button>
-                            ) : (
-                                <div className="p-3 opacity-20 grayscale" title="Debes seguirte mutuamente para chatear">
-                                    <MessageCircle size={18} className="text-slate-400" />
+                <div className="flex-1 overflow-y-auto p-6 space-y-3 custom-scrollbar">
+                    {list.length > 0 ? list.map((item: any) => {
+                        const u = getUser(item);
+                        return (
+                            <div key={item.id} className="flex items-center justify-between p-4 rounded-[1.5rem] hover:bg-slate-50 transition-all group border border-transparent hover:border-slate-100">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 rounded-full bg-slate-100 border-2 border-white shadow-sm overflow-hidden shrink-0">
+                                        <img src={u.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${u.email}`} className="w-full h-full object-cover" alt="" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-black text-slate-800 leading-none mb-1 uppercase tracking-tight">{u.fullName}</p>
+                                        <p className="text-[10px] text-slate-400 font-bold tracking-widest uppercase">@{u.email.split('@')[0]}</p>
+                                    </div>
                                 </div>
-                            )}
-                        </div>
-                    )) : (
+
+                                {isReciprocal(u.id) ? (
+                                    <button onClick={() => onStartChat(u.id)} className="p-3 bg-teal-50 text-teal-600 rounded-2xl hover:bg-teal-600 hover:text-white transition-all shadow-sm" title="Enviar mensaje">
+                                        <MessageCircle size={18} />
+                                    </button>
+                                ) : (
+                                    <div className="p-3 opacity-20 grayscale" title="Debes seguirte mutuamente para chatear">
+                                        <MessageCircle size={18} className="text-slate-400" />
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    }) : (
                         <div className="py-24 text-center">
                             <UserIcon className="mx-auto text-slate-100 mb-4" size={48} />
                             <p className="text-slate-300 font-black uppercase text-[10px] tracking-[0.3em]">Lista vacía</p>
                         </div>
                     )}
                 </div>
-                <button onClick={onClose} className="p-5 text-[10px] font-black text-slate-400 hover:text-rose-500 transition-colors uppercase tracking-[0.2em] border-t border-slate-50 bg-slate-50/50">Cerrar Ventana</button>
+
+                <button onClick={onClose} className="p-5 text-[10px] font-black text-slate-400 hover:text-rose-500 transition-colors uppercase tracking-[0.2em] border-t border-slate-50 bg-slate-50/50">
+                    Cerrar Ventana
+                </button>
             </div>
         </div>
     );
@@ -260,13 +275,17 @@ export const MyProfileView = () => {
     const stats = {
         read: books.filter(b => b.status === "Read"),
         totalPages: books.filter(b => b.status === "Read").reduce((acc, b) => acc + (Number(b.pageCount) || 0), 0),
-        reviews: books.filter(b => b.review && b.review.length > 0)
+        reviews: books.filter(b => b.review && b.review.length > 0),
+        totalBooks: books.length
     };
-
-    const getRank = (pages: number) => {
-        if (pages > 5000) return { title: 'Erudito', icon: '🏅' };
-        if (pages > 1000) return { title: 'Lector Voraz', icon: '📖' };
-        return { title: 'Iniciado', icon: '👶' };
+    const getRank = (totalBooks: number, readBooks: number) => {
+        if (readBooks >= 100) return { title: 'Leyenda', icon: '🏆', color: 'from-yellow-400 to-amber-600', useRead: true, next: null, nextTitle: null };
+        if (readBooks >= 50) return { title: 'Gran Erudito', icon: '🎓', color: 'from-purple-400 to-indigo-600', useRead: true, next: 100, nextTitle: 'Leyenda' };
+        if (readBooks >= 25) return { title: 'Erudito', icon: '🏅', color: 'from-teal-400 to-cyan-600', useRead: true, next: 50, nextTitle: 'Gran Erudito' };
+        if (readBooks >= 10) return { title: 'Lector Voraz', icon: '📖', color: 'from-teal-500 to-emerald-600', useRead: true, next: 25, nextTitle: 'Erudito' };
+        if (totalBooks >= 10) return { title: 'Coleccionista', icon: '📚', color: 'from-slate-400 to-slate-600', useRead: true, next: 10, nextTitle: 'Lector Voraz' };
+        if (totalBooks >= 5) return { title: 'Explorador', icon: '🔍', color: 'from-slate-400 to-slate-600', useRead: false, next: 10, nextTitle: 'Coleccionista' };
+        return { title: 'Iniciado', icon: '👶', color: 'from-slate-400 to-slate-600', useRead: false, next: 5, nextTitle: 'Explorador' };
     };
 
     const joinDate = profileData?.createdAt ? new Intl.DateTimeFormat('es-ES', { month: 'long', year: 'numeric' }).format(new Date(profileData.createdAt)) : 'Reciente';
@@ -357,6 +376,7 @@ export const MyProfileView = () => {
     };
 
     if (isLoading || !profileData) return <div className="min-h-screen flex items-center justify-center bg-[#F8FAFB]"><Loader2 className="text-teal-600 animate-spin" size={40} /></div>;
+
 
     return (
         <div className="min-h-screen bg-[#F8FAFB] font-sans text-slate-900 pb-24 text-left">
@@ -572,9 +592,19 @@ export const MyProfileView = () => {
                             <div className="w-px h-10 bg-white/20 hidden md:block"></div>
                             <StatGroup label="Libros" value={books.length} />
                             <div className="w-px h-10 bg-white/20 hidden md:block"></div>
-                            <StatGroup label="Seguidores" value={profileData.followerRelations?.length || 0} onClick={() => { setActiveTab('followers'); setIsFollowModalOpen(true); }} clickable />
+                            <StatGroup
+                                label="Seguidores"
+                                value={profileData.followerRelations?.filter((f: any) => f.status === 'ACCEPTED').length || 0}
+                                onClick={() => { setActiveTab('followers'); setIsFollowModalOpen(true); }}
+                                clickable
+                            />
                             <div className="w-px h-10 bg-white/20 hidden md:block"></div>
-                            <StatGroup label="Siguiendo" value={profileData.followingRelations?.length || 0} onClick={() => { setActiveTab('following'); setIsFollowModalOpen(true); }} clickable />
+                            <StatGroup
+                                label="Siguiendo"
+                                value={profileData.followingRelations?.filter((f: any) => f.status === 'ACCEPTED').length || 0}
+                                onClick={() => { setActiveTab('following'); setIsFollowModalOpen(true); }}
+                                clickable
+                            />
                         </div>
                     )}
                 </div>
@@ -603,8 +633,17 @@ export const MyProfileView = () => {
                                 <div className="bg-white rounded-[2.5rem] p-8 md:p-10 shadow-sm border border-slate-100">
                                     <div className="flex items-center justify-between mb-8">
                                         <h2 className="text-xl font-black text-slate-900 uppercase italic tracking-tighter">Actividad Reciente</h2>
-                                        <div className="flex items-center gap-2 bg-teal-50 px-4 py-1.5 rounded-full text-teal-600 font-bold text-[9px] uppercase tracking-widest border border-teal-100/50">
-                                            <Sparkles size={12} fill="currentColor" /> {stats.read.length} leídos este año
+
+                                        <div className="flex items-center gap-3">
+                                            <div className="flex items-center gap-2 bg-teal-50 px-4 py-1.5 rounded-full text-teal-600 font-bold text-[9px] uppercase tracking-widest border border-teal-100/50">
+                                                <Sparkles size={12} fill="currentColor" />
+                                                {growthData.reduce((acc: number, curr: any) => acc + Number(curr.count), 0)} AÑADIDOS ESTE AÑO
+                                            </div>
+
+                                            <div className="flex items-center gap-2 bg-amber-50 px-4 py-1.5 rounded-full text-amber-600 font-bold text-[9px] uppercase tracking-widest border border-amber-100/50">
+                                                <BookOpen size={12} fill="currentColor" />
+                                                {stats.read.length} LEÍDOS ESTE AÑO
+                                            </div>
                                         </div>
                                     </div>
 
@@ -774,39 +813,59 @@ export const MyProfileView = () => {
                                     {Array.from(new Set(books.map(b => b.genre).filter(Boolean)))
                                         .slice(0, 5)
                                         .map((g, i) => (
-                                            <span
-                                                key={i}
-                                                className="px-4 py-1.5 bg-amber-50 border border-amber-200 rounded-xl text-[10px] font-bold text-amber-700 shadow-sm"
-                                            >
+                                            <span key={i} className="px-4 py-1.5 bg-amber-50 border border-amber-200 rounded-xl text-[10px] font-bold text-amber-700 shadow-sm">
                                                 {g as React.ReactNode}
                                             </span>
                                         ))}
-
                                     {Array.from(new Set(books.map(b => b.genre).filter(Boolean))).length === 0 && (
-                                        <span className="text-xs text-slate-300 italic">
-                                            No hay géneros definidos
-                                        </span>
+                                        <span className="text-xs text-slate-300 italic">No hay géneros definidos</span>
                                     )}
                                 </div>
                             </div>
 
-                            <div className="bg-[#0F172A] rounded-[2.5rem] p-8 text-white relative overflow-hidden shadow-xl mt-6">
-                                <Award className="text-teal-300 mb-4" size={24} />
+                            {stats.totalBooks > 0 && (() => {
+                                const rank = getRank(stats.totalBooks, stats.read.length);
+                                const currentValue = rank.useRead ? stats.read.length : stats.totalBooks;
+                                const progress = rank.next ? Math.min(100, Math.round((currentValue / rank.next) * 100)) : 100;
+                                const remaining = rank.next ? rank.next - currentValue : 0;
 
-                                <h4 className="font-black text-lg uppercase tracking-tight leading-none mb-4">
-                                    Rango Lector
-                                </h4>
+                                return (
+                                    <div className="bg-[#0F172A] rounded-[2.5rem] p-8 text-white relative overflow-hidden shadow-xl">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <Award className="text-teal-300" size={24} />
+                                            <span className="text-[9px] font-bold text-white/30 uppercase tracking-widest">Rango Lector</span>
+                                        </div>
 
-                                <div className="text-4xl mb-4">
-                                    {getRank(stats.totalPages).icon}
-                                </div>
+                                        <div className="text-4xl mb-2">{rank.icon}</div>
+                                        <p className={`font-black text-xl uppercase tracking-tight bg-gradient-to-r ${rank.color} bg-clip-text text-transparent mb-1`}>
+                                            {rank.title}
+                                        </p>
+                                        <p className="text-white/40 text-[9px] font-bold uppercase tracking-widest mb-6">
+                                            {stats.read.length} leídos · {stats.totalBooks} en biblioteca
+                                        </p>
 
-                                <p className="text-white/60 text-[9px] font-bold uppercase tracking-widest">
-                                    {stats.totalPages.toLocaleString()} páginas devoradas
-                                </p>
+                                        {rank.next && (
+                                            <>
+                                                <div className="flex justify-between items-center mb-2">
+                                                    <span className="text-[10px] text-white/40">Hacia <span className="text-white/70">{rank.nextTitle}</span></span>
+                                                    <span className="text-[10px] text-teal-400 font-bold">{progress}%</span>
+                                                </div>
+                                                <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden mb-2">
+                                                    <div
+                                                        className="h-full bg-gradient-to-r from-teal-500 to-teal-300 rounded-full transition-all duration-700"
+                                                        style={{ width: `${progress}%` }}
+                                                    />
+                                                </div>
+                                                <p className="text-[9px] text-white/30 font-bold uppercase tracking-widest">
+                                                    Lee {remaining} {rank.useRead ? 'libros' : 'libros añadidos'} para el siguiente rango
+                                                </p>
+                                            </>
+                                        )}
 
-                                <Sparkles className="absolute -right-4 -top-4 w-24 h-24 text-white/5 rotate-12" />
-                            </div>
+                                        <Sparkles className="absolute -right-4 -top-4 w-24 h-24 text-white/5 rotate-12" />
+                                    </div>
+                                );
+                            })()}
                         </div>
                     )}
                 </div>

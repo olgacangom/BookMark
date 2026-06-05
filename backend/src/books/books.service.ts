@@ -42,23 +42,15 @@ export class BooksService {
   }
 
   async create(createBookDto: CreateBookDto, userId: string) {
-    const duplicate = await this.bookRepository.findOne({
+    const existingBook = await this.bookRepository.findOne({
       where: [
-        // mismo usuario + mismo título + autor
-        {
-          userId,
-          title: createBookDto.title,
-          author: createBookDto.author,
-        },
-        // mismo ISBN si existe
+        { userId, title: createBookDto.title, author: createBookDto.author },
         ...(createBookDto.isbn ? [{ userId, isbn: createBookDto.isbn }] : []),
       ],
     });
 
-    if (duplicate) {
-      throw new ConflictException(
-        `Ya tienes este libro en tu biblioteca (${duplicate.title})`,
-      );
+    if (existingBook) {
+      throw new ConflictException('Este libro ya existe en tu biblioteca');
     }
 
     const newBook = this.bookRepository.create({

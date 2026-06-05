@@ -215,22 +215,25 @@ export const LibraryView = () => {
                 isOpen={isModalOpen}
                 book={selectedBook}
                 onClose={() => { setIsModalOpen(false); setSelectedBook(null); }}
-                onSuccess={loadData}
+                onSuccess={() => {
+                    loadData();
+                }}
                 createBook={async (data: BookFormData) => {
                     if (selectedBook) {
                         return await bookService.update(selectedBook.id, data as any);
                     }
-
                     return await bookService.create(data as any);
                 }}
-                onError={(message) =>
+                onError={(error: any) => {
+                    const msg = error.response?.data?.message || "Este libro ya existe en tu biblioteca.";
+
                     setFeedback({
                         isOpen: true,
                         type: 'error',
-                        title: 'Libro duplicado',
-                        message
-                    })
-                }
+                        title: 'LIBRO DUPLICADO', 
+                        message: Array.isArray(msg) ? msg[0] : msg
+                    });
+                }}
             />
 
             <ConfirmDeleteModal

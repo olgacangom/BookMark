@@ -2,6 +2,8 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { BooksGrowthChart } from './BooksGrowthChart';
 
+const TooltipMock = vi.hoisted(() => vi.fn(() => null));
+
 vi.mock('recharts', () => {
     const OriginalRecharts = vi.importActual('recharts');
     return {
@@ -16,7 +18,7 @@ vi.mock('recharts', () => {
         CartesianGrid: () => null,
         XAxis: () => null,
         YAxis: () => null,
-        Tooltip: () => null,
+        Tooltip: TooltipMock,
         LabelList: () => null,
         defs: ({ children }: any) => <defs data-testid="defs">{children}</defs>,
         linearGradient: ({ id, children }: any) => (
@@ -66,5 +68,49 @@ describe('BooksGrowthChart', () => {
         await waitFor(() => {
             expect(container.querySelector('svg')).toBeInTheDocument();
         });
+    });
+
+    it('ejecuta correctamente el formatter del Tooltip', async () => {
+        TooltipMock.mockClear();
+
+        render(
+            <BooksGrowthChart
+                data={[{ month: '2026-06', count: 5 }]}
+            />
+        );
+
+        await waitFor(() => {
+            expect(TooltipMock).toHaveBeenCalled();
+        });
+
+        type TooltipProps = {
+            formatter: (
+                value: any,
+                name: any,
+                props: any
+            ) => [string, string];
+        };
+
+        const call = TooltipMock.mock.calls[0];
+
+        if (!call) {
+            throw new Error('Tooltip no fue llamado');
+        }
+
+        const tooltipProps = (call as unknown as [TooltipProps])[0];
+        expect(typeof tooltipProps.formatter).toBe('function');
+
+        const result = tooltipProps.formatter(
+            5,
+            'count',
+            {
+                payload: { month: '2026-06' },
+            }
+        );
+
+        expect(result).toEqual([
+            '5 libros añadidos en junio',
+            '',
+        ]);
     });
 });

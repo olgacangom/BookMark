@@ -10,27 +10,28 @@ describe('API Service', () => {
     const mockToken = 'token-secreto-123';
     vi.spyOn(Storage.prototype, 'getItem').mockReturnValue(mockToken);
 
+    // @ts-expect-error acceso interno de axios para test
+    const interceptor = api.interceptors.request.handlers[0].fulfilled;
 
-    // @ts-expect-error - Accediendo a handlers internos de axios para testing
-    const requestInterceptor = api.interceptors.request.handlers[0].fulfilled;
+    const config: any = { headers: {} };
 
-    const config = { headers: {} } as any;
-    const result = await requestInterceptor(config);
+    const result = await interceptor(config);
 
+    expect(result.headers).toBeDefined();
     expect(result.headers.Authorization).toBe(`Bearer ${mockToken}`);
   });
 
   it('no debe añadir el header Authorization si el token no existe', async () => {
     vi.spyOn(Storage.prototype, 'getItem').mockReturnValue(null);
 
+    // @ts-expect-error acceso interno de axios para test
+    const interceptor = api.interceptors.request.handlers[0].fulfilled;
 
-    // @ts-expect-error - Accediendo a handlers internos de axios para testing
-    const requestInterceptor = api.interceptors.request.handlers[0].fulfilled;
+    const config: any = { headers: {} };
 
-    const config = { headers: {} } as any;
-    const result = await requestInterceptor(config);
+    const result = await interceptor(config);
 
-    expect(result.headers.Authorization).toBeUndefined();
+    expect(result.headers?.Authorization).toBeUndefined();
   });
 
   it('debe tener configurada la baseURL correctamente', () => {

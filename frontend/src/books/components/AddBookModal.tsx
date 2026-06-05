@@ -120,8 +120,9 @@ export const AddBookModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, onEr
             onSuccess();
             onClose();
         } catch (error: any) {
-            const msg = error.response?.data?.message || "No se pudo registrar el libro";
-            onError(Array.isArray(msg) ? msg[0] : msg);
+            const msg = error.response?.data?.message || error.message || "No se pudo registrar el libro";
+            const finalMessage = Array.isArray(msg) ? msg[0] : msg;
+            onError(finalMessage);
         }
     };
 

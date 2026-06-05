@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
 import {
     Heart, MessageCircle, MoreHorizontal, Check, Send,
-    Target, BookOpen, Users, BookText, Loader2, EyeOff, UserCircle, X, BookHeart,
+    Target, BookOpen, Users, BookText, Loader2, EyeOff, X, BookHeart,
     BookIcon, Edit2, Trash2, BarChart2, AlertTriangle
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { useNavigate } from 'react-router-dom';
 import { Activity, ActivityType, Comment, activityService } from '../services/activity.service';
 import { useAuth } from '../../context/AuthContext';
 
@@ -41,7 +40,6 @@ const ActivityBadge: React.FC<{ type: ActivityType }> = ({ type }) => {
 
 export const ActivityCard: React.FC<ActivityCardProps> = ({ activity, onLike, onIgnore, onComment, onUpdate, onDelete, onVote }) => {
     const { user } = useAuth();
-    const navigate = useNavigate();
     const [commentText, setCommentText] = useState('');
     const [showComments, setShowComments] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -361,10 +359,6 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({ activity, onLike, on
                                         </>
                                     )}
 
-                                    <button onClick={() => { navigate(`/profile/${activity.user.id}`); setShowMenu(false); }} className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-slate-50 text-slate-600 transition-colors group text-left">
-                                        <UserCircle size={18} className="text-slate-400 group-hover:text-teal-600" />
-                                        <span className="text-sm font-bold">Ver cuenta</span>
-                                    </button>
 
                                     {!isOwner && (
                                         <>

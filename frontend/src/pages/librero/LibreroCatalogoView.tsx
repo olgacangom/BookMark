@@ -200,14 +200,14 @@ export const LibreroCatalogView = () => {
                 {myStock.map((item) => (
                     <div
                         key={item.id}
-                        onClick={() => handleOpenEdit(item)} // Al pulsar aquí, abre el modal
-                        className="group bg-white p-3 md:p-5 rounded-[2rem] md:rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col hover:shadow-2xl hover:scale-[1.02] hover:border-teal-500/30 transition-all cursor-pointer"
+                        onClick={() => handleOpenEdit(item)}
+                        className="group relative bg-white p-3 md:p-5 rounded-[2rem] md:rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col hover:shadow-2xl hover:scale-[1.02] hover:border-teal-500/30 transition-all cursor-pointer"
                     >
                         <button
                             onClick={(e) => handleOpenDelete(e, item)}
-                            className="absolute top-4 right-4 z-20 p-2.5 bg-white/90 text-rose-500 rounded-xl hover:bg-rose-500 hover:text-white transition-all shadow-md border border-slate-100"
+                            className="absolute top-3 right-3 z-30 p-2 bg-white/90 text-slate-400 hover:text-rose-500 rounded-xl hover:bg-rose-50 transition-all shadow-sm border border-slate-100 opacity-100 md:opacity-0 group-hover:opacity-100"
                         >
-                            <Trash2 size={18} />
+                            <Trash2 size={16} />
                         </button>
 
                         <div className="relative w-full aspect-[2/3] rounded-2xl overflow-hidden shadow-sm bg-slate-50 mb-3 md:mb-4">

@@ -40,6 +40,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       formData.append('password', password);
       formData.append('role', role);
 
+      if (extraData?.province) {
+        formData.append('province', extraData.province);
+      }
+
       if (extraData) {
         if (extraData.libraryName) formData.append('libraryName', extraData.libraryName);
         if (extraData.libraryAddress) formData.append('libraryAddress', extraData.libraryAddress);
