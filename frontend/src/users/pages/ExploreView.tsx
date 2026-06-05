@@ -167,6 +167,7 @@ export const ExploreView = () => {
     const [mySentRequestIds, setMySentRequestIds] = useState<string[]>([]);
     const [feedback, setFeedback] = useState<{ isOpen: boolean, type: 'success' | 'cancel' }>({ isOpen: false, type: 'success' });
     const [selectedProvince, setSelectedProvince] = useState('Todas');
+    const [myBooks, setMyBooks] = useState<any[]>([]);
 
     const availableProvinces = useMemo(() => {
         const provinces = new Set(users.map(u => u.province).filter(Boolean));
@@ -224,11 +225,14 @@ export const ExploreView = () => {
                 lectores.sort((a: any, b: any) => b.proximityScore - a.proximityScore);
                 setUsers(lectores);
             }
+            if (myBooksRes.status === 'fulfilled') {
+                setMyBookKeys(myBooksRes.value.map(b => `${b.title}-${b.author}`.toLowerCase()));
+                setMyBooks(myBooksRes.value);
+            }
             if (booksRes.status === 'fulfilled' && booksRes.value.data.length > 0) {
                 const found = booksRes.value.data.find((b: any) => b.title.toLowerCase().includes("viento"));
                 setFeaturedBook(found || booksRes.value.data[0]);
             }
-            if (myBooksRes.status === 'fulfilled') setMyBookKeys(myBooksRes.value.map(b => `${b.title}-${b.author}`.toLowerCase()));
             if (eventsRes.status === 'fulfilled') {
                 const sortedEvents = eventsRes.value.data.sort((a: any, b: any) => {
                     const scoreA = getProximityScore(a.organizer?.province, currentUser.province);
@@ -328,6 +332,14 @@ export const ExploreView = () => {
     };
 
     if (loading) return <div className="flex h-screen items-center justify-center bg-[#F8FAFB]"><Loader2 className="w-10 h-10 animate-spin text-teal-600" /></div>;
+
+
+    const totalRead = myBooks.filter(b => b.status === 'Read').length;
+    const totalReviews = myBooks.filter(b => b.review && b.review.length > 0).length;
+    const MONTHLY_GOAL = 5;
+    const progressPercent = Math.min(100, Math.round((totalRead / MONTHLY_GOAL) * 100));
+    const circumference = 175;
+    const dashOffset = circumference * (1 - progressPercent / 100);
 
     return (
         <div className="min-h-screen font-sans pb-20 animate-in fade-in duration-500 text-left">
@@ -478,27 +490,48 @@ export const ExploreView = () => {
                 </div>
 
                 <aside className="w-full xl:w-80 space-y-6 shrink-0 pb-10">
-                    <section className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-100 text-left hover:border-teal-300  focus-within:border-slate-500">
+                    <section className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-100 text-left hover:border-teal-300">
                         <div className="flex justify-between items-center mb-6">
                             <h4 className="font-black text-sm tracking-tight text-slate-900">Mi actividad</h4>
                             <button onClick={() => navigate('/myprofile')} className="text-[10px] font-bold text-teal-600 hover:underline flex items-center">Ver todo <ChevronRight size={12} /></button>
                         </div>
+
                         <div className="flex items-center gap-4 mb-6">
                             <div className="relative w-16 h-16 flex items-center justify-center shrink-0">
                                 <svg className="w-full h-full transform -rotate-90">
                                     <circle cx="32" cy="32" r="28" stroke="currentColor" strokeWidth="6" fill="transparent" className="text-slate-100" />
-                                    <circle cx="32" cy="32" r="28" stroke="currentColor" strokeWidth="6" fill="transparent" strokeDasharray={175} strokeDashoffset={175 * 0.4} className="text-teal-500 transition-all duration-1000" />
+                                    <circle
+                                        cx="32" cy="32" r="28"
+                                        stroke="currentColor" strokeWidth="6" fill="transparent"
+                                        strokeDasharray={circumference}
+                                        strokeDashoffset={dashOffset}
+                                        className="text-teal-500 transition-all duration-1000"
+                                    />
                                 </svg>
-                                <span className="absolute font-black text-lg text-slate-800">3</span>
+                                <span className="absolute font-black text-lg text-slate-800">{totalRead}</span>
                             </div>
                             <div className="flex-1">
-                                <p className="text-xs font-bold text-slate-900 mb-1">Libros leídos este mes</p>
-                                <div className="flex justify-between items-center text-[10px] font-bold text-slate-400"><span>de 5 objetivo</span><span className="text-teal-600">60%</span></div>
+                                <p className="text-xs font-bold text-slate-900 mb-1">Total de libros leídos</p>
+                                <div className="flex justify-between items-center text-[10px] font-bold text-slate-400">
+                                    <span>de {MONTHLY_GOAL} objetivo</span>
+                                    <span className="text-teal-600">{progressPercent}%</span>
+                                </div>
                             </div>
                         </div>
+
                         <div className="space-y-4 pt-4 border-t border-slate-50">
-                            <div className="flex justify-between items-center text-xs"><span className="flex items-center gap-2 text-slate-500 font-bold"><Clock size={14} className="text-slate-400" /> Reseñas escritas</span><span className="font-black text-slate-800">2</span></div>
-                            <div className="flex justify-between items-center text-xs"><span className="flex items-center gap-2 text-slate-500 font-bold"><Flame size={14} className="text-orange-500 fill-orange-500" /> Días de racha</span><span className="font-black text-slate-800 flex items-center gap-1">7 </span></div>
+                            <div className="flex justify-between items-center text-xs">
+                                <span className="flex items-center gap-2 text-slate-500 font-bold">
+                                    <Clock size={14} className="text-slate-400" /> Reseñas escritas
+                                </span>
+                                <span className="font-black text-slate-800">{totalReviews}</span>
+                            </div>
+                            <div className="flex justify-between items-center text-xs">
+                                <span className="flex items-center gap-2 text-slate-500 font-bold">
+                                    <Flame size={14} className="text-orange-500 fill-orange-500" /> En biblioteca
+                                </span>
+                                <span className="font-black text-slate-800">{myBooks.length}</span>
+                            </div>
                         </div>
                     </section>
 
