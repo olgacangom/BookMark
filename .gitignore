@@ -19,4 +19,5 @@ coverage/
 
 frontend/.env
 backend/uploads/
+coverage/lcov-report/
 coverage/lcov-report/block-navigation.js

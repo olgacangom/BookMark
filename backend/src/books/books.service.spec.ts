@@ -131,22 +131,37 @@ describe('BooksService', () => {
 
     it('debe crear un libro y registrar la actividad exitosamente', async () => {
       repo.findOne?.mockResolvedValue(null);
-      repo.create?.mockReturnValue({ ...mockBook, title: 'Nuevo Libro' });
+
+      repo.create?.mockReturnValue({
+        ...mockBook,
+        title: 'Nuevo Libro',
+      });
+
+      const savedBook = {
+        ...mockBook,
+        title: 'Nuevo Libro',
+      };
+
+      repo.save?.mockResolvedValue(savedBook);
+
       const result = await service.create(createDto, mockUserId);
+
       expect(repo.create).toHaveBeenCalled();
       expect(repo.save).toHaveBeenCalled();
+
       expect(activitiesService.create).toHaveBeenCalledWith(
         mockUserId,
         ActivityType.BOOK_ADDED,
-        mockBook.id.toString(),
+        savedBook.id.toString(),
       );
+
       expect(result.title).toBe('Nuevo Libro');
     });
 
     it('debe capturar errores en ActivitiesService (instanceof Error)', async () => {
       const consoleSpy = jest
         .spyOn(console, 'error')
-        .mockImplementation(() => {});
+        .mockImplementation(() => { });
       repo.findOne?.mockResolvedValue(null);
       activitiesService.create?.mockRejectedValue(new Error('Fallo'));
 
@@ -162,7 +177,7 @@ describe('BooksService', () => {
     it('debe capturar errores en ActivitiesService (string)', async () => {
       const consoleSpy = jest
         .spyOn(console, 'error')
-        .mockImplementation(() => {});
+        .mockImplementation(() => { });
       repo.findOne?.mockResolvedValue(null);
       activitiesService.create?.mockRejectedValue('Error String');
 
