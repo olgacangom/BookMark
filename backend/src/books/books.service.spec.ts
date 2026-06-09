@@ -161,7 +161,7 @@ describe('BooksService', () => {
     it('debe capturar errores en ActivitiesService (instanceof Error)', async () => {
       const consoleSpy = jest
         .spyOn(console, 'error')
-        .mockImplementation(() => { });
+        .mockImplementation(() => {});
       repo.findOne?.mockResolvedValue(null);
       activitiesService.create?.mockRejectedValue(new Error('Fallo'));
 
@@ -177,7 +177,7 @@ describe('BooksService', () => {
     it('debe capturar errores en ActivitiesService (string)', async () => {
       const consoleSpy = jest
         .spyOn(console, 'error')
-        .mockImplementation(() => { });
+        .mockImplementation(() => {});
       repo.findOne?.mockResolvedValue(null);
       activitiesService.create?.mockRejectedValue('Error String');
 

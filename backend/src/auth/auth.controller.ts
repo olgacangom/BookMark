@@ -16,7 +16,6 @@ import { diskStorage } from 'multer';
 import { extname } from 'path';
 import { randomBytes } from 'crypto';
 
-
 export function generateLicenseFilename(file: Express.Multer.File) {
   const secureSuffix = randomBytes(16).toString('hex');
   const timestamp = Date.now();
@@ -39,7 +38,7 @@ export class AuthController {
   constructor(
     private authService: AuthService,
     private usersService: UsersService,
-  ) { }
+  ) {}
 
   @Post('register')
   @UseInterceptors(
