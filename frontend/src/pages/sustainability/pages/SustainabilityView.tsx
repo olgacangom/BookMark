@@ -6,7 +6,8 @@ import {
     RefreshCw, Heart, Loader2,
     Trash2, Clock, Tag,
     ShoppingBag, Info, Globe, Sparkle,
-    Edit3, Users, Calendar, X, Check, HandHelping
+    Edit3, Users, Calendar, X, Check, HandHelping,
+    MapPin
 } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 
@@ -425,10 +426,10 @@ export const MarketplaceSection = ({ listings, onEdit, onAction }: any) => {
                                         className="p-2 bg-white text-[#407B75] rounded-lg shadow-xl hover:bg-[#407B75] hover:text-white transition-all">
                                         <Edit3 size={14} />
                                     </button>
-                                    <button 
-                                    onClick={() => onAction('delete', item)} 
-                                    aria-label="Eliminar"
-                                    className="p-2 bg-white text-rose-500 rounded-lg shadow-xl hover:bg-rose-500 hover:text-white transition-all">
+                                    <button
+                                        onClick={() => onAction('delete', item)}
+                                        aria-label="Eliminar"
+                                        className="p-2 bg-white text-rose-500 rounded-lg shadow-xl hover:bg-rose-500 hover:text-white transition-all">
                                         <Trash2 size={14} />
                                     </button>
                                 </div>
@@ -579,9 +580,25 @@ const SocialSection = ({ listings, error, onOpenDetails, myRequests }: any) => {
                                 )}
                             </div>
                             <div className="absolute bottom-4 left-0 right-0 flex justify-center">
-                                <div className="flex overflow-x-auto no-scrollbar gap-2 bg-white p-2 rounded-2xl w-full">
-                                    <img src={item.user?.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${item.user?.email}`} className="w-5 h-5 rounded-full object-cover" alt="" />
-                                    <span className="text-[9px] font-black text-slate-800 uppercase tracking-tighter">@{item.user?.fullName?.split(' ')[0]}</span>
+                                <div className="flex items-center gap-2 bg-white p-2 rounded-2xl w-full overflow-x-auto no-scrollbar">
+                                    <img
+                                        src={item.user?.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${item.user?.email}`}
+                                        className="w-6 h-6 rounded-full object-cover shrink-0"
+                                        alt=""
+                                    />
+                                    <div className="flex flex-col justify-center">
+                                        <span className="text-[10px] font-black text-slate-800 uppercase tracking-tighter leading-none">
+                                            @{item.user?.fullName?.split(' ')[0]}
+                                        </span>
+                                        {item.user?.province && (
+                                            <div className="flex items-center gap-1 mt-1">
+                                                <MapPin size={10} className="text-red-500 shrink-0" />
+                                                <span className="text-red-500 font-bold text-[9px] uppercase tracking-widest leading-none">
+                                                    {item.user.province}
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         </div>

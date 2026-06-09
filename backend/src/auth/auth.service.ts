@@ -25,7 +25,7 @@ export class AuthService {
     private readonly userRepository: Repository<User>,
     @InjectRepository(UserStats)
     private readonly userStatsRepository: Repository<UserStats>,
-  ) { }
+  ) {}
 
   async validateUser(
     email: string,

@@ -78,11 +78,21 @@ const AvailabilityModal = ({ isOpen, onClose, stores, listings, bookTitle, onReq
                                                     <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-teal-50 shadow-sm shrink-0">
                                                         <img src={item.user.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${item.user.email}`} alt="" />
                                                     </div>
-                                                    <div>
-                                                        <p className="text-xs font-black text-slate-900 uppercase leading-none mb-1">@{item.user.fullName.split(' ')[0]}</p>
+                                                    <div className="flex flex-col items-start gap-2">
+                                                        <p className="text-xs font-black text-slate-900 uppercase leading-none">
+                                                            @{item.user.fullName.split(' ')[0]}
+                                                        </p>
+
                                                         <span className={`px-2 py-0.5 rounded-lg border text-[8px] font-black uppercase inline-block ${conditionStyles[item.condition] || 'bg-slate-50'}`}>
                                                             {item.condition === 'good' ? '👍 Buen Estado' : item.condition.toUpperCase().replace('_', ' ')}
                                                         </span>
+
+                                                        {item.user.province && (
+                                                            <span className="text-[9px] text-red-500 font-bold uppercase tracking-widest flex items-center gap-1">
+                                                                <MapPin size={10} className="text-red-500 shrink-0" />
+                                                                {item.user.province}
+                                                            </span>
+                                                        )}
                                                     </div>
                                                 </div>
                                                 <button onClick={() => onRequest(item.id, isRequested)} className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg active:scale-95 ${isRequested ? 'bg-amber-500 text-white hover:bg-amber-600 ring-4 ring-amber-500/10' : 'bg-slate-900 text-white hover:bg-teal-600'}`}>
@@ -122,7 +132,7 @@ const AvailabilityModal = ({ isOpen, onClose, stores, listings, bookTitle, onReq
                                     <div key={item.inventoryId} className="bg-slate-50/50 p-4 rounded-[2rem] flex justify-between items-center border border-slate-100/50">
                                         <div className="text-left flex-1 min-w-0 px-2">
                                             <p className="font-black text-slate-700 text-[11px] uppercase tracking-tight">{item.store.libraryName}</p>
-                                            <p className="text-[9px] text-slate-400 flex items-center gap-1"><MapPin size={10} /> {item.store.libraryAddress}, {item.store.province}</p>
+                                            <p className="text-[10px] font-semibold text-slate-500 flex items-center gap-1"><MapPin size={10} /> {item.store.libraryAddress}, {item.store.province}</p>
                                         </div>
                                         <div className="text-right pl-4 border-l border-slate-200 ml-4 shrink-0">
                                             <p className="text-base font-black text-teal-600 tracking-tighter">{Number(item.price).toFixed(2)}€</p>
@@ -180,11 +190,39 @@ export const ExploreView = () => {
 
         if (entityProvince === userProvince) return 100;
 
-        const sameRegion =
-            entityProvince.includes("Andalucía") &&
-            userProvince.includes("Andalucía");
+        const regions: { [key: string]: string[] } = {
+            "Andalucía": ["Almería", "Cádiz", "Córdoba", "Granada", "Huelva", "Jaén", "Málaga", "Sevilla"],
+            "Aragón": ["Huesca", "Teruel", "Zaragoza"],
+            "Asturias": ["Asturias"],
+            "Illes Balears": ["Illes Balears"],
+            "Canarias": ["Las Palmas", "Santa Cruz de Tenerife"],
+            "Cantabria": ["Cantabria"],
+            "Castilla y León": ["Ávila", "Burgos", "León", "Palencia", "Salamanca", "Segovia", "Soria", "Valladolid", "Zamora"],
+            "Castilla-La Mancha": ["Albacete", "Ciudad Real", "Cuenca", "Guadalajara", "Toledo"],
+            "Cataluña": ["Barcelona", "Girona", "Lleida", "Tarragona"],
+            "Comunidad Valenciana": ["Alicante", "Castellón", "Valencia"],
+            "Extremadura": ["Badajoz", "Cáceres"],
+            "Galicia": ["A Coruña", "Lugo", "Ourense", "Pontevedra"],
+            "Madrid": ["Madrid"],
+            "Murcia": ["Murcia"],
+            "Navarra": ["Navarra"],
+            "País Vasco": ["Álava", "Bizkaia", "Gipuzkoa"],
+            "La Rioja": ["La Rioja"]
+        };
 
-        if (sameRegion) return 60;
+        const getRegion = (province: string) => {
+            for (const [region, provinces] of Object.entries(regions)) {
+                if (provinces.includes(province)) return region;
+            }
+            return null;
+        };
+
+        const entityRegion = getRegion(entityProvince);
+        const userRegion = getRegion(userProvince);
+
+        if (entityRegion && userRegion && entityRegion === userRegion) {
+            return 60;
+        }
 
         return 10;
     };
@@ -279,7 +317,7 @@ export const ExploreView = () => {
                 api.get(`/sustainability/listings/book/${book.id}`)
             ]);
 
-            // Filtramos por provincia seleccionada (si no es 'Todas')
+            // Para librerías: Filtramos por provincia seleccionada (si no es 'Todas')
             const filteredStores = selectedProvince === 'Todas'
                 ? storesRes.data
                 : storesRes.data.filter((item: any) => item.store.province === selectedProvince);
@@ -291,8 +329,23 @@ export const ExploreView = () => {
                 return scoreB - scoreA;
             });
 
+            // Para usuarios: Filtramos por provincia
+            const filteredListings = listingsRes.data.filter((l: any) => {
+                const isNotMe = l.user.id !== currentUser?.id;
+                const matchesProvince = selectedProvince === 'Todas' || l.user.province === selectedProvince;
+
+                return isNotMe && matchesProvince;
+            });
+
+            // Filtramos por proximidad 
+            const sortedListings = filteredListings.sort((a: any, b: any) => {
+                const scoreA = getProximityScore(a.user.province, currentUser?.province);
+                const scoreB = getProximityScore(b.user.province, currentUser?.province);
+                return scoreB - scoreA; // Mayor puntuación primero
+            });
+
             setAvailableStores(sortedStores);
-            setAvailableListings(listingsRes.data.filter((l: any) => l.user.id !== currentUser?.id));
+            setAvailableListings(sortedListings);
             setSelectedBookForStores(book.title);
             setIsAvailabilityOpen(true);
         } catch (error) {

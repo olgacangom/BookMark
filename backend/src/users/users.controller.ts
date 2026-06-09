@@ -41,7 +41,7 @@ interface GrowthData {
 @Controller('users')
 @UseInterceptors(ClassSerializerInterceptor)
 export class UsersController {
-  constructor(private readonly usersService: UsersService) { }
+  constructor(private readonly usersService: UsersService) {}
 
   // RUTAS ESTÁTICAS
 
@@ -104,7 +104,8 @@ export class UsersController {
   }
 
   @Patch('deactivate-me')
-  @Roles(UserRole.USER)
+  @Roles(UserRole.USER, UserRole.LIBRERO)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   async deactivateMyAccount(@Req() req: { user: User }): Promise<User> {
     return this.usersService.deactivateAccount(req.user.id);
   }
