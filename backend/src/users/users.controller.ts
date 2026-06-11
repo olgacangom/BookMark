@@ -41,7 +41,7 @@ interface GrowthData {
 @Controller('users')
 @UseInterceptors(ClassSerializerInterceptor)
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(private readonly usersService: UsersService) { }
 
   // RUTAS ESTÁTICAS
 
@@ -87,17 +87,15 @@ export class UsersController {
       },
     }),
   )
-  async uploadAvatar(
-    @UploadedFile() file: Express.Multer.File,
-    @Request() req: RequestWithUser,
-  ) {
+  async uploadAvatar(@UploadedFile() file: Express.Multer.File, @Request() req: any) {
+    console.log("Process ENV API_URL:", process.env.API_URL); 
     const userId = req.user.id;
-
-    const url = `http://localhost:3000/uploads/avatars/${file.filename}`;
-
+    const url = `${process.env.API_URL || 'http://localhost:3000'}/uploads/avatars/${file.filename}`;
+    console.log("URL generada:", url);
     return this.usersService.updateAvatar(userId, url);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Delete('avatar')
   async deleteAvatar(@Req() req: { user: User }): Promise<User> {
     return this.usersService.deleteAvatar(req.user.id);
