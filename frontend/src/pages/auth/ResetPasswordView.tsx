@@ -5,6 +5,7 @@ import api from '../../services/api';
 
 export const ResetPasswordView = () => {
     const { token } = useParams();
+    console.log("Token recibido de useParams:", token);
     const navigate = useNavigate();
     
     const [password, setPassword] = useState("");

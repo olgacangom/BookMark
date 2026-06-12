@@ -11,8 +11,6 @@ import { ClubsModule } from './club/club.module';
 import { BookstoreModule } from './bookstore/bookstore.module';
 import { ChatModule } from './chat/chat.module';
 import { AIModule } from './ai/ai.module';
-import { ServeStaticModule } from '@nestjs/serve-static';
-import { join } from 'path';
 
 @Module({
   imports: [
@@ -38,13 +36,8 @@ import { join } from 'path';
       },
       poolSize: 10,
     }),
-    ServeStaticModule.forRoot({
-      rootPath: join(__dirname, '..', 'uploads'),
-      serveRoot: '/uploads',
-      serveStaticOptions: { index: false },
-    }),
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule { }
+export class AppModule {}

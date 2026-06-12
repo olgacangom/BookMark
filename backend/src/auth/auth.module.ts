@@ -9,9 +9,11 @@ import { JwtStrategy } from './jwt.strategy';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from 'src/users/entities/user.entity';
 import { UserStats } from 'src/users/entities/user-stats.entity';
+import { CloudinaryModule } from 'src/cloudinary/cloudinary.module';
 
 @Module({
   imports: [
+    CloudinaryModule,
     forwardRef(() => UsersModule),
     PassportModule,
     TypeOrmModule.forFeature([User, UserStats]),
