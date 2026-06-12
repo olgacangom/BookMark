@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "../../services/api";
 import {
-    User as UserIcon, BookCopy, Mail,
+    BookCopy, Mail,
     CheckCircle, XCircle, ShieldAlert, Loader2,
     ExternalLink, AlertTriangle, Building2, MapPin, FileText, X, ShieldCheck, Trash2,
     Search, Filter, RotateCcw
