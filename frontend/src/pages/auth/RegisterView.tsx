@@ -143,7 +143,20 @@ export const RegisterView = () => {
                                 <label className="text-[10px] font-bold text-slate-400 uppercase ml-2">Email</label>
                                 <div className="relative">
                                     <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-                                    <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:border-teal-500 text-sm font-semibold outline-none" placeholder="tu@email.com" required />
+                                    <input
+                                        type="email"
+                                        name="email"
+                                        value={email}
+                                        autoComplete="new-email"
+                                        autoCorrect="off"
+                                        autoCapitalize="none"
+                                        readOnly
+                                        onFocus={(e) => e.target.removeAttribute('readonly')}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:border-teal-500 text-sm font-semibold outline-none"
+                                        placeholder="tu@email.com"
+                                        required
+                                    />
                                 </div>
                             </div>
 
@@ -151,8 +164,24 @@ export const RegisterView = () => {
                                 <label className="text-[10px] font-bold text-slate-400 uppercase ml-2">Contraseña</label>
                                 <div className="relative">
                                     <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-                                    <input type={showPassword ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} className="w-full pl-12 pr-12 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:border-teal-500 text-sm font-semibold outline-none" placeholder="Mínimo 6 caracteres" required />
-                                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300">
+                                    <input
+                                        type={showPassword ? 'text' : 'password'}
+                                        name="new-password"
+                                        autoComplete="new-password"
+                                        autoCorrect="off"
+                                        autoCapitalize="none"
+                                        spellCheck={false}
+                                        readOnly
+                                        onFocus={(e) => e.target.removeAttribute('readonly')}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        className="w-full pl-12 pr-12 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:border-teal-500 text-sm font-semibold outline-none"
+                                        placeholder="Mínimo 6 caracteres"
+                                        required
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300">
                                         {showPassword ? <Eye size={18} /> : <EyeOff size={18} />}
                                     </button>
                                 </div>

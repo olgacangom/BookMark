@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
+import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
 import { jest, describe, it, expect, beforeEach } from '@jest/globals';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { RegisterDto } from 'src/auth/dto/register.dto';
@@ -19,6 +20,7 @@ const TARGET_ID = 'target-1';
 describe('UsersController', () => {
   let controller: UsersController;
   let service: jest.Mocked<UsersService>;
+  let cloudinaryServiceMock: jest.Mocked<CloudinaryService>;
 
   const usersServiceMock = {
     getPendingRequests: jest.fn(),
@@ -40,25 +42,32 @@ describe('UsersController', () => {
   };
 
   beforeEach(async () => {
+    cloudinaryServiceMock = {
+      uploadFile: jest.fn(),
+    } as any;
+
     const module: TestingModule = await Test.createTestingModule({
       controllers: [UsersController],
-      providers: [{ provide: UsersService, useValue: usersServiceMock }],
+      providers: [
+        { provide: UsersService, useValue: usersServiceMock },
+        { provide: CloudinaryService, useValue: cloudinaryServiceMock },
+      ],
     }).compile();
 
     controller = module.get<UsersController>(UsersController);
     service = module.get(UsersService);
+
     jest.clearAllMocks();
   });
 
   it('should call getPendingRequests with user id', async () => {
     const req: MockRequest = {
-      user: {
-        id: 'abc',
-        email: 'test@test.com',
-      },
+      user: { id: USER_ID, email: 'test@test.com' },
     };
+
     await controller.getRequests(req);
-    expect(service.getPendingRequests).toHaveBeenCalledWith('abc');
+
+    expect(service.getPendingRequests).toHaveBeenCalledWith(USER_ID);
   });
 
   it('should search users', async () => {
@@ -69,61 +78,76 @@ describe('UsersController', () => {
 
   it('should update profile', async () => {
     const req: MockRequest = {
-      user: {
-        id: 'abc',
-        email: 'test@test.com',
-      },
+      user: { id: USER_ID, email: 'test@test.com' },
     };
-    const dto = { fullName: 'New Name' };
+
+    const dto = { fullName: 'New Name' } as UpdateUserDto;
 
     await controller.updateProfile(req, dto);
-    expect(service.update).toHaveBeenCalledWith('abc', dto);
+
+    expect(service.update).toHaveBeenCalledWith(USER_ID, dto);
   });
 
   it('should upload avatar', async () => {
-    const file: Partial<Express.Multer.File> = {
+    const file: Express.Multer.File = {
+      fieldname: 'file',
+      originalname: 'avatar.png',
+      encoding: '7bit',
+      mimetype: 'image/png',
+      size: 1234,
+      destination: '',
       filename: 'avatar.png',
+      path: '',
+      buffer: Buffer.from('image'),
+      stream: {} as any,
     };
+
     const req: MockRequest = {
-      user: {
-        id: USER_ID,
-        email: 'test@test.com',
-      },
+      user: { id: USER_ID, email: 'test@test.com' },
     };
+
+    cloudinaryServiceMock.uploadFile.mockResolvedValue({
+      secure_url: 'http://image.com/avatar.png',
+    } as any);
+
     await controller.uploadAvatar(file as Express.Multer.File, req);
+
+    expect(cloudinaryServiceMock.uploadFile).toHaveBeenCalledWith(
+      file,
+      'avatars',
+    );
+
     expect(service.updateAvatar).toHaveBeenCalledWith(
       USER_ID,
-      expect.stringContaining('avatar.png'),
+      'http://image.com/avatar.png',
     );
   });
 
   it('should delete avatar', async () => {
     const req = {
-      user: {
-        id: USER_ID,
-      } as User,
+      user: { id: USER_ID } as User,
     };
+
     await controller.deleteAvatar(req);
+
     expect(service.deleteAvatar).toHaveBeenCalledWith(USER_ID);
   });
 
   it('should deactivate account', async () => {
     const req = {
-      user: {
-        id: USER_ID,
-      } as User,
+      user: { id: USER_ID } as User,
     };
+
     await controller.deactivateMyAccount(req);
+
     expect(service.deactivateAccount).toHaveBeenCalledWith(USER_ID);
   });
 
   it('should follow and unfollow users', async () => {
     const req: MockRequest = {
-      user: {
-        id: USER_ID,
-        email: 'test@test.com',
-      },
+      user: { id: USER_ID, email: 'test@test.com' },
     };
+
     await controller.follow(req, TARGET_ID);
     await controller.unfollow(req, TARGET_ID);
 
@@ -141,12 +165,11 @@ describe('UsersController', () => {
 
   it('should get profile correctly', async () => {
     const req: MockRequest = {
-      user: {
-        id: USER_ID,
-        email: 'test@test.com',
-      },
+      user: { id: USER_ID, email: 'test@test.com' },
     };
+
     await controller.getProfile(req, 'target');
+
     expect(service.findOneProfile).toHaveBeenCalledWith('target', USER_ID);
   });
 
@@ -165,6 +188,7 @@ describe('UsersController', () => {
       province: 'Sevilla',
       role: UserRole.USER,
     };
+
     await controller.create(registerDto);
 
     expect(service.findAll).toHaveBeenCalled();
@@ -182,12 +206,11 @@ describe('UsersController', () => {
 
   it('should get growth stats', async () => {
     const req: MockRequest = {
-      user: {
-        id: USER_ID,
-        email: 'test@test.com',
-      },
+      user: { id: USER_ID, email: 'test@test.com' },
     };
+
     await controller.getGrowth(req);
+
     expect(service.getBooksGrowth).toHaveBeenCalledWith(USER_ID);
   });
 });

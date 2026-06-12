@@ -12,9 +12,10 @@ import { LoginDto } from './dto/login.dto';
 import { User } from 'src/users/entities/user.entity';
 import { RegisterDto } from './dto/register.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
 import { extname } from 'path';
 import { randomBytes } from 'crypto';
+import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
+import { memoryStorage } from 'multer';
 
 export function generateLicenseFilename(file: Express.Multer.File) {
   const secureSuffix = randomBytes(16).toString('hex');
@@ -38,15 +39,13 @@ export class AuthController {
   constructor(
     private authService: AuthService,
     private usersService: UsersService,
+    private cloudinaryService: CloudinaryService,
   ) {}
 
   @Post('register')
   @UseInterceptors(
     FileInterceptor('document', {
-      storage: diskStorage({
-        destination: './uploads/licencias',
-        filename: multerFilenameCallback(),
-      }),
+      storage: memoryStorage(),
     }),
   )
   async register(
@@ -54,7 +53,17 @@ export class AuthController {
     @UploadedFile() file: Express.Multer.File,
   ): Promise<Omit<User, 'password'>> {
     if (file) {
-      registerDto.document = file.path;
+      const uploaded = await this.cloudinaryService.uploadFile(
+        file,
+        'licencias',
+      );
+
+      console.log('PDF CLOUDINARY');
+      console.log(uploaded.secure_url);
+      console.log(uploaded.resource_type);
+      console.log(uploaded.public_id);
+
+      registerDto.document = uploaded.secure_url;
     }
 
     return this.usersService.create(registerDto);

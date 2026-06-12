@@ -18,13 +18,12 @@ import { UsersService } from './users.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { extname } from 'path';
 import { RegisterDto } from 'src/auth/dto/register.dto';
 import { User, UserRole } from './entities/user.entity';
 import { Roles } from './roles/roles.decorator';
 import { RolesGuard } from './roles/roles.guard';
-import { randomUUID } from 'crypto';
+import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
+import { memoryStorage } from 'multer';
 
 interface RequestWithUser {
   user: {
@@ -41,7 +40,10 @@ interface GrowthData {
 @Controller('users')
 @UseInterceptors(ClassSerializerInterceptor)
 export class UsersController {
-  constructor(private readonly usersService: UsersService) { }
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly cloudinaryService: CloudinaryService,
+  ) {}
 
   // RUTAS ESTÁTICAS
 
@@ -72,13 +74,7 @@ export class UsersController {
   @Post('avatar')
   @UseInterceptors(
     FileInterceptor('file', {
-      storage: diskStorage({
-        destination: './uploads/avatars',
-        filename: (req, file, cb) => {
-          const uniqueSuffix = `${Date.now()}-${randomUUID()}`;
-          cb(null, `${uniqueSuffix}${extname(file.originalname)}`);
-        },
-      }),
+      storage: memoryStorage(),
       fileFilter: (req, file, cb) => {
         if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/)) {
           return cb(new Error('Solo se permiten imágenes'), false);
@@ -87,12 +83,13 @@ export class UsersController {
       },
     }),
   )
-  async uploadAvatar(@UploadedFile() file: Express.Multer.File, @Request() req: any) {
-    console.log("Process ENV API_URL:", process.env.API_URL); 
+  async uploadAvatar(
+    @UploadedFile() file: Express.Multer.File,
+    @Request() req: RequestWithUser,
+  ) {
     const userId = req.user.id;
-    const url = `${process.env.API_URL || 'http://localhost:3000'}/uploads/avatars/${file.filename}`;
-    console.log("URL generada:", url);
-    return this.usersService.updateAvatar(userId, url);
+    const uploaded = await this.cloudinaryService.uploadFile(file, 'avatars');
+    return this.usersService.updateAvatar(userId, uploaded.secure_url);
   }
 
   @UseGuards(JwtAuthGuard)

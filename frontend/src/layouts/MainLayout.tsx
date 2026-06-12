@@ -159,8 +159,16 @@ export function MainLayout() {
 
                 <div className="p-6 border-t border-slate-50">
                     <Link to="/myprofile" className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-50 transition-colors">
-                        <div className="w-10 h-10 rounded-full bg-teal-100 flex items-center justify-center text-teal-700 font-bold border-2 border-white shadow-sm overflow-hidden">
-                            {user?.avatarUrl ? <img src={user.avatarUrl} className="w-full h-full object-cover" alt="Avatar" /> : "O"}
+                        <div className="w-10 h-10 rounded-full bg-slate-600 flex items-center justify-center text-teal-700 font-bold border-2 border-white shadow-sm overflow-hidden">
+                            {user?.avatarUrl ? (
+                                <img src={user.avatarUrl} className="w-full h-full object-cover" alt="Avatar" />
+                            ) : (
+                                <img
+                                    src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email || 'default'}`}
+                                    className="w-full h-full object-cover"
+                                    alt="Avatar por defecto"
+                                />
+                            )}
                         </div>
                         <div className="flex-1 min-w-0 text-left">
                             <p className="font-bold text-slate-800 text-sm truncate">{user?.fullName || "Usuario"}</p>
@@ -211,8 +219,16 @@ export function MainLayout() {
 
                         {/* Profile Small Avatar */}
                         <Link to="/myprofile" className={`p-1 rounded-full border-2 transition-all ${isActive('/myprofile') ? 'border-teal-600 scale-110' : 'border-transparent'}`}>
-                            <div className="w-7 h-7 rounded-full overflow-hidden bg-slate-200">
-                                <img src={user?.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email}`} className="w-full h-full object-cover" alt="" />
+                            <div className="w-10 h-10 rounded-full bg-teal-100 flex items-center justify-center text-teal-700 font-bold border-2 border-white shadow-sm overflow-hidden">
+                                {user?.avatarUrl ? (
+                                    <img src={user.avatarUrl} className="w-full h-full object-cover" alt="Avatar" />
+                                ) : (
+                                    <img
+                                        src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email || 'default'}`}
+                                        className="w-full h-full object-cover"
+                                        alt="Avatar por defecto"
+                                    />
+                                )}
                             </div>
                         </Link>
 

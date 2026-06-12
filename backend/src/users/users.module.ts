@@ -28,6 +28,7 @@ import { SustainabilityController } from './sustainability/sustainability.contro
 import { SustainabilityRequest } from './entities/sustainability-request.entity';
 import { PollVote } from './entities/poll-vote.entity';
 import { AuthModule } from 'src/auth/auth.module';
+import { CloudinaryModule } from 'src/cloudinary/cloudinary.module';
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { AuthModule } from 'src/auth/auth.module';
       SustainabilityRequest,
       PollVote,
     ]),
+    CloudinaryModule,
     forwardRef(() => AuthModule),
   ],
   controllers: [

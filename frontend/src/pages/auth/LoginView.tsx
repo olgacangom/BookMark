@@ -13,12 +13,6 @@ export const LoginView = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const savedEmail = localStorage.getItem("remember_email");
-    if (savedEmail) {
-      setEmail(savedEmail);
-    }
-  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,11 +22,11 @@ export const LoginView = () => {
     try {
       const response = await api.post('/auth/login', { email, password });
       const { access_token, user } = response.data;
-      
+
       localStorage.setItem("remember_email", email);
-      
+
       login(access_token, user);
-      
+
       if (user.role === 'admin') {
         navigate("/admin/users");
       } else if (user.role === 'librero') {
@@ -43,7 +37,7 @@ export const LoginView = () => {
 
     } catch (err: any) {
       setError(
-        err.response?.data?.message || 
+        err.response?.data?.message ||
         "Las credenciales no coinciden con nuestros registros."
       );
     } finally {
@@ -59,7 +53,7 @@ export const LoginView = () => {
 
       <div className="w-full max-w-[440px] relative z-10 animate-in fade-in zoom-in-95 duration-700">
         <div className="bg-white/80 backdrop-blur-2xl rounded-[2.5rem] shadow-[0_20px_50px_rgba(13,148,136,0.1)] border border-white p-10 md:p-12 relative overflow-hidden">
-          
+
           {/* Logo y Encabezado */}
           <div className="text-center mb-10">
             <div className="inline-flex items-center justify-center w-20 h-20 bg-teal-600 rounded-[1.8rem] shadow-xl shadow-teal-600/20 mb-6 relative transform transition-transform hover:scale-105 duration-500">
@@ -89,10 +83,12 @@ export const LoginView = () => {
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-teal-600 transition-colors" />
                 <input
                   type="email"
-                  name="email" 
-                  autoComplete="email" 
+                  name="email"
+                  autoComplete="on"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  readOnly 
+                  onFocus={(e) => e.target.removeAttribute('readonly')}
                   className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:border-teal-500 focus:bg-white transition-all text-slate-800 text-sm font-semibold placeholder:text-slate-300"
                   placeholder="ejemplo@email.com"
                   required
@@ -108,9 +104,11 @@ export const LoginView = () => {
                 <input
                   type="password"
                   name="password"
-                  autoComplete="current-password" 
+                  autoComplete="on"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  readOnly 
+                  onFocus={(e) => e.target.removeAttribute('readonly')}
                   className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:border-teal-500 focus:bg-white transition-all text-slate-800 text-sm font-semibold placeholder:text-slate-300"
                   placeholder="••••••••"
                   required
@@ -119,8 +117,8 @@ export const LoginView = () => {
             </div>
 
             <div className="flex justify-end mb-6">
-              <Link 
-                to="/forgot-password" 
+              <Link
+                to="/forgot-password"
                 className="text-[10px] font-bold text-teal-600 hover:text-emerald-600 uppercase tracking-widest transition-colors"
               >
                 ¿Olvidaste tu contraseña?

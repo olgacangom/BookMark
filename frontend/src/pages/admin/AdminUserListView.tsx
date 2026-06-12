@@ -145,30 +145,22 @@ export const AdminUserListView = () => {
                             <div><label className="text-[10px] font-black text-teal-600 uppercase tracking-widest mb-1 block ml-1">Nombre Comercial</label><div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-slate-700 font-bold">{infoUser.libraryName || 'No especificado'}</div></div>
                             <div><label className="text-[10px] font-black text-teal-600 uppercase tracking-widest mb-1 block ml-1">Ubicación</label><div className="flex items-start gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100 text-slate-700 font-medium italic"><MapPin size={18} className="text-slate-400 mt-0.5" />{infoUser.libraryAddress || 'Sin dirección'}</div></div>
                             <div className="pt-4 border-t border-slate-50">
-                                {infoUser.document ? (
-                                    <button
-                                        onClick={() => {
-                                            const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
-                                            const docPath = infoUser.document.replace(/\\/g, '/');
-                                            const fullUrl = `${baseUrl}/${docPath.replace(/^\/+/, '')}`;
-                                            window.open(fullUrl, '_blank');
-                                        }}
-                                        className="w-full group flex items-center justify-between p-5 bg-teal-600 rounded-3xl text-white hover:bg-teal-700 shadow-xl shadow-teal-600/20 transition-all"
-                                    >
-                                        <div className="flex items-center gap-4">
-                                            <div className="bg-white/20 p-2.5 rounded-xl"><FileText size={24} /></div>
-                                            <div className="text-left">
-                                                <p className="font-semibold text-sm uppercase tracking-tight">Ver Licencia PDF</p>
-                                                <p className="text-teal-100 text-[10px] italic">Abrir en pestaña nueva</p>
-                                            </div>
+
+                                <a
+                                    href={infoUser.document}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="w-full group flex items-center justify-between p-5 bg-teal-600 rounded-3xl text-white hover:bg-teal-700 shadow-xl shadow-teal-600/20 transition-all cursor-pointer"
+                                >
+                                    <div className="flex items-center gap-4">
+                                        <div className="bg-white/20 p-2.5 rounded-xl"><FileText size={24} /></div>
+                                        <div className="text-left">
+                                            <p className="font-semibold text-sm uppercase tracking-tight">Ver Licencia PDF</p>
+                                            <p className="text-teal-100 text-[10px] italic">Abrir en pestaña nueva</p>
                                         </div>
-                                        <ExternalLink size={20} className="opacity-50 group-hover:opacity-100" />
-                                    </button>
-                                ) : (
-                                    <div className="p-8 bg-rose-50 rounded-3xl border border-dashed border-rose-200 text-center text-rose-600 font-bold text-xs uppercase">
-                                        Sin documento adjunto
                                     </div>
-                                )}
+                                    <ExternalLink size={20} className="opacity-50 group-hover:opacity-100" />
+                                </a>
                             </div>
                         </div>
                     </div>
@@ -296,8 +288,16 @@ export const AdminUserListView = () => {
                                     <tr key={u.id} className={`hover:bg-teal-50/20 transition-colors group ${u.isActive === false ? 'opacity-50 grayscale-[0.5]' : ''}`}>
                                         <td className="px-4 md:px-8 py-4">
                                             <div className="flex items-center gap-4 text-left">
-                                                <div className="w-12 h-12 rounded-2xl bg-teal-100 flex items-center justify-center text-teal-700 font-bold border-2 border-white shadow-sm overflow-hidden flex-shrink-0 transition-transform group-hover:scale-110">
-                                                    {u.avatarUrl ? <img src={u.avatarUrl} className="w-full h-full object-cover" alt="" /> : <UserIcon size={20} />}
+                                                <div className="w-12 h-12 rounded-2xl bg-slate-600 flex items-center justify-center border-2 border-white shadow-sm overflow-hidden flex-shrink-0 transition-transform group-hover:scale-110">
+                                                    {u.avatarUrl ? (
+                                                        <img src={u.avatarUrl} className="w-full h-full object-cover" alt={u.fullName} />
+                                                    ) : (
+                                                        <img
+                                                            src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${u.email || u.id}&backgroundColor=0f172a`}
+                                                            className="w-full h-full object-cover"
+                                                            alt="Avatar"
+                                                        />
+                                                    )}
                                                 </div>
                                                 <div className="min-w-0">
                                                     <p className="font-bold text-slate-800 truncate leading-tight mb-0.5">{u.fullName}</p>
