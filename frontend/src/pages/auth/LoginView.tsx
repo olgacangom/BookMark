@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { BookOpen, Mail, Lock, Sparkles, Loader2, ChevronRight } from "lucide-react";
